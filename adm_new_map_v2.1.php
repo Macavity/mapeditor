@@ -2,34 +2,95 @@
 
 define('IN_RPG', true);
 
-include($phpbb_root_path . 'includes/rpg_config.'.$phpEx);
+include('includes/rpg_config.php');
 
-
-//
-// Start session management
-$userdata = session_pagestart($user_ip, PAGE_INDEX);
-init_userprefs($userdata);
-// End session management
-//
-
-//
-//check for userlevel
-//
-if( !$userdata['session_logged_in'] ){
-	header('Location: ' . append_sid("../login.$phpEx?redirect=adm_tileset.$phpEx", true));
-}
-
-// 104 = Macavity, 75 = shizo, 54 = Morpheusz, 57 = Kadaj, 638 = Deval
-//202 = Pietro, 1066 = Lunk, 1110 = Tsunade, 1075 = Istvan
+/**
+ * 104 = Macavity
+ * 75 = shizo
+ * 54 = Morpheusz
+ * 57 = Kadaj
+ * 638 = Deval
+ * 202 = Pietro
+ * 1066 = Lunk
+ * 1110 = Tsunade
+ * 1075 = Istvan
+ */
+/*
 if( !in_array($userdata['user_id'],array(104,75,57,638,202,1066,1110,1075))){
 	message_die(GENERAL_MESSAGE, $lang['Not_Authorised']);
-}
+}*/
 
-$var = 'user_'.$userdata['user_id'];
-$$var = true;
+// since we don't have a phpbb frame anymore, let's make some fake arrays.
+$users = array(
+	  54 => array( 'name' => 'Morpheusz', 	'rank' => 'dev' ),
+	  57 => array( 'name' => 'Kadaj', 		'rank' => 'dev' ),
+  	  75 => array( 'name' => 'shizo', 		'rank' => 'dev' ),
+	 104 => array( 'name' => 'Macavity', 	'rank' => 'admin' ),
+	 638 => array( 'name' => 'Deval', 		'rank' => 'intern', 'prefix' => '[d]' ),
+	 713 => array( 'name' => 'Santana', 	'rank' => 'editor', 'prefix' => '[s]' ),
+	 202 => array( 'name' => 'Pietro', 		'rank' => 'editor', 'prefix' => '[p]' ),
+	1066 => array( 'name' => 'Lunk', 		'rank' => 'editor', 'prefix' => '[l]' ),
+	1110 => array( 'name' => 'Tsunade', 	'rank' => 'intern', 'prefix' => '[t]' ),
+	1075 => array( 'name' => 'Istvan', 		'rank' => 'editor', 'prefix' => '[i]' ),
+);
+
+$userId = 104;
+$user = $users[$userId];
+
 
 define('IN_RPG_ADMIN', true);
-//end check
+
+// List of possible Tilesets
+
+$tilesets = array();
+
+$directory = "images/tiles";
+$d = dir($directory);
+chdir($directory);
+while($file = $d->read()) {
+	if(is_dir($file) && $file != '.' && $file != '..'){
+		$tilesets[] = $file;
+	}
+}
+chdir("../../../");
+$d->close();
+
+natcasesort($tilesets);
+
+foreach($tilesets as $t){
+	$list_tilesets .= "<option value=\"$t\">$t</option>";
+}
+
+/*
+ * Available Maps for this user
+ */
+$directory = "maps";
+$d = dir($directory);
+chdir($directory);
+
+$file_array = array();
+while($file = $d->read()){
+	if( (is_file($file)) && strpos ($file, ".js") && strpos ($file, "_ft") === false ){
+
+		if($user_713 && strpos($file,'[s]') === false){
+		}
+		elseif($user_1110 && (strpos($file,'[t]') === false && strpos($file,'[l]') === false && strpos($file,'[p]') === false)){
+		}
+		elseif($user_1066 && (strpos($file,'[l]') === false && strpos($file,'[p]') === false && strpos($file,'[t]') === false)){
+		}
+		elseif($user_202 &&  (strpos($file,'[p]') === false && strpos($file,'[l]') === false && strpos($file,'[t]') === false && strpos($file,'[i]') === false && strpos($file,'[m]') === false)){
+		}
+		elseif($user_1075 && (strpos($file,'[i]') === false)){
+		}
+		else{
+			$file_array[] = $file;
+		}
+	}
+}
+chdir("../../../");
+$d->close();
+
+natcasesort($file_array);
 ?>
 <style type="text/css">
   body {
@@ -55,162 +116,20 @@ define('IN_RPG_ADMIN', true);
   }
 
 </style>
-<?
-// Liste der m�glichen Tilesets
-$tilesets = array();
-$directory = "rpg/images/tiles";
-$d = dir($directory);
-chdir($directory);
-while($file = $d->read()) {
-	if(is_dir($file) && $file != '.' && $file != '..'){
-		$tilesets[] = $file;
-	}
+<?php
+
+$stage = empty($_POST['stage']) ? 'create' : $_POST['stage'];
+
+if( $stage == 'create' || empty($_POST['file_name']) ){
+	/**
+	 * Create Map
+	 */
+	include("views/create_map.php");
 }
-chdir("../../../");
-$d->close();
-
-natcasesort($tilesets);
-foreach($tilesets as $t){
-	$list_tilesets .= "<option value=\"$t\">$t</option>";
-}
-
-// Weiter je nach Fortschritt.
-if( !$_POST['stage'] || empty($_POST['file_name']) ){//{{{
-/********************************************************************************
- *															Startseite
- *******************************************************************************/
-	?>
-
-<script language="JavaScript" type="text/javascript">
-//<!--
-function showImage(){
-	tile_set = document.getElementById('tileset').value;
-	file = document.getElementById("main_bg").value;
-	document.getElementById("main_bg_img").innerHTML = '<img src="rpg/images/tiles/'+tile_set+'/'+file+'">';
-}
-
-function clickTile(tile_name){
-	//tile_set = document.getElementById('tileset').value;
-	document.getElementById('main_bg').value = tile_name;
-	showImage();
-}
-
-function switchTileSet(){
-	newTS = document.getElementById('tileset').value;
-	document.getElementById('iframe_tileset').src = 'rpg/images/tiles/'+newTS+'/'+newTS+'.html';
-}
-//-->
-</script><fieldset><legend>Neue Karte erstellen</legend>
-	<p>Gib bitte Name, H&ouml;he und Breite der neuen Karte an:</p>
-	<form action="" method="post">
-	<input type="hidden" id="stage" name="stage" value="edit_map">
-	<p>Name:<input type="text" id="name" name="name" maxlength="50" size="30"></p>
-	<p>Dateiname:<input type="text" id="file_name" name="file_name" maxlength="20" size="25"> <i>(kurz, keine Umlaute, Sonderzeichen oder Leerzeichen)</i></p>
-	<p>Tileset:<select name="tileset" id="tileset" onChange="switchTileSet();">
-	<? global $list_tilesets; echo $list_tilesets; ?>
-	</select>
-	<br><iframe id="iframe_tileset" src="" width="<? echo (32+8)*8; ?>" height="<? echo (32+8)*6; ?>"></iframe>
-	</p>
-	<p>Haupt-Hintergrund:<input type="text" name="main_bg" id="main_bg" onChange="showImage();"><span id="main_bg_img">&nbsp;</span> <i>(in den tiles anklicken)</i></p>
-	<p>H&ouml;he:<input type="text" id="height" name="height" maxlength="3" size="5" value="20"></p>
-	<p>Breite:<input type="text" id="width" name="width" maxlength="3" size="5" value="20"></p>
-	<input type="submit" value="Weiter">
-	</form>
-	</fieldset>
-	<hr>
-	<fieldset><legend>Alte Karte bearbeiten (Hintergrund)</legend>
-	<form action="" method="post">
-	<input type="hidden" id="stage" name="stage" value="edit_map">
-	<input type="hidden" id="edit" name="edit" value="1">
-	<input type="hidden" id="name" name="name" value="1">
-	<input type="hidden" id="width" name="width" value="1">
-	<input type="hidden" id="height" name="height" value="1">
-	<select id="file_name" name="file_name">
-	<?
-	$directory = "rpg/maps";
-	$d = dir($directory);
-	chdir($directory);
-
-	$file_array = array();
-	while($file = $d->read()){
-		if( (is_file($file)) && strpos ($file, ".js") && strpos ($file, "_ft") === false ){
-			if($user_713 && strpos($file,'[s]') === false){
-			}
-			elseif($user_1110 && (strpos($file,'[t]') === false && strpos($file,'[l]') === false && strpos($file,'[p]') === false)){
-			}
-			elseif($user_1066 && (strpos($file,'[l]') === false && strpos($file,'[p]') === false && strpos($file,'[t]') === false)){
-			}
-			elseif($user_202 &&  (strpos($file,'[p]') === false && strpos($file,'[l]') === false && strpos($file,'[t]') === false)){
-                        }
-			elseif($user_1075 && (strpos($file,'[i]') === false)){
-                        }
-			else{
-				$file_array[] = $file;
-			}
-		}
-	}
-	chdir("../../");
-	$d->close();
-
-	natcasesort($file_array);
-	foreach($file_array as $file){
-		echo "<option value=\"$file\">$file</option>";
-	}
-
-	?>
-	</select>
-	<input type="submit" value="Weiter">
-	</form>
-	</fieldset>
-	<hr>
-	<fieldset><legend>Alte Karte bearbeiten (Feldtypen)</legend>
-	<form action="" method="post">
-	<input type="hidden" id="stage" name="stage" value="edit_ft">
-	<select id="file_name" name="file_name">
-	<?
-	$directory = "rpg/maps";
-	$d = dir($directory);
-	chdir($directory);
-
-	$file_array = array();
-	while($file = $d->read()){
-		if( (is_file($file)) && strpos ($file, ".js") && strpos ($file, "_ft") === false ){
-			if($user_713 && strpos($file,'[s]') === false){
-			}
-			elseif($user_1110 && (strpos($file,'[t]') === false && strpos($file,'[l]') === false && strpos($file,'[p]') === false)){
-			}
-			elseif($user_1066 && (strpos($file,'[l]') === false && strpos($file,'[p]') === false && strpos($file,'[t]') === false)){
-			}
-			elseif($user_202 &&  (strpos($file,'[p]') === false && strpos($file,'[l]') === false && strpos($file,'[t]') === false && strpos($file,'[i]') === false && strpos($file,'[m]') === false)){
-                        }
-			elseif($user_1075 && (strpos($file,'[i]') === false)){
-                        }
-			else{
-		  		$file_array[] = $file;
-			}
-		}
-	}
-	chdir("../../../");
-	$d->close();
-
-	natcasesort($file_array);
-	foreach($file_array as $file){
-		echo "<option value=\"$file\">$file</option>";  
-	}
-	?>
-	</select>
-	<input type="submit" value="Weiter">
-	</form>
-	</fieldset>
-
-	<?
-//}}}
-} 
-elseif($_POST['stage'] == 'edit_map'){//{{{
-/********************************************************************************
- *													Kartendaten bearbeiten
- *******************************************************************************/
-
+elseif( $stage == 'edit_map'){
+	/**
+	 * Edit Map
+	 */
 	if(file_exists('rpg/maps/'.$_POST['file_name'])){
 		$map_file = file('rpg/maps/'.$_POST['file_name']);
 		foreach($map_file as $line){
