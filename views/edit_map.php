@@ -1,103 +1,11 @@
+<?php global $name, $height, $width, $main_bg, $field_bg, $field_layer1, $field_layer2, $field_layer4 ?>
+<script language="JavaScript" type="text/javascript" src="/includes/js_rpg_adm.js"></script>
+
 <script language="JavaScript" type="text/javascript">
-        var value_bg = new Array()
-        var old_x = 1;
-        var old_y = 1;
-
-        function setValue(name,value){
-            if(document.getElementById(name)){
-                document.getElementById(name).value = value;
-            }
-            else{
-                new_hidden = '<input type="hidden" id="'+name+'" name="'+name+'" value="'+value+'">';
-                document.getElementById('div_fields').innerHTML += new_hidden;
-            }
-        }
-
-        function changeField(x,y){
-            document.getElementById('edit_x').innerHTML = x;
-            document.getElementById('edit_y').innerHTML = y;
-
-            tile_set = document.getElementById('sel_tileset').value;
-            tile = document.getElementById('sel_tile').value;
-
-            edit_type = document.getElementById('edit_et').value;
-            value = tile;
-
-            if(edit_type == 'BG'){
-                //Wert speichern
-                name = 'field_'+x+'x'+y+'_bg';
-                setValue(name,value);
-                document.getElementById('bg_'+x+'x'+y).innerHTML = '<img src="rpg/images/tiles/'+value+'">';
-                //document.getElementById('edit_img_bg').innerHTML = '<img src="rpg/images/tiles/'+value+'">';
-            }
-            else if(edit_type == 'L1'){
-                changeLayer(1,value);
-            }
-            else if(edit_type == 'L2'){
-                changeLayer(2,value);
-            }
-            else if(edit_type == 'L4'){
-                changeLayer(4,value);
-            }
-            old_x = x;
-            old_y = y;
-        }
-
-        function changeBG(){
-            x = document.getElementById('edit_x').innerHTML;
-            y = document.getElementById('edit_y').innerHTML;
-
-            document.getElementById('bg_'+x+'x'+y).style.backgroundImage = 'url(rpg/images/tiles/'+(document.getElementById('edit_bg').value)+');';
-
-            //Wert speichern
-            value = document.getElementById('edit_bg').value;
-            name = 'field_'+x+'x'+y+'_bg';
-            setValue(name,value);
-
-        }
-
-        function changeLayer(num,value){
-            x = document.getElementById('edit_x').innerHTML;
-            y = document.getElementById('edit_y').innerHTML;
-
-            //Wert speichern
-            name = 'field_'+x+'x'+y+'_layer_'+num;
-            setValue(name,value);
-
-            if(document.getElementById('bg_'+x+'x'+y+'_lay_'+num)){
-                if(value != ''){
-                    document.getElementById('bg_'+x+'x'+y+'_lay_'+num).innerHTML = '<img src="rpg/images/tiles/'+value+'">';
-                }
-                else{
-                    document.getElementById('bg_'+x+'x'+y+'_lay_'+num).innerHTML = '';
-                }
-                //document.getElementById('div_debug').innerHTML = '<img src="rpg/images/'+value+'">';
-            }
-            else{
-                if(value != ''){
-                    new_div = '<span id="bg_'+x+'x'+y+'_lay_'+num+'" style="position:absolute; z-index:'+num+'"><img src="rpg/images/tiles/'+value+'"></span>';
-                    document.getElementById('span_bg_'+x+'x'+y).innerHTML += new_div;
-                }
-                else{
-                    document.getElementById('bg_'+x+'x'+y+'_lay_'+num).innerHTML = '';
-                }
-                //document.getElementById('div_debug').innerHTML = 'neu, '+num+','+new_div;
-            }
-        }
-
-        function switchTileSet(){
-            newTS = document.getElementById('sel_tileset').value;
-            document.getElementById('iframe_tileset').src = 'rpg/images/tiles/'+newTS+'/'+newTS+'.html';
-        }
-
-        function clickTile(tile_name){
-            tile_set = document.getElementById('sel_tileset').value;
-            value = tile_set+'/'+tile_name;
-            document.getElementById('sel_tile').value = value;
-            document.getElementById('img_sel_tile').innerHTML = '<img src="rpg/images/tiles/'+value+'">';
-        }
-
-    //--> <!--}}}-->
+    var edit_existing_map = <?php if($edit_existing_map){ echo 'true'; } else{ echo 'false'; } ?>;
+    var value_bg = [];
+    var old_x = 1;
+    var old_y = 1;
 </script>
 <form action="" method="post">
     <table width="100%">
@@ -137,45 +45,96 @@
             <td width="70%"> <!-- Karte -->
                 <div id="big_map" style="width:640px; height:640px; overflow:scroll;">
                     <div id="tbl_map" style="position:relative; display:inline; width: <? echo $width*32; ?>px; height: <? echo $height*32; ?>px;" align="center">
-	<span id="bg_layer" style="position:relative; display:table; width: <? echo $width*32; ?>px; height: <? echo $height*32; ?>px;">
-	<?
-    global $bg_div_field; echo $bg_div_field;
-    ?>
-	</span></div></div>
+	                    <span id="bg_layer" style="position:relative; display:table; width: <? echo $width*32; ?>px; height: <? echo $height*32; ?>px;">
+                        <?php
+                        for($y = 0; $y < $height; $y++) {
+                            // Y
+                            for($x = 0; $x < $width; $x++) {
+                                // X
+                                $t = 32 * $y;
+                                $l = 32 * $x;
+                                $bg = isset($field_bg[$y][$x]) ? $field_bg[$y][$x] : $main_bg;
+
+                                $field_layer1[$y][$x] = isset($field_layer1[$y][$x]) ? $field_layer1[$y][$x] : 'spacer.gif';
+                                $field_layer2[$y][$x] = isset($field_layer2[$y][$x]) ? $field_layer2[$y][$x] : 'spacer.gif';
+                                $field_layer4[$y][$x] = isset($field_layer4[$y][$x]) ? $field_layer4[$y][$x] : 'spacer.gif';
+
+                                ?>
+                                <span onClick="changeField(<?=$x?>,<?=$y?>);" title="<?=$x?>,<?=$y?>">
+                                    <span id="bg_<?=$x?>x<?=$y?>" style="position: absolute; z-index: 1; top: <?=$t?>px; left: <?=$l?>px;">
+                                        <img src="/images/tiles/<?=$bg?>">
+                                    </span>
+                                    <span id="bg_<?=$x?>x<?=$y?>_lay_1" style="position: absolute; z-index: 2; top: <?=$t?>px; left: <?=$l?>px;">
+                                        <img src="/images/tiles/<?=$field_layer1[$y][$x]?>">
+                                    </span>
+                                    <span id="bg_<?=$x?>x<?=$y?>_lay_2" style="position: absolute; z-index: 3; top: <?=$t?>px; left: <?=$l?>px;">
+                                        <img src="/images/tiles/<?=$field_layer2[$y][$x]?>">
+                                    </span>
+                                    <span id="bg_<?=$x?>x<?=$y?>_lay_4" style="position: absolute; z-index: 4; top: <?=$t?>px; left: <?=$l?>px;">
+                                        <img src="/images/tiles/<?=$field_layer4[$y][$x]?>">
+                                    </span>
+                                </span>
+                                <?
+                            }
+                        } ?>
+	                    </span>
+                    </div>
+                </div>
             </td>
             <td width="30%"> <!-- Tiles -->
                 <table>
                     <tr>
-                        <td><select id="sel_tileset" onChange="switchTileSet();"><?
-                                foreach($availableTilesets as $t){
-                                    if($t == $stdTS)
-                                        $list_tilesets .= "\n<option value=\"$t\" selected>$t</option>";
-                                    else
-                                        $list_tilesets .= "\n<option value=\"$t\">$t</option>";
-                                }
-                                echo $list_tilesets;
-                                ?></select><span id="tiles_from_this_tileset">&nbsp;</span></td>
+                        <td>
+                            <select id="sel_tileset" onChange="switchTileSet();">
+                                <? foreach($availableTilesets as $t){ ?>
+                                <option value="<?=$t?>" <?php if($t == $stdTS) { echo 'selected'; } ?>><?=$t?></option>
+                                <? } ?>
+                            </select>
+                            <span id="tiles_from_this_tileset">&nbsp;</span>
+                        </td>
                     </tr>
                     <tr>
-                        <td id="td_tileset" valign="top"><iframe id="iframe_tileset" width="100%" height="600" src="<? echo 'rpg/images/tiles/'.$stdTS.'/'.$stdTS.'.html'; ?>"></iframe></td>
+                        <td id="td_tileset" valign="top">
+                            <iframe id="iframe_tileset" width="100%" height="600" src="<? echo '/images/tiles/'.$stdTS.'/'.$stdTS.'.html'; ?>"></iframe>
+                        </td>
                     </tr>
                 </table>
             </td>
         </tr>
         <tr>
             <td colspan="2">
-                Kartenname: <input type="text" id="name" name="name" value="<? global $name; echo $name; ?>">
+                Kartenname: <input type="text" id="name" name="name" value="<?  echo $name; ?>">
                 <input type="hidden" id="file_name" name="file_name" value="<? echo $_POST['file_name']; ?>">
                 <input type="hidden" id="stage" name="stage" value="2">
                 <input type="hidden" id="main_bg" name="main_bg" value="<? global $main_bg; echo $main_bg; ?>">
                 <input type="hidden" id="width" name="width" value="<? global $width; echo $width; ?>">
                 <input type="hidden" id="height" name="height" value="<? global $height; echo $height; ?>">
                 <input type="hidden" id="edit" name="edit" value="<? echo $_POST['edit']; ?>">
-                <div id="div_fields"><? global $div_fields; echo $div_fields; ?>;</div>
+                <div id="div_fields">
+                    <?php for($y = 0; $y < $height; $y++) {
+                        // Y
+                        for($x = 0; $x < $width; $x++){
+                            // X
+                            $t = 32 * $y;
+                            $l = 32 * $x;
+                            $bg = (($field_bg[$y][$x]) ? $field_bg[$y][$x] : $main_bg);
+
+                            if($field_layer1[$y][$x]){
+                                ?><input id="field_<?=$x?>x<?=$y?>_layer_1" name="field_<?=$x?>x<?=$y?>_layer_1" value="<?=$field_layer1[$y][$x]?>" type="hidden"><?
+                            }
+                            if($field_layer2[$y][$x]){
+                                ?><input id="field_<?=$x?>x<?=$y?>_layer_2" name="field_<?=$x?>x<?=$y?>_layer_2" value="<?=$field_layer2[$y][$x]?>" type="hidden"><?
+                            }
+                            if($field_layer4[$y][$x]){
+                                ?><input id="field_<?=$x?>x<?=$y?>_layer_4" name="field_<?=$x?>x<?=$y?>_layer_4" value="<?=$field_layer4[$y][$x]?>" type="hidden"><?
+                            }
+
+
+                            ?><input id="field_<?=$x?>x<?=$y?>_bg" name="field_<?=$x?>x<?=$y?>_bg" value="<?=$bg?>" type="hidden"><?
+                        }
+                    } ?>
+                </div>
 
                 <input type="submit" value="Fertig.">
 </form>
-</td>
-</tr>
-</table>
 <div id="div_debug"></div>

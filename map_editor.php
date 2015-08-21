@@ -15,24 +15,7 @@ include('includes/rpg_config.php');
  * 1110 = Tsunade
  * 1075 = Istvan
  */
-/*
-if( !in_array($userdata['user_id'],array(104,75,57,638,202,1066,1110,1075))){
-	message_die(GENERAL_MESSAGE, $lang['Not_Authorised']);
-}*/
 
-// since we don't have a phpbb frame anymore, let's make some fake arrays.
-$users = array(
-	  54 => array( 'name' => 'Morpheusz', 	'rank' => 'dev' ),
-	  57 => array( 'name' => 'Kadaj', 		'rank' => 'dev' ),
-  	  75 => array( 'name' => 'shizo', 		'rank' => 'dev' ),
-	 104 => array( 'name' => 'Macavity', 	'rank' => 'admin' ),
-	 638 => array( 'name' => 'Deval', 		'rank' => 'intern', 'prefix' => '[d]' ),
-	 713 => array( 'name' => 'Santana', 	'rank' => 'editor', 'prefix' => '[s]' ),
-	 202 => array( 'name' => 'Pietro', 		'rank' => 'editor', 'prefix' => '[p]' ),
-	1066 => array( 'name' => 'Lunk', 		'rank' => 'editor', 'prefix' => '[l]' ),
-	1110 => array( 'name' => 'Tsunade', 	'rank' => 'intern', 'prefix' => '[t]' ),
-	1075 => array( 'name' => 'Istvan', 		'rank' => 'editor', 'prefix' => '[i]' ),
-);
 
 $userId = 104;
 $user = $users[$userId];
@@ -52,7 +35,7 @@ while($file = $d->read()) {
 		$availableTilesets[] = $file;
 	}
 }
-chdir("../../../");
+chdir("../../");
 $d->close();
 
 natcasesort($availableTilesets);
@@ -76,7 +59,7 @@ while($file = $d->read()){
 		$availableMaps[] = $file;
 	}
 }
-chdir("../../../");
+chdir("../");
 $d->close();
 
 natcasesort($availableMaps);
@@ -116,113 +99,43 @@ if( $stage == 'create' || empty($_POST['file_name']) ){
 	include("views/create_map.php");
 }
 elseif( $stage == 'edit_map'){
+	$edit_existing_map = ($_POST['edit'] == 1) ? true : false;
+	$editFileName = empty($_POST['file_name']) ? false : 'maps/'.$_POST['file_name'];
+
+
 	/**
 	 * Edit Map
 	 */
-	if(file_exists('rpg/maps/'.$_POST['file_name'])){
-		$map_file = file('rpg/maps/'.$_POST['file_name']);
-		foreach($map_file as $line){
-			$s = $line;
-			if(substr_count($s,'var name')){
-				$s = $s.';';
-			}
-			$s = str_replace('var ','$',$s);
-			$s = str_replace('new Array','array',$s);
-			$s = str_replace('field_','$field_',$s);
-			$s = str_replace('$$','$',$s);
-			$php_code .= $s;
-			
-		}
-		eval($php_code);
+	if( $editFileName && file_exists($editFileName)){
+
+		$mapSource = file_get_contents($editFileName);
+
+		$mapSource = preg_replace("/var name = '([^']+)'/", "\$name = '$1';", $mapSource);
+
+		$mapSource = str_replace('var ', '$', $mapSource);
+		$mapSource = str_replace('new Array','array',$mapSource);
+		$mapSource = str_replace('field_', '$field_', $mapSource);
+		$mapSource = str_replace('$$','$',$mapSource);
+
+		eval($mapSource);
 	}
-	$tiles_dir = 'rpg/images/tiles/';
-	$stdTS = $_POST['tileset'];
-	
-	$edit_existing_map = ($_POST['edit'] == 1) ? true : false;	
-	
+	else {
+		echo "<h3>Achtung: Map $editFileName wurde nicht gefunden.</h3>";
+	}
+	$tiles_dir = '/images/tiles/';
+	$stdTS = empty($_POST['tileset']) ? '001-Grassland01' : $_POST['tileset'];
+
 	if($edit_existing_map){
-		$stdTS = '001-Grassland01';
-		?>
-		<script language="JavaScript" type="text/javascript" src="includes/js_rpg_adm.js"></script>
-		<script language="JavaScript" type="text/javascript" src="<? echo 'rpg/maps/'.$_POST['file_name']; ?>"></script>
-		<script language="JavaScript" type="text/javascript">
-			var edit_existing_map = true;
-			
-			function init(){
-				generateFields(width,height,main_bg);
-				document.getElementById('name').value = name;
-				document.getElementById('main_bg').value = main_bg;
-				document.getElementById('width').value = width;
-				document.getElementById('height').value = height;
-				//setFields(width,height,field_bg,field_layer1,field_layer2,field_layer4);
-			}
-			
-		</script>
-		<?	
 	}
-	else{
+	else {
 		$name = $_POST['name'];
-		$main_bg = $_POST['tileset'].'/'.$_POST['main_bg'];	
- 		$width = $_POST['width'];
+		$main_bg = $_POST['tileset'].'/'.$_POST['main_bg'];
+		$width = $_POST['width'];
 		$height = $_POST['height'];
-		?>
-		<script language="JavaScript" type="text/javascript">
-			var edit_existing_map = false;
-		</script>
-		<?	
 	}
-	
- for($y = 0; $y < $height; $y++){//{{{ 
- 	// Y
-	$var_bg_js = array();
-	for($x = 0; $x < $width; $x++){//{{{
-		// X
-		$t = 32 * $y;
-		$l = 32 * $x;
-		$div_fields .= "\n";
-		if($field_layer1[$y][$x]){
-			$div_fields .= '<input id="field_'.$x.'x'.$y.'_layer_1" name="field_'.$x.'x'.$y.'_layer_1" value="'.$field_layer1[$y][$x].'" type="hidden">';
-		}
-		if($field_layer2[$y][$x]){
-			$div_fields .= '<input id="field_'.$x.'x'.$y.'_layer_2" name="field_'.$x.'x'.$y.'_layer_2" value="'.$field_layer2[$y][$x].'" type="hidden">';
-		}
-		if($field_layer4[$y][$x]){
-			$div_fields .= '<input id="field_'.$x.'x'.$y.'_layer_4" name="field_'.$x.'x'.$y.'_layer_4" value="'.$field_layer4[$y][$x].'" type="hidden">';
-		}
-		$bg = (($field_bg[$y][$x]) ? $field_bg[$y][$x] : $main_bg);
-		$field_layer1[$y][$x] = ($field_layer1[$y][$x]) ? $field_layer1[$y][$x] : 'spacer.gif';
-		$field_layer2[$y][$x] = ($field_layer2[$y][$x]) ? $field_layer2[$y][$x] : 'spacer.gif';
-		$field_layer4[$y][$x] = ($field_layer4[$y][$x]) ? $field_layer4[$y][$x] : 'spacer.gif';
-		$bg_div_field .= '
-		<span onClick="changeField('.$x.','.$y.');" alt="'.$x.','.$y.'" title="'.$x.','.$y.'">
-		<span id="bg_'.$x.'x'.$y.'" style="position: absolute; z-index: 1; top: '.$t.'px; left: '.$l.'px;">
-			<img src="rpg/images/tiles/'.$bg.'">
-		</span>
-		<span id="bg_'.$x.'x'.$y.'_lay_1" style="position: absolute; z-index: 2; top: '.$t.'px; left: '.$l.'px;">
-			<img src="rpg/images/tiles/'.$field_layer1[$y][$x].'">
-		</span>
-		<span id="bg_'.$x.'x'.$y.'_lay_2" style="position: absolute; z-index: 3; top: '.$t.'px; left: '.$l.'px;">
-			<img src="rpg/images/tiles/'.$field_layer2[$y][$x].'">
-		</span>
-		<span id="bg_'.$x.'x'.$y.'_lay_4" style="position: absolute; z-index: 4; top: '.$t.'px; left: '.$l.'px;">
-			<img src="rpg/images/tiles/'.$field_layer4[$y][$x].'">
-		</span>
-		</span>';
-		$div_fields .= '<input id="field_'.$x.'x'.$y.'_bg" name="field_'.$x.'x'.$y.'_bg" value="'.$bg.'" type="hidden">';
-	}
- }
- //$well_done = false;
 
 	include('views/edit_map.php');
 
-	if($_POST['edit'] == 1){
-	?>
-	<script language="JavaScript" type="text/javascript">
-		//init();
-		//setFields();
-	</script>
-	<?
-	}
 }
 elseif($stage == "2"){//{{{
 	/**
