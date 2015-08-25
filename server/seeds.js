@@ -24,24 +24,4 @@ Meteor.startup(function () {
          */
     }
 
-    if(Channels.find().count() == 0){
-        Channels.insert({
-            name: "general"
-        });
-    }
-
-    /**
-     * Roles
-     */
-    var admin = Meteor.users.findOne({email: "a.pape@paneon.de"});
-    if (admin){
-        Roles.addUsersToRoles(admin.id(), ['admin']);
-    }
-
-    // create a couple of roles if they don't already exist (THESE ARE NOT NEEDED -- just for the demo)
-    if(!Meteor.roles.findOne({name: "secret"}))
-        Roles.createRole("secret");
-
-    if(!Meteor.roles.findOne({name: "double-secret"}))
-        Roles.createRole("double-secret");
 });

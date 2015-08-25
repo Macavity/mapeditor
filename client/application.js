@@ -1,26 +1,16 @@
 /**
  * Subscriptions
  */
-Meteor.subscribe('posts');
-
-Meteor.subscribe('messages');
-
-Meteor.subscribe('publicCharacterData');
-
-Meteor.subscribe('myCharacters');
-
-Meteor.subscribe('channels');
-
-Meteor.subscribe('uploads');
+/*Meteor.subscribe('uploads');
 
 Meteor.subscribe('maps');
+
+Meteor.subscribe('tilesets');*/
 
 /**
  * Startup
  */
 Meteor.startup(function () {
-
-    Session.set('channel', 'general');
 
     sAlert.config({
         effect: '',
@@ -45,14 +35,6 @@ Accounts.ui.config({
 /**
  * Global Helpers
  */
-Template.registerHelper("activeCharNameFromId", function (userId) {
-    var char = Meteor.characters.findOne({ userId: userId, active: true });
-    if (typeof char === "undefined") {
-        throw new Meteor.Error("not-authorized");
-    }
-    return char.name;
-});
-
 Template.registerHelper("timestampToTime", function (timestamp) {
     var date = new Date(timestamp);
     var hours = date.getHours();

@@ -1,0 +1,18 @@
+<template name="tilesets">
+    <h2>Tilesets</h2>
+
+    <div>
+        <div class="loading">
+            {{>spinner}}
+        </div>
+        <div id="custom_select" class="border-box">
+            <select name="tileset_select"></select>
+        </div>
+        <div id="tileset"><div id="tileset_container"></div></div>
+
+        <div class="buttons">
+            <a href="#" data-template="tileset_form"><span class="fa fa-plus-sign"></span> Add tileset</a>
+            <a href="#" id="tilesets_remove" class="remove"><span class="fa fa-minus-sign"></span> Remove tileset</a>
+        </div>
+    </div>
+</template>

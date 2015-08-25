@@ -1,0 +1,82 @@
+<template name="editor">
+    <div class="container">
+        <div class="row">
+            <div class="btn-group">
+                <button class="btn btn-default">Import JSON File</button>
+            </div>
+        </div>
+        <div class="row">
+            <aside id="aside-left" class="col-md-3">
+
+                <section id="section-tilesets">
+                    <h2>Tilesets</h2>
+
+                    <div>
+                        <div class="loading">
+                            {{>spinner}}
+                        </div>
+                        <div id="custom_select" class="border-box">
+                            <select name="tileset_select"></select>
+                        </div>
+                        <div id="tileset"><div id="tileset_container"></div></div>
+
+                        <div class="buttons">
+                            <a href="#" data-template="tileset_form"><span class="fa fa-plus-sign"></span> Add tileset</a>
+                            <a href="#" id="tilesets_remove" class="remove"><span class="fa fa-minus-sign"></span> Remove tileset</a>
+                        </div>
+                    </div>
+                </section>
+
+            </aside>
+
+            <section id="section-canvas" class="col-md-6">
+                <div id="toolkit" class="btn-group">
+                    <button data-tool="draw" title="Brush Tool (B)" class="btn btn-default">
+                        <span class="glyphicon glyphicon-pencil active"></span>
+                    </button>
+                    <button data-tool="fill" title="Bucket Fill Tool (F)" class="btn btn-default">
+                        <span class="glyphicon glyphicon-tint"></span>
+                    </button>
+                    <button data-tool="erase" title="Eraser (E)" class="btn btn-default">
+                        <span class="glyphicon glyphicon-erase"></span>
+                    </button>
+
+                </div>
+                <div id="canvas">
+                    <div id="tiles"></div>
+                    <div class="selection"></div>
+                    <div id="viewport"></div>
+                    <div class="warning border-box"></div>
+                </div>
+            </section>
+
+            <aside id="aside-right" class="col-md-3">
+                <section id="section-minimap">
+                    <h2>Minimap</h2>
+
+                </section>
+                <section id="section-properties">
+                    <h2>Properties</h2>
+                    <div>
+                        <ul id="properties"></ul>
+                        <div class="btn-group">
+                            <button>+</button>
+                            <button>-</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="section-layers">
+                    <h2>Layers</h2>
+
+                    <div>
+                        <ul id="layerlist"></ul>
+                        <div class="buttons">
+                            <a href="#" id="layers-add"><span class="fa fa-plus-sign"></span> Add layer</a>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+</template>

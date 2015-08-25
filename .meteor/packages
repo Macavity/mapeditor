@@ -17,3 +17,6 @@ juliancwirko:s-alert-scale
 fourseven:scss
 cfs:standard-packages
 cfs:gridfs
+twbs:bootstrap
+ian:accounts-ui-bootstrap-3
+sacha:spin

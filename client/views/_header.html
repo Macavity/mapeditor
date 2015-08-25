@@ -7,14 +7,14 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="{{pathFor 'postsList'}}">News</a>
+            <a class="navbar-brand" href="{{pathFor 'news'}}">News</a>
         </div>
         <div class="collapse navbar-collapse" id="navigation">
             <ul class="nav navbar-nav">
                 {{#if currentUser}}
-                    <li><a href="{{pathFor 'game'}}">Spielen</a></li>
-                    <li><a href="{{pathFor 'charList'}}">Charaktere</a></li>
-                    <li><a href="{{pathFor 'adminWorld'}}">Admin/World</a></li>
+                    <li><a href="{{pathFor 'editor'}}">Editor</a></li>
+                    <li><a href="{{pathFor 'tilesets'}}">Tilesets</a></li>
+                    <li><a href="{{pathFor 'test'}}">Testdrive</a></li>
                 {{/if}}
             </ul>
             <ul class="nav navbar-nav navbar-right">
