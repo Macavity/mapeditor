@@ -43,7 +43,7 @@
         </tr>
         <tr>
             <td width="70%"> <!-- Karte -->
-                <div id="big_map" style="width:640px; height:640px; overflow:scroll;">
+                <div id="big_map" style="min-width:640px; min-height:640px; overflow:scroll;">
                     <div id="tbl_map" style="position:relative; display:inline; width: <? echo $width*32; ?>px; height: <? echo $height*32; ?>px;" align="center">
 	                    <span id="bg_layer" style="position:relative; display:table; width: <? echo $width*32; ?>px; height: <? echo $height*32; ?>px;">
                         <?php

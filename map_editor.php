@@ -62,6 +62,7 @@ while($file = $d->read()){
 chdir("../");
 $d->close();
 
+
 natcasesort($availableMaps);
 ?>
 <style type="text/css">

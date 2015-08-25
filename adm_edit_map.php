@@ -18,37 +18,19 @@
  *
  ***************************************************************************/
 
-define('IN_PHPBB', true);
 define('IN_RPG', true);
-$phpbb_root_path = './';
-include($phpbb_root_path . 'extension.inc');
-include($phpbb_root_path . 'common.'.$phpEx);
 
 require "includes/rpg_functions.php";
 require "includes/rpg_config.php";
 require "includes/class_map.php";
 //require "includes/class_character.php";
 
-$filename = "rpg_char.php";
-$rpglang = "eng";
-
 $debug = array();
-//
-// Start session management
-$userdata = session_pagestart($user_ip, PAGE_INDEX);
-init_userprefs($userdata);
-
-if( !$userdata['session_logged_in'] || ($userdata['user_id'] != 104 && $userdata['user_id'] != 75)){
-	header('Location: ' . append_sid("login.$phpEx?redirect=rpg_map.$phpEx", true));
-}
-// End session management
-//
 
 function generateTable($map_id){
-	global $db, $table_prefix;
 	// Create Table Field
 	$map = new Map($map_id);
-	$table_field .= '<table width="100%" border="1" background="" style="border:px solid; padding:4px 5px;background-color:white;" cellspacing="0" cellpadding="0">';
+	$table_field = '<table width="100%" border="1" background="" style="border:0px solid; padding:4px 5px;background-color:white;" cellspacing="0" cellpadding="0">';
 
 	for($i = 1; $i <= $map->height; $i++){	// Y
 		$table_field .= '
@@ -79,22 +61,26 @@ function generateTable($map_id){
 	return $table_field;
 }
 
+$maps = array(
+	array('map_id' => 'dalaran', 'map_name' => 'Dalaran', 'map_comment' => ""),
+	array('map_id' => 'dalaran_west', 'map_name' => 'Dalaran West', 'map_comment' => ""),
+);
+
+
 function getMapOptions($not_map){
-	global $db, $table_prefix;
 	// Get Maps
-	$sql = "SELECT * FROM {$table_prefix}rpg_maps WHERE map_id <> $not_map";
-	if(!$result = $db->sql_query($sql)){
-		message_die(GENERAL_MESSAGE,'Tot...alle...sie sind alle tot...*wimmer*');
-	}
-	while($row = $db->sql_fetchrow($result)){
+	global $maps;
+
+	$opts = "";
+	foreach($maps as $row){
 		$opts .= '
 		<option value="'.$row['map_id'].'">ID:'.$row['map_id'].', '.$row['map_name'].' ('.$row['map_comment'].')</option>';
 	}
 	return $opts;
 }
 
-// Aktionen ausführen
-if($_POST['act']){
+// Aktionen ausfÃ¼hren
+if(!empty($_POST['act'])){
 	$act = $_POST['act'];
 	if($act == 'new_jp'){
 		$table_field = generateTable($_POST['target_map']);
@@ -136,7 +122,7 @@ if($_POST['act']){
 		echo "SQL: <br>$sql<br>Sprungpunkt eingetragen.";
 	}
 }
-else{
+elseif(!empty($_GET['map'])){
 	$map_id = ($_GET['map']) ? $_GET['map'] : 1;
 	$table_field = generateTable($map_id);
 	$opts_map = getMapOptions($map_id);
@@ -150,29 +136,17 @@ else{
 	}
 	//-->
 	</script>
-	<? global $table_field; echo "$table_field"; ?>              			
 	<div id="new_jp" style="display:none">
-	<form action="adm_edit_map.php" method="post">
-	<input type="hidden" id="act" name="act" value="new_jp">
-	<input type="hidden" id="map_id" name="map_id" value="<? global $map_id; echo $map_id; ?>">
-	<br>X:<input type="text" id="var_x" name="var_x" value="0">
-	<br>Y:<input type="text" id="var_y" name="var_y" value="0">
-	<br>Neuer Sprungpunkt nach:
-	<select id="target_map" name="target_map"><? global $opts_map; echo $opts_map; ?></select>
-	<br>Name:<input type="text" id="var_name" name="var_name" value="">
-	<br><input type="submit" value="Absenden">
-	</form>
+		<form action="adm_edit_map.php" method="post">
+			<input type="hidden" id="act" name="act" value="new_jp">
+			<input type="hidden" id="map_id" name="map_id" value="<?php echo $map_id; ?>">
+			<br>X:<input type="text" id="var_x" name="var_x" value="0">
+			<br>Y:<input type="text" id="var_y" name="var_y" value="0">
+			<br>Neuer Sprungpunkt nach:
+			<select id="target_map" name="target_map"><?php echo $opts_map; ?></select>
+			<br>Name:<input type="text" id="var_name" name="var_name" value="">
+			<br><input type="submit" value="Absenden">
+		</form>
 	</div>
 	<?
 }
-
-
-// Debug
-foreach($debug as $w){
-        $i++;
-        $deb .= ($w == '-') ? "<hr>" : "<br>$i:$w";
-}
-$flag = getRates($user);
-$debug = ($flag['debug']) ? $deb : '';
-
-?>

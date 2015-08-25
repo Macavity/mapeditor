@@ -1,34 +1,8 @@
 <?
-//
-// Let's set the root dir for phpBB
-//
-$phpbb_root_path = './';
-define('IN_PHPBB', true);
+
 define('IN_RPG', true);
-include($phpbb_root_path . 'extension.inc'); 
-include($phpbb_root_path . 'common.'.$phpEx);
-include($phpbb_root_path . 'includes/rpg_config.'.$phpEx);
+include('includes/rpg_config.php');
 
-
-//
-// Start session management
-$userdata = session_pagestart($user_ip, PAGE_INDEX); 
-init_userprefs($userdata); 
-// End session management
-//
-
-//
-//check for userlevel
-//
-if( !$userdata['session_logged_in'] ){
-	header('Location: ' . append_sid("../login.$phpEx?redirect=adm_tileset.$phpEx", true));
-}
-
-if( $userdata['user_id'] != 104 && $userdata['user_id'] != 75 ){
-	message_die(GENERAL_MESSAGE, $lang['Not_Authorised']);
-}
-define('IN_RPG_ADMIN', true);
-//end check
 ?>
 <script language="JavaScript" type="text/javascript">
 // <!--
@@ -50,12 +24,12 @@ function hex2int($hex) {
                     );
 }
 
-if($_REQUEST['file']){
-	$srcSet = 'rpg/images/tilesets/'.$_REQUEST['file'];
+if(!empty($_REQUEST['file'])){
+	$srcSet = 'export/static/images/tilesets/'.$_REQUEST['file'];
 	$prefix = $_REQUEST['prefix'];
 	$TileSize = ($_REQUEST['size']) ? $_REQUEST['size'] : 32;
 	
-	$html_file_dir = 'rpg/images/tiles/'.$prefix.'/';
+	$html_file_dir = 'export/static/images/tiles/'.$prefix.'/';
 	// Verzeichnis erstellen falls noch nicht vorhanden
 	if(!is_dir($html_file_dir)){
 		mkdir($html_file_dir,0777);
@@ -187,7 +161,7 @@ if($_REQUEST['file']){
 	$fp = fopen("$html_file_name",'w');
 	if ($fp){
 		flock($fp,2);
-		echo "<br>'$html_file_name' wurde für andere User gesperrt.";
+		echo "<br>'$html_file_name' wurde fï¿½r andere User gesperrt.";
 		fputs ($fp, "\n<!-- Datei: $html_file_name -->");
 		fputs ($fp, "\n<!-- Liste der Bilder des Tilesets: $prefix -->");
 		fputs ($fp, "$htmlImages");
@@ -197,7 +171,7 @@ if($_REQUEST['file']){
 		fclose($fp);
 	}
 	else{
-		echo "<br>Datei konnte nicht zum  Schreiben geöffnet werden";
+		echo "<br>Datei konnte nicht zum  Schreiben geï¿½ffnet werden";
 	}
 	
 	echo "<br><b>New Tiles created from Tileset $srcSet</b>
@@ -209,7 +183,7 @@ if($_REQUEST['file']){
 else{
 	?>
 <form name="sendTilesSet" method="post" action="">
-  <br>Datei: <input type="text" name="file" id="file"> (aus dem Ordner 'rpg/images/tilesets')
+  <br>Datei: <input type="text" name="file" id="file"> (aus dem Ordner '/images/tilesets')
   <br>Tileset Name: <input type="text" name="prefix" id="prefix" value="-"> <i>(wird dann in gleichnamigen Ordner gespeichert) (keine Umlaute oder Sonderzeichen verwenden!)</i>
   <br>Tile Size/ Gr&ouml;&szlig;e der Felder: <input type="text" name="size" id="size" value="32">
   <br><fieldset>
@@ -224,7 +198,7 @@ else{
   Transparente Farbe: <input type="text" name="trans" id="trans" value="FFFFFF" size="8" maxlength="6"><br>
   oder Ort an dem die Transparente Farbe ist: <br>
   <input type="radio" id="trans_loc" name="trans_loc" value="clr" onChange="changeTrans();" checked>
-  Über Farbwert w&auml;hlen <br>
+  Ã¼ber Farbwert w&auml;hlen <br>
   <input type="radio" id="trans_loc" name="trans_loc" value="lu" onChange="changeTrans();">
   Links Oben <br>
   <input type="radio" id="trans_loc" name="trans_loc" value="ru" onChange="changeTrans();">
@@ -239,4 +213,4 @@ else{
 <?
 }
 
-?>
+
