@@ -1,38 +1,53 @@
 Meteor.methods({
-    newMap: function(data){
-        var userId = Meteor.userId();
+    insertTileset: function(fileInfo){
 
-        data.creatorId = userId;
-        //data.creatorName = Characters.findOne({userId: userId, active: true}).name;
+        // Get the tileset with the largest firstgid value.
+        var lastTileset = Tilesets.findOne({}, {$orderby: { firstgid: -1 }});
 
-        data.width = 1;
-        data.height = 1;
+        var firstgid = 1;
+        if(!!lastTileset){
+            firstgid = lastTileset.firstgid+lastTileset.tilecount;
+        }
 
-        Maps.insert(data, function(error, result){
+        var fs = Npm.require("fs");
+
+        /**
+         * Get tileset data
+         */
+
+        var imageInfo = Imagemagick.identify(fileInfo.url);
+
+        var imagewidth = imageInfo.width;
+        var imageheight = imageInfo.height;
+        var perRow = Math.floor(imagewidth/32);
+        var perCol = Math.ceil(imageheight/32);
+
+        console.log("perRow: "+imagewidth+" => "+perRow);
+        console.log("perCol: "+imageheight+" => "+perCol);
+        var tilecount = (perCol*perRow);
+        console.log("tilecount: "+tilecount);
+
+        var tilesetData = {
+            name: fileInfo.name,
+            image: fileInfo.path,
+            firstgid: firstgid,
+            tilecount: tilecount,
+            tileheight: 32,
+            tilewidth: 32,
+            imageheight: imageheight,
+            imagewidth: imagewidth,
+            margin: 0,
+            spacing: 0
+        };
+
+        Tilesets.insert(tilesetData, function(error, result){
             if(!!error){
                 console.log("Server exception");
-                console.log(error);
+                console.log(tilesetData);
+                console.log(error.sanitizedError);
                 throw new Meteor.Error(error.sanitizedError.error, error.sanitizedError.reason);
             }
         });
 
-    },
-
-    uploadTilemap: function(file){
-        Uploads.insert(file, function (err, fileObj) {
-            if (err){
-                // handle error
-            } else {
-                // handle success depending what you need to do
-                var userId = Meteor.userId();
-
-                console.log(fileObj);
-
-                var imagesURL = {
-                    "profile.image": "/cfs/files/uploads/" + fileObj._id
-                };
-                Meteor.users.update(userId, {$set: imagesURL});
-            }
-        });
     }
 });
