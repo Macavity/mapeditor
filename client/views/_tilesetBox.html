@@ -1,0 +1,43 @@
+<template name="tilesetBox">
+    <div class="panel-heading">
+        <h2 class="panel-title">Tilesets</h2>
+    </div>
+    <div class="panel-body">
+        {{#if Template.subscriptionsReady}}
+            <!-- Split button -->
+            <div class="btn-group">
+                <button id="active-tileset" type="button" class="btn btn-danger">Active Tileset</button>
+                <button title="Switch Tileset" type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Switch Tileset</span>
+                </button>
+                <ul class="dropdown-menu">
+                    {{#each tilesets}}
+                        <li><a href="#">Action</a></li>
+                    {{/each}}
+                </ul>
+            </div>
+
+            <div id="custom_select" class="border-box">
+                <select name="tileset_select" title=""></select>
+            </div>
+            <div id="tileset">
+                <div id="tileset_container"></div>
+            </div>
+
+            <div class="btn-group">
+                <button id="btn-add-tileset" data-template="tileset_form">
+                    <span class="glyphicon glyphicon-plus"></span>
+                    Add Tileset
+                </button>
+                <button id="btn-remove-tileset" class="btn btn-">
+                    <span class="fa fa-minus-sign"></span>
+                    Remove Tileset
+                </button>
+            </div>
+        {{else}}
+            {{>spinner}}
+        {{/if}}
+    </div>
+
+</template>

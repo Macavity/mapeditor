@@ -1,0 +1,15 @@
+<template name="news">
+    <div class="posts">
+        {{#each posts}}
+                <div class="post">
+                    <div class="post-content">
+                        <h3><a data-toggle="collapse" role="button" href="#{{_id}}" aria-expanded="false" aria-controls="post-body-{{_id}}">{{title}}</a></h3>
+                    </div>
+                    <br clear="all"/>
+                    <div id="{{_id}}" class="collapse">
+                        <div class="well">{{body}}</div>
+                    </div>
+                </div>
+        {{/each}}
+    </div>
+</template>
