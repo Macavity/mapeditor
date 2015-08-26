@@ -9,8 +9,6 @@ Meteor.methods({
             firstgid = lastTileset.firstgid+lastTileset.tilecount;
         }
 
-        var fs = Npm.require("fs");
-
         /**
          * Get tileset data
          */
@@ -28,7 +26,7 @@ Meteor.methods({
         console.log("tilecount: "+tilecount);
 
         var tilesetData = {
-            name: fileInfo.name,
+            name: fileInfo.name.replace(".png",""),
             image: fileInfo.path,
             firstgid: firstgid,
             tilecount: tilecount,

@@ -19,9 +19,18 @@ Meteor.startup(function () {
      * Tilesets
      */
     if(Tilesets.find().count() == 0){
-        /**
-         * @TODO Find a standard tileset
-         */
+        Tilesets.insert({
+            "name" : "000-Types",
+            "image" : "tilesets/000-Types.png",
+            "firstgid" : 1,
+            "tilecount" : 9,
+            "tileheight" : 32,
+            "tilewidth" : 32,
+            "imageheight" : 96,
+            "imagewidth" : 96,
+            "margin" : 0,
+            "spacing" : 0
+        });
     }
 
 });
