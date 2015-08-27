@@ -1,21 +1,25 @@
 <template name="editor">
+    {{>fpsMeter}}
     <div class="container">
         <div class="row col-md-offset-3" style="margin-bottom: 5px;">
             <div class="col-md-12">
-                <div class="btn-group">
-                    <button class="btn btn-default">Import JSON File</button>
-                </div>
 
-                <div id="toolkit" class="btn-group">
-                    <button data-tool="draw" title="Brush Tool (B)" class="btn btn-default">
-                        <span class="glyphicon glyphicon-pencil active"></span>
-                    </button>
-                    <button data-tool="fill" title="Bucket Fill Tool (F)" class="btn btn-default">
-                        <span class="glyphicon glyphicon-tint"></span>
-                    </button>
-                    <button data-tool="erase" title="Eraser (E)" class="btn btn-default">
-                        <span class="glyphicon glyphicon-erase"></span>
-                    </button>
+                <div class="btn-toolbar" role="toolbar" aria-label="...">
+                    <div class="btn-group">
+                        <button class="btn btn-default">Import JSON File</button>
+                    </div>
+
+                    <div id="toolkit" class="btn-group" role="group">
+                        <button data-tool="draw" title="Brush Tool (B)" class="btn btn-default">
+                            <span class="glyphicon glyphicon-pencil active"></span>
+                        </button>
+                        <button data-tool="fill" title="Bucket Fill Tool (F)" class="btn btn-default">
+                            <span class="glyphicon glyphicon-tint"></span>
+                        </button>
+                        <button data-tool="erase" title="Eraser (E)" class="btn btn-default">
+                            <span class="glyphicon glyphicon-erase"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

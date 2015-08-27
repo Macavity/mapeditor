@@ -88,6 +88,10 @@ Template.tilesetBox.events({
 
         var selection = container.find(".selection");
 
+        if(typeof Session.get('activeTileset') === "undefined"){
+            Session.set('activeTileset', $("#active-tileset").val());
+        }
+
         var activeTileset = Tilesets.findOne(Session.get('activeTileset'));
         var tileWidth = activeTileset.tilewidth;
         var tileHeight = activeTileset.tileheight;
