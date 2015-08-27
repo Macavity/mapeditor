@@ -2,7 +2,7 @@ Meteor.methods({
     insertTileset: function(fileInfo){
 
         // Get the tileset with the largest firstgid value.
-        var lastTileset = Tilesets.findOne({}, {$orderby: { firstgid: -1 }});
+        var lastTileset = Tilesets.findOne({}, {sort: { firstgid: -1 }});
 
         var firstgid = 1;
         if(!!lastTileset){

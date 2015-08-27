@@ -1,0 +1,19 @@
+<template name="canvas">
+    <div id="canvas" style="width:{{canvasWidth}}px; height: {{canvasHeight}}px;">
+        <div class="selection" style="">
+            <div id="brush" style="width: {{brushSelection.width}}px; height: {{brushSelection.height}}px; background: url('{{brushSelection.backgroundImage}}') no-repeat {{brushSelection.backgroundPosition}};"></div>
+        </div>
+        <div id="tilemap">
+            {{#each layers}}
+                <div class="layer" data-name="{{name}}" style="z-index: {{z}}">
+                    {{#each tiles}}
+                        <div class="tile"></div>
+                    {{/each}}
+                </div>
+            {{/each}}
+        </div>
+        <div id="grid" style="width:{{canvasWidth}}px; height: {{canvasHeight}}px; background-size: {{tileset.tilewidth}}px {{tileset.tileheight}}px;background-image:
+                repeating-linear-gradient(0deg, #000, #000 1px, transparent 1px, transparent {{tileset.tilewidth}}px),
+                repeating-linear-gradient(-90deg, #000, #000 1px, transparent 1px, transparent {{tileset.tileheight}}px);"></div>
+    </div>
+</template>
