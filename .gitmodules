@@ -1,0 +1,3 @@
+[submodule "packages/fpsmeter"]
+	path = packages/fpsmeter
+url=git@github.com:Macavity/meteor-fpsmeter.git
