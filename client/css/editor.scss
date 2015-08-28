@@ -91,6 +91,21 @@ $zCanvas: 0;
     z-index: $zGrid;
 
   }
+
+  .layer {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    opacity: 1;
+
+    @include prefix(transition, opacity .15s ease-in-out);
+
+    &.layer-invisible {
+      opacity: 0;
+    }
+
+  }
+
 }
 
 
@@ -148,38 +163,31 @@ $zCanvas: 0;
  */
 
 ul#layerlist {
-  border: 1px solid #282828;
   list-style: none;
+  padding: 0px;
 
-  & > li {
-    height: 10px;
-
-    color: #FFF;
-    text-shadow: -1px -1px rgba(0, 0, 0, 0.5);
-    font-size: 12px;
-    line-height: 10px;
-
-    padding: 5px 10px 10px 10px;
-    background-color: #666;
-
-    border-top: 1px solid #999;
-    border-bottom: 1px solid #333;
-
+  li {
     cursor: pointer;
 
-    &:last-child { border-bottom: 0px; }
+    i {
+      width: 30px;
+      opacity: 1;
 
-    &.active {
-      background-color: #2881ab;
-      border-top: 1px solid #83d8ff;
+      @include prefix(transition, opacity .15s ease-in-out);
+
+      &.layer-active-indicator {
+        opacity: 0;
+      }
     }
-  }
-  li span {
-    color: #222;
-    font-size: 14px;
-    text-shadow: 0px 1px rgba(255, 255, 255, 0.5);
 
-    &:first-child { padding-right: 5px; }
-    &:last-child { float: right; }
+    &.layer-invisible i {
+      opacity: 0;
+    }
+
+    &.layer-active {
+      i.layer-active-indicator {
+        opacity: 1;
+      }
+    }
   }
 }

@@ -18,9 +18,5 @@ Template.ManageTilesets.helpers({
 });
 
 Template.ManageTilesets.events({
-    'change #btn-upload-tileset': function(event) {
-        _.each(event.srcElement.files, function(file) {
-            Meteor.saveFile(file, file.name);
-        });
-    }
+    
 });

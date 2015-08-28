@@ -1,12 +1,29 @@
 <template name="editor">
-    {{>fpsMeter}}
     <div class="container">
         <div class="row col-md-offset-3" style="margin-bottom: 5px;">
             <div class="col-md-12">
 
                 <div class="btn-toolbar" role="toolbar" aria-label="...">
                     <div class="btn-group">
-                        <button class="btn btn-default">Import JSON File</button>
+                        <button class="btn btn-default" data-toggle="modal" data-target="#import-json-modal">Import JSON File</button>
+                    </div>
+
+                    <div class="modal fade" id="import-json-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">Import a file in json format</h4>
+                                </div>
+                                <div class="modal-body">
+                                    {{> upload_bootstrap fileTypes='.json' multiple=false formData=tilemapFormData callbacks=mapUploadComplete }}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary">Save changes</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="toolkit" class="btn-group" role="group">

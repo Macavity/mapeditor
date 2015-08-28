@@ -12,6 +12,10 @@ Template.tilesetBox.created = function(){
      */
     this.newSelectionTo = false;
 
+    if(typeof Session.get('activeTileset') === "undefined"){
+        Session.set('activeTileset', $("#active-tileset").val());
+    }
+
 };
 
 Template.tilesetBox.helpers({
@@ -26,6 +30,7 @@ Template.tilesetBox.helpers({
         if(!savedTileset){
             return false;
         }
+        Session.set('activeTileset', savedTileset);
         savedTileset.image = "/.uploads/"+savedTileset.image;
 
         return savedTileset;
@@ -87,10 +92,6 @@ Template.tilesetBox.events({
         var offset =  container.offset();
 
         var selection = container.find(".selection");
-
-        if(typeof Session.get('activeTileset') === "undefined"){
-            Session.set('activeTileset', $("#active-tileset").val());
-        }
 
         var activeTileset = Tilesets.findOne(Session.get('activeTileset'));
         var tileWidth = activeTileset.tilewidth;

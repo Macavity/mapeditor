@@ -5,7 +5,7 @@
         </div>
         <div id="tilemap">
             {{#each layers}}
-                <div class="layer" data-name="{{name}}" style="z-index: {{z}}">
+                <div id="layer-{{id}}" class="layer" data-name="{{name}}" style="z-index: {{z}}">
                     {{#each tiles}}
                         <div class="tile"></div>
                     {{/each}}
