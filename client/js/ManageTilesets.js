@@ -18,5 +18,5 @@ Template.ManageTilesets.helpers({
 });
 
 Template.ManageTilesets.events({
-    
+
 });

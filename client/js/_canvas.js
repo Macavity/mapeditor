@@ -14,9 +14,6 @@ Template.canvas.rendered = function(){
             Session.set('activeTileset', oneTileset._id);
         }
     }
-    else{
-        console.log(typeof Session.get('activeTileset'));
-    }
 };
 
 Template.canvas.helpers({
