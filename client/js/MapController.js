@@ -12,16 +12,30 @@ MapController = RouteController.extend({
     },
     index: function(){
 
-        var ownMaps = Maps.find({creatorId: Meteor.userId()});
-        var hasMaps = (ownMaps.count());
-
-
         Template.mapIndex.helpers({
             ownMaps: function(){
                 return Maps.find({creatorId: Meteor.userId()}).fetch();
             },
             hasMaps: function(){
                 return Maps.find({creatorId: Meteor.userId()}).count();
+            }
+        });
+
+        Template.mapIndex.events({
+            'click #create-map': function(event){
+                var newMap = {
+                    name: $("#mapName").val(),
+                    width: $("#mapWidth").val(),
+                    height: $("#mapHeight").val()
+                };
+                Meteor.call('createMap', newMap, function(error, result){
+                    if(!!error){
+                        sAlert.error(error);
+                    }
+                    else {
+                        Router.go('/map/edit/'+result);
+                    }
+                });
             }
         });
 
