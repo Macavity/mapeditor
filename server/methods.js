@@ -2,7 +2,7 @@ Meteor.methods({
     insertTileset: function(fileInfo){
 
         // Get the tileset with the largest firstgid value.
-        var lastTileset = Tilesets.findOne({}, {$orderby: { firstgid: -1 }});
+        var lastTileset = Tilesets.findOne({}, {sort: { firstgid: -1 }});
 
         var firstgid = 1;
         if(!!lastTileset){
@@ -47,5 +47,36 @@ Meteor.methods({
             }
         });
 
+    },
+    getMapFiles: function(){
+        /*var exec = Npm.require('child_process').exec;
+
+
+        var child = exec('ls -l ' + process.env.PWD + '/.uploads/maps/*.json', function(error, stdout, stderr) {
+
+            var files = [];
+            var lines = stdout.split("\n");
+
+            console.log(lines);
+
+            var regex = /.uploads\/maps\/(.+)\.json/;
+
+            var i, match;
+            for(i = 0; i < lines.length; i++){
+                if(lines[i].match(regex)){
+                    match = regex.exec(lines[i]);
+                    files.push(match[0]);
+                }
+            }
+
+            console.log(files);
+
+            if(error !== null) {
+                console.log('exec error: ' + error);
+            }
+            console.log("set mapJsonFiles Session data.");
+            Session.set('mapJsonFiles', files);
+
+        });*/
     }
 });

@@ -1,0 +1,13 @@
+<template name="layers">
+    <div class="panel-heading">
+        <h2 class="panel-title"><i class="glyphicon glyphicon-th-list"></i> Layers</h2>
+    </div>
+
+    <div class="panel-body">
+        <ul id="layerlist">
+            {{#each layers}}
+              <li data-id="{{id}}" class="{{#if active}}layer-active{{/if}}"><i class="layer-active-indicator glyphicon glyphicon-hand-right"></i><i class="glyphicon glyphicon-eye-open toggle-layer"></i>{{name}}</li>
+            {{/each}}
+        </ul>
+    </div>
+</template>
