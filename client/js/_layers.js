@@ -1,49 +1,9 @@
 
 Template.layers.created = function(){
 
-    this.layerData = [
-        {
-            z: 1,
-            id: "background",
-            name: "Background",
-            active: true,
-            tiles: []
-        },
-        {
-            z: 2,
-            id: "floor1",
-            name: "Layer Floor 1",
-            active: false,
-            tiles: []
-        },
-        {
-            z: 3,
-            id: "floor2",
-            name: "Layer Floor 2",
-            active: false,
-            tiles: []
-        },
-        {
-            z: 11,
-            id: "sky1",
-            name: "Layer Sky 1",
-            active: false,
-            tiles: []
-        },
-        {
-            z: 12,
-            id: "sky2",
-            name: "Layer Sky 2",
-            active: false,
-            tiles: []
-        }
-    ];
 };
 
 Template.layers.helpers({
-    layers: function(){
-        return Template.instance().layerData;
-    }
 });
 
 Template.layers.events({

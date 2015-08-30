@@ -5,60 +5,7 @@ Template.canvas.created = function(){
 
 };
 
-Template.canvas.rendered = function(){
-
-    var activeTileset = Session.get('activeTileset');
-    if(typeof activeTileset === "undefined" || activeTileset === ""){
-        var oneTileset = Tilesets.findOne({name: {$ne: "000-Types"}});
-        if(oneTileset){
-            Session.set('activeTileset', oneTileset._id);
-        }
-    }
-};
-
 Template.canvas.helpers({
-    layers: function(){
-        var layers = [
-          {
-              z: 1,
-              id: "background",
-              name: "Background",
-              tiles: []
-          },
-          {
-              z: 2,
-              id: "floor1",
-              name: "Layer Floor 1",
-              tiles: []
-          },
-          {
-              z: 3,
-              id: "floor2",
-              name: "Layer Floor 2",
-              tiles: []
-          },
-          {
-              z: 11,
-              id: "sky1",
-              name: "Layer Sky 1",
-              tiles: []
-          },
-          {
-              z: 12,
-              id: "sky2",
-              name: "Layer Sky 2",
-              tiles: []
-          }
-        ];
-
-        return layers;
-    },
-    canvasWidth: function(){
-        return 30*32;
-    },
-    canvasHeight: function(){
-        return 30*32;
-    },
     tileset: function(){
         var tilesetId = Session.get('activeTileset');
         if(!!tilesetId){

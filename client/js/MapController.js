@@ -45,15 +45,100 @@ MapController = RouteController.extend({
         });
 
     },
-    edit: function(id){
+    edit: function(){
 
-        var map = Maps.find({creatorId: Meteor.userId(), id: id});
+        var mapId = Router.current().params._id;
 
-        //var characters = Characters.find({userId: Meteor.userId()});
-        /*return {
-         characters:characters,
-         canCreateMoreChars: ~(characters.length < 6)
-         }*/
-        this.render('mapEdit');
+        var map = Maps.findOne({_id: mapId, creatorId: Meteor.userId()});
+
+        if(!map){
+            sAlert("This Map doesn't exist.");
+            this.render("access_denied");
+            return;
+        }
+
+        var activeTileset = Session.get('activeTileset');
+        if(typeof activeTileset === "undefined" || activeTileset === ""){
+            var oneTileset = Tilesets.findOne({name: {$ne: "000-Types"}});
+            if(oneTileset){
+                Session.set('activeTileset', oneTileset._id);
+            }
+        }
+
+        /**
+         * Properties
+         * @type {Array}
+         */
+        var properties = [];
+
+        properties.push({
+            field: "author", value: map.creatorName
+        });
+        properties.push({
+            field: "name", value: map.name
+        });
+        properties.push({
+            field: "width", value: map.width
+        });
+        properties.push({
+            field: "height", value: map.height
+        });
+        properties.push({
+            field: "tileheight", value: map.tileheight
+        });
+        properties.push({
+            field: "tilewidth", value: map.tilewidth
+        });
+
+        /**
+         * Layers
+         */
+        var mapLayers = [
+            {
+                z: 1,
+                id: "background",
+                name: "Background",
+                active: true,
+                tiles: []
+            },
+            {
+                z: 2,
+                id: "floor1",
+                name: "Layer Floor 1",
+                active: false,
+                tiles: []
+            },
+            {
+                z: 3,
+                id: "floor2",
+                name: "Layer Floor 2",
+                active: false,
+                tiles: []
+            },
+            {
+                z: 11,
+                id: "sky1",
+                name: "Layer Sky 1",
+                active: false,
+                tiles: []
+            }
+        ];
+
+        Template.mapEdit.helpers({
+            activeTileset: function(){
+                return Session.get('activeTileset');
+            }
+
+        });
+
+        this.render('mapEdit', {
+            data: {
+                map: map,
+                mapProperties: properties,
+                mapLayers: mapLayers,
+                canvasWidth: (map.width * map.tilewidth),
+                canvasHeight: (map.height * map.tileheight)
+            }
+        });
     }
 });
