@@ -7,7 +7,7 @@
             {{#each layers}}
                 <div id="layer-{{id}}" class="layer" data-name="{{name}}" style="z-index: {{z}}">
                     {{#each tiles}}
-                        <div class="tile"></div>
+                        <div class="tile" style="width:{{map.tilewidth}}px; height:{{map.tileheight}}px; background: url('{{backgroundImage}}') no-repeat {{backgroundPosition}};"></div>
                     {{/each}}
                 </div>
             {{/each}}

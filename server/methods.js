@@ -48,6 +48,29 @@ Meteor.methods({
         });
 
     },
+    createMap: function(mapData){
+        // Default Values. Can be changed during the edit process.
+        mapData.tileheight = 32;
+        mapData.tilewidth = 32;
+
+        mapData.creatorId = Meteor.userId();
+        mapData.creatorName = Meteor.user().username;
+
+        var result = Maps.insert(mapData, function(error, result){
+            if(!!error){
+                console.log("Server exception");
+                console.log(mapData);
+                console.log(error.sanitizedError);
+                throw new Meteor.Error(error.sanitizedError.error, error.sanitizedError.reason);
+            }
+            else {
+                return result;
+            }
+        });
+
+        return result;
+
+    },
     getMapFiles: function(){
         /*var exec = Npm.require('child_process').exec;
 

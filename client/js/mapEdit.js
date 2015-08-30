@@ -1,10 +1,10 @@
-Template.editor.created = function () {
+Template.mapEdit.created = function () {
 
     Session.set('importJson', {});
 
 };
 
-Template.editor.helpers({
+Template.mapEdit.helpers({
     tilesets: function(){
         return Tilesets.find();
     },
@@ -18,7 +18,11 @@ Template.editor.helpers({
     }
 });
 
-Template.editor.events({
+Template.mapEdit.events({
+    /**
+     * Import JSON Map File
+     * @param event
+     */
     'change #importJsonFile': function(event){
         var files = event.target.files; // FileList object
 
@@ -35,6 +39,9 @@ Template.editor.events({
             // Closure to capture the file information.
             reader.onload = function(e) {
                 var json = JSON.parse(e.target.result);
+
+
+
                 Session.set('importJson', json);
             };
 

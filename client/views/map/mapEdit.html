@@ -1,31 +1,13 @@
-<template name="editor">
+<template name="mapEdit">
     <div class="container">
+        <h1>Map: {{map.name}}</h1>
+
         <div class="row col-md-offset-3" style="margin-bottom: 5px;">
             <div class="col-md-12">
 
                 <div class="btn-toolbar" role="toolbar" aria-label="...">
                     <div class="btn-group">
                         <button class="btn btn-default" data-toggle="modal" data-target="#import-json-modal">Import JSON File</button>
-                    </div>
-
-                    <div class="modal fade" id="import-json-modal" tabindex="-1" role="dialog" aria-labelledby="openLabel">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                                    <h4 class="modal-title" id="openLabel">Import a file in json format</h4>
-                                </div>
-                                <div class="modal-body">
-
-                                    <input type="file" id="importJsonFile" name="importJsonFile" />
-
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                    <button id="import-json-data" type="button" class="btn btn-primary" data-dismiss="modal">Import Data</button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div id="toolkit" class="btn-group" role="group">
@@ -52,36 +34,43 @@
             </aside>
 
             <section id="section-canvas" class="col-md-6">
-                {{>canvas}}
+                {{>canvas map=map layers=mapLayers canvasWidth=canvasWidth canvasHeight=canvasHeight}}
             </section>
 
             <aside id="aside-right" class="col-md-3">
                 <section id="section-minimap" class="panel panel-primary">
-                    {{>minimap}}
+                    {{>minimap layers=mapLayers}}
                 </section>
                 <section id="section-properties" class="panel panel-primary">
-                    {{>properties}}
+                    {{>properties properties=mapProperties}}
                 </section>
 
                 <section id="section-layers" class="panel panel-primary">
-                    {{>layers}}
+                    {{>layers layers=mapLayers}}
                 </section>
             </aside>
         </div>
     </div>
-    <div class="modal fade" id="upload-json-modal" tabindex="-1" role="dialog" aria-labelledby="uploadLabel">
+
+    <div class="modal fade" id="import-json-modal" tabindex="-1" role="dialog" aria-labelledby="openLabel">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="uploadLabel">Import a file in json format</h4>
+                    <h4 class="modal-title" id="openLabel">Import a file in json format</h4>
                 </div>
                 <div class="modal-body">
-                    {{> upload_bootstrap fileTypes='.json' multiple=false formData=tilemapFormData }}
+
+                    <input type="file" id="importJsonFile" name="importJsonFile" />
+
+                    <div id="importContent" style="display: none">
+
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">Save changes</button>
+                    <button id="import-json-data" type="button" class="btn btn-primary" data-dismiss="modal">Import Data</button>
                 </div>
             </div>
         </div>
@@ -96,6 +85,8 @@
                 </div>
                 <div class="modal-body">
                     {{> upload_bootstrap fileTypes='.json' multiple=false formData=tilemapFormData }}
+
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
