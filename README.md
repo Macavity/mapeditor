@@ -91,6 +91,20 @@ Keep in mind that this editor is still in a very early stage and not working yet
 3. Go into your local folder of the repository and start meteor from the terminal/shell with ```meteor```
 4. Unless port 3000 was already used you can now use the editor in your browser [http://localhost:3000](http://localhost:3000)
 
+# To Do
+
+Open to suggestions :)
+
+* Actually placing tiles on the Map with Draw Tool
+* Erasing Tiles with Erase Tool
+* Minimap for larger maps
+* Bucket Tool to fill larger areas
+* Keyboard shortcuts for the tools
+* Seperate Layer for different types of tiles on the map - used for Collisions for example
+* Testdrive a map - walk around with a character, test collisions
+* Support [TMX](https://github.com/bjorn/tiled/wiki/TMX-Map-Format) format as well 
+
+
 # Credits
 
 Based on an old tile based browsergame for [Last Anixile](http://www.last-anixile.de)
