@@ -6,6 +6,10 @@ Template.mapEdit.created = function () {
 
 };
 
+Template.mapEdit.rendered = function(){
+    Map.initialize();
+};
+
 Template.mapEdit.helpers({
     tilesets: function(){
         return Tilesets.find();
@@ -42,9 +46,9 @@ Template.mapEdit.helpers({
 
         var activeTool = Template.instance().activeTool;
 
-        _.each(tools, function(index){
-            if(tools[index].tool == activeTool){
-                tools[index].active = true;
+        _.each(tools, function(tool){
+            if(tool.tool == activeTool){
+                tool.active = true;
             }
         });
     },

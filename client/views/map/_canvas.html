@@ -5,11 +5,11 @@
         </div>
         <div id="tilemap">
             {{#each layers}}
-                <div id="layer-{{id}}" class="layer" data-name="{{name}}" style="z-index: {{z}}">
+                <canvas id="layer-{{id}}" class="layer" data-name="{{name}}" style="z-index: {{z}}; width:{{canvasWidth}}px; height: {{canvasHeight}}px;">
                     {{#each tiles}}
                         <div class="tile" style="width:{{map.tilewidth}}px; height:{{map.tileheight}}px; background: url('{{backgroundImage}}') no-repeat {{backgroundPosition}};"></div>
                     {{/each}}
-                </div>
+                </canvas>
             {{/each}}
         </div>
         {{! A scalable grid in the background }}
