@@ -11,15 +11,11 @@
                     </div>
 
                     <div id="toolkit" class="btn-group" role="group">
-                        <button data-tool="draw" title="Brush Tool (B)" class="btn btn-default">
-                            <span class="glyphicon glyphicon-pencil active"></span>
-                        </button>
-                        <button data-tool="fill" title="Bucket Fill Tool (F)" class="btn btn-default">
-                            <span class="glyphicon glyphicon-tint"></span>
-                        </button>
-                        <button data-tool="erase" title="Eraser (E)" class="btn btn-default">
-                            <span class="glyphicon glyphicon-erase"></span>
-                        </button>
+                        {{#each availableTools}}
+                            <button data-tool="{{tool}}" title="{{label}}" class="btn btn-default active">
+                                <span class="glyphicon {{icon}} {{#if active}}active{{/if}}"></span>
+                            </button>
+                        {{/each}}
                     </div>
                 </div>
             </div>

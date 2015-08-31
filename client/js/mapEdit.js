@@ -2,6 +2,8 @@ Template.mapEdit.created = function () {
 
     Session.set('importJson', {});
 
+    this.activeTool = "draw";
+
 };
 
 Template.mapEdit.helpers({
@@ -15,6 +17,39 @@ Template.mapEdit.helpers({
     },
     mapFiles: function(){
         //return this.fs.cwd().files();
+    },
+    availableTools: function(){
+        var tools = [
+            {
+                label: "Brush Tool (B)",
+                tool: "draw",
+                icon: "glyphicon-pencil",
+                active: false
+            },
+            {
+                label: "Bucket Fill Tool (F)",
+                tool: "fill",
+                icon: "glyphicon-tint",
+                active: false
+            },
+            {
+                label: "Eraser (E)",
+                tool: "erase",
+                icon: "glyphicon-erase",
+                active: false
+            }
+        ];
+
+        var activeTool = Template.instance().activeTool;
+
+        _.each(tools, function(index){
+            if(tools[index].tool == activeTool){
+                tools[index].active = true;
+            }
+        });
+    },
+    activeTool: function(){
+        return Template.instance().activeTool;
     }
 });
 
@@ -79,5 +114,12 @@ Template.mapEdit.events({
         });
 
         Session.set('mapProperties', properties);
+    },
+    /**
+     * Switch currently used tool
+     * @param event
+     */
+    'click #toolkit button': function(event){
+
     }
 });
