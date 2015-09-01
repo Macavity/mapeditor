@@ -1,7 +1,7 @@
 /**
  *
  */
-Map = (function ($) {
+Tilemap = (function ($) {
 
     /**
      * Available loggin level types
@@ -115,8 +115,6 @@ Map = (function ($) {
         _.each(canvasElements, function(canvas, index){
             layers[index] = canvas.getContext("2d");
         });
-
-        mapElement = canvas[0].getContext("2d");
 
         _.each(mapData.tilesets, function(tileset, index){
             var img = new Image();
