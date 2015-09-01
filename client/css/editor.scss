@@ -58,9 +58,6 @@ $zCanvas: 0;
   overflow: hidden;
   background-color: gray;
 
-  &.nogrid {
-    background-image: none !important;
-  }
   .selection {
     position: absolute;
     z-index: $zSelection;
@@ -84,7 +81,7 @@ $zCanvas: 0;
     repeating-linear-gradient(-90deg, #000, #000 1px, transparent 1px, transparent $height);
     height:100%;
     width:100%;
-    opacity:0.14;
+    opacity:0.4;
     position:absolute;
     top:0;
     left:0;
