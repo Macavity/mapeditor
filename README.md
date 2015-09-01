@@ -4,6 +4,8 @@ The editor gives you the ability to import json files that were saved in [Tiled]
 
 Keep in mind that this editor is still in a very early stage and not working yet.
 
+![Screenshot](http://i.imgur.com/qwZRKFz.jpg?raw)
+
 ### Example File
 
 ```json
