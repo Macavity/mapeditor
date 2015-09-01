@@ -30,7 +30,7 @@ Template.tilesetBox.helpers({
         if(!savedTileset){
             return false;
         }
-        Session.set('activeTileset', savedTileset);
+        Session.set('activeTileset', savedTileset._id);
         savedTileset.image = "/.uploads/"+savedTileset.image;
 
         return savedTileset;
