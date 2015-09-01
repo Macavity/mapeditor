@@ -1,5 +1,5 @@
 /**
- *
+ * Tilemap Functions
  */
 Tilemap = (function ($) {
 
@@ -47,68 +47,18 @@ Tilemap = (function ($) {
     var sprites = [];
     var spritesToLoad = 0;
 
-    var mapData = {
-        "properties": {
-            "author": "shizo",
-            "name": "Dalaran - Nordtor"
-        },
-        "height": 30,
-        "width": 30,
-        "orientation": "orthogonal",
-        "renderorder": "right-down",
-        "tileheight": 32,
-        "tilewidth": 32,
-        "layers": [
-            {
-                "name": "Background",
-                "type": "tilelayer",
-                "height": 30,
-                "width": 30,
-                "data": [
-                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                    3, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 0, 0, 0, 0, 0, 0, 2, 11, 1, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 3, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-                    3, 0, 2, 1, 1, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1,
-                    3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1,
-                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-                ]
-            }
-        ],
-        "tilesets": [
-            {
-                "_id" : "hsimANpFmwuzRJGHF",
-                "name" : "000-Types",
-                "image" : "tilesets/000-Types.png",
-                "firstgid" : 1,
-                "tilecount" : 9,
-                "tileheight" : 32,
-                "tilewidth" : 32,
-                "imageheight" : 96,
-                "imagewidth" : 96,
-                "margin" : 0,
-                "spacing" : 0
-            }, {
-                "_id" : "FaWPqnNdAQd7WoE9P",
-                "name" : "magecity",
-                "image" : "tilesets/magecity.png",
-                "firstgid" : 10,
-                "tilecount" : 368,
-                "tileheight" : 32,
-                "tilewidth" : 32,
-                "imageheight" : 1450,
-                "imagewidth" : 256,
-                "margin" : 0,
-                "spacing" : 0
-            }
-        ],
-        "version": 1
-    };
-    var initialize = function(){
+    /**
+     * @type {MapSchema}
+     */
+    var map;
+
+    /**
+     *
+     * @param {MapSchema} mapParam
+     */
+    var initialize = function(mapParam){
+
+        map = mapParam;
 
         var canvasElements = $("#canvas").find("canvas");
 
@@ -116,14 +66,25 @@ Tilemap = (function ($) {
             layers[index] = canvas.getContext("2d");
         });
 
-        _.each(mapData.tilesets, function(tileset, index){
+        _.each(map.tilesets, function(tileset, index){
             var img = new Image();
-            img.src = "/.uploads/" + tileset.image;
+            img.src = tileset.image;
             img.onload = allSpritesLoaded;
-            mapData.tilesets[index].img = img;
+
+            tileset.colCount = Math.floor(tileset.imagewidth / tileset.tilewidth);
+            tileset.rowCount = Math.floor(tileset.imageheight / tileset.tileheight);
+
+            tileset.img = img;
+
+            map.tilesets[index] = tileset;
+
             sprites[index] = img;
         });
         spritesToLoad = sprites.length;
+
+        if(spritesToLoad == 0){
+            drawMap();
+        }
 
         initialized = true;
 
@@ -138,38 +99,48 @@ Tilemap = (function ($) {
 
     var drawMap = function(){
 
-        var layerData = mapData.layers[0].data;
+        _.each(map.layers, function(layer){
+            debug("draw layer "+layer.id);
+            var canvas = $("#layer-"+layer.id);
+            var context = canvas[0].getContext("2d");
 
-        //mapElement.drawImage(image, 0, 0, 32, 32, 0, 0, 32, 32);
-
-
-        _(layerData).each(function(tileId, index) {
-            //_(row).each(function(tileId, x){
-                //debug("x:"+x);
-
-                if(tileId !== 0){
-                    var x = Math.floor(index % mapData.layers[0].width);
-                    var y = Math.floor(index / mapData.layers[0].height);
-                    drawTile(x, y, tileId);
+            _(layer.data).each(function(tileId, index) {
+                if (tileId !== 0) {
+                    var x = Math.floor(index % map.width);
+                    var y = Math.floor(index / map.height);
+                    drawTile(context, x, y, tileId);
                 }
-            //});
+            });
+
         });
 
     };
 
-    var drawTile = function(x,y, tileId){
-        debug("drawTile "+x+","+y+","+tileId);
+    var drawTile = function(context, x,y, tileId){
+        //debug("drawTile "+x+","+y+":");
 
         var tile = getTile(tileId);
 
-
-
-        mapElement.drawImage(tile.image, tile.x, tile.y, mapData.tilewidth, mapData.tileheight, x* mapData.tilewidth, y*mapData.tileheight, mapData.tilewidth, mapData.tileheight);
-
-        /*mapElement.fillRect(
-            x * 32, y * 32,
-            32, 32
-        );*/
+        if(!tile || tile === 0){
+            return;
+        }
+        context.drawImage(
+            tile.image,
+            // The X coordinate where to start clipping
+            tile.x,
+            // The Y coordinate where to start clipping
+            tile.y,
+            // Clipping width
+            tile.width,
+            // Clipping height
+            tile.height,
+            // The X coordinate where to place the image on the canvas
+            x * map.tilewidth,
+            // The Y coordinate where to place the image on the canvas
+            y * map.tileheight,
+            // Width & Height on the canvas
+            map.tilewidth,
+            map.tileheight);
     };
 
     /**
@@ -178,35 +149,40 @@ Tilemap = (function ($) {
      * @returns {{x: number, y: number, image: HTMLImageElement}}
      */
     var getTile = function(tileId){
-        var tile = {};
+        var tile = {
+            x: 0,
+            y: 0,
+            image: HTMLImageElement
+        };
 
         /*
          * Loop through the tilesets searching for the one where firstgid <= tileId
          */
         var i;
-        for (i = mapData.tilesets.length-1; i >= 0; i--) {
-            if (mapData.tilesets[i].firstgid <= tileId)
+        for (i = map.tilesets.length-1; i >= 0; i--) {
+            if (map.tilesets[i].firstgid <= tileId)
                 break;
         }
 
-        var tileset = mapData.tilesets[i];
+        var tileset = map.tilesets[i];
 
         tile.image = sprites[i];
 
         /*
          * Calculate x/y offset based on the properties of this tileset
          */
-        var rowCount = Math.floor(tileset.imagewidth / tileset.tilewidth);
-        var colCount = Math.floor(tileset.imageheight / tileset.tileheight);
 
         var localTileId = tileId - tileset.firstgid;
 
-        var localTileX = Math.floor(localTileId % colCount);
-        var localTileY = Math.floor(localTileId / rowCount);
+        var localTileX = Math.floor(localTileId % tileset.colCount);
+        var localTileY = Math.floor(localTileId / tileset.colCount);
 
+        //debug(["localTile: "+localTileId+", "+localTileX+"/"+localTileY]);
 
         tile.x = (localTileX * tileset.tilewidth);
         tile.y = (localTileY * tileset.tileheight);
+        tile.width = tileset.tilewidth;
+        tile.height = tileset.tileheight;
 
         //debug(tile);
 

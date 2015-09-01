@@ -5,10 +5,8 @@
         </div>
         <div id="tilemap">
             {{#each layers}}
-                <canvas id="layer-{{id}}" class="layer" data-name="{{name}}" style="z-index: {{z}}; width:{{canvasWidth}}px; height: {{canvasHeight}}px;">
-                    {{#each tiles}}
-                        <div class="tile" style="width:{{map.tilewidth}}px; height:{{map.tileheight}}px; background: url('{{backgroundImage}}') no-repeat {{backgroundPosition}};"></div>
-                    {{/each}}
+                <canvas id="layer-{{id}}" class="layer {{#if active}}layer-active{{/if}} {{#unless visible}}layer-invisible{{/unless}}" data-name="{{name}}" style="z-index: {{z}}; width:{{canvasWidth}}px; height: {{canvasHeight}}px" width="{{canvasWidth}}" height= "{{canvasHeight}}">
+
                 </canvas>
             {{/each}}
         </div>
