@@ -7,7 +7,7 @@ Template.mapEdit.created = function () {
 };
 
 Template.mapEdit.rendered = function(){
-    Map.initialize();
+    Tilemap.initialize(this.data.map);
 };
 
 Template.mapEdit.helpers({
@@ -125,5 +125,32 @@ Template.mapEdit.events({
      */
     'click #toolkit button': function(event){
 
+    },
+    'click #btn-grid-checkbox': function(/*event*/){
+        var $checkbox = $("#grid-checkbox");
+        var $button = $("#btn-grid-checkbox");
+        var $grid = $("#grid");
+        var $icon = $button.find("i");
+
+        var isChecked = $checkbox.is(':checked');
+
+        if(isChecked){
+            // Deaktivate Grid
+            $checkbox.prop("checked", false);
+            $button.data('state', "off");
+            $button.removeClass('btn-primary active')
+                .addClass('btn-default');
+            $icon.removeClass('glyphicon-check').addClass('glyphicon-unchecked');
+            $grid.hide();
+        }
+        else{
+            // Activate Grid
+            $checkbox.prop("checked", true);
+            $button.data('state', "on");
+            $button.removeClass('btn-default')
+                .addClass('btn-primary active');
+            $icon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
+            $grid.show();
+        }
     }
 });

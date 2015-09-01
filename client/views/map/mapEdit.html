@@ -17,14 +17,23 @@
                             </button>
                         {{/each}}
                     </div>
+                    <div class="btn-group" role="grop">
+                        <span class="button-checkbox">
+                            <button id="btn-grid-checkbox" type="button" class="btn btn-primary active">
+                                <i class="state-icon glyphicon glyphicon-check"></i>
+                                Grid
+                            </button>
+                            <input id="grid-checkbox" type="checkbox" class="hidden" checked="checked"/>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="row">
             <aside id="aside-left" class="col-md-3">
 
-                <section id="section-tilesets" class="panel panel-primary">
-                    {{> tilesetBox}}
+                <section id="section-properties" class="panel panel-primary">
+                    {{>properties properties=mapProperties}}
                 </section>
 
             </aside>
@@ -34,16 +43,16 @@
             </section>
 
             <aside id="aside-right" class="col-md-3">
-                <section id="section-minimap" class="panel panel-primary">
+                <!--section id="section-minimap" class="panel panel-primary">
                     {{>minimap layers=mapLayers}}
-                </section>
-                <section id="section-properties" class="panel panel-primary">
-                    {{>properties properties=mapProperties}}
-                </section>
-
+                </section-->
                 <section id="section-layers" class="panel panel-primary">
                     {{>layers layers=mapLayers}}
                 </section>
+                <section id="section-tilesets" class="panel panel-primary">
+                    {{> tilesetBox}}
+                </section>
+
             </aside>
         </div>
     </div>
