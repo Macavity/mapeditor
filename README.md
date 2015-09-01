@@ -4,6 +4,8 @@ The editor gives you the ability to import json files that were saved in [Tiled]
 
 Keep in mind that this editor is still in a very early stage and not working yet.
 
+![Screenshot](http://i.imgur.com/qwZRKFz.jpg?raw)
+
 ### Example File
 
 ```json
@@ -109,3 +111,5 @@ Open to suggestions :)
 
 Based on an old tile based browsergame for [Last Anixile](http://www.last-anixile.de)
 The working original was written in PHP and rests in the legacy branch. Bear in mind that the code was created in 2005 ;-) - 'twas a different time then.. I made just rough corrections so it works outside it's previous frame.
+
+* Tileset magecity was made by [Hyptosis on opengameart](http://opengameart.org/content/mage-city-arcanos)

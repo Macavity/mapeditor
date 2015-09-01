@@ -6,6 +6,10 @@ Template.mapEdit.created = function () {
 
 };
 
+Template.mapEdit.rendered = function(){
+    Tilemap.initialize(this.data.map);
+};
+
 Template.mapEdit.helpers({
     tilesets: function(){
         return Tilesets.find();
@@ -42,9 +46,9 @@ Template.mapEdit.helpers({
 
         var activeTool = Template.instance().activeTool;
 
-        _.each(tools, function(index){
-            if(tools[index].tool == activeTool){
-                tools[index].active = true;
+        _.each(tools, function(tool){
+            if(tool.tool == activeTool){
+                tool.active = true;
             }
         });
     },
@@ -121,5 +125,32 @@ Template.mapEdit.events({
      */
     'click #toolkit button': function(event){
 
+    },
+    'click #btn-grid-checkbox': function(/*event*/){
+        var $checkbox = $("#grid-checkbox");
+        var $button = $("#btn-grid-checkbox");
+        var $grid = $("#grid");
+        var $icon = $button.find("i");
+
+        var isChecked = $checkbox.is(':checked');
+
+        if(isChecked){
+            // Deaktivate Grid
+            $checkbox.prop("checked", false);
+            $button.data('state', "off");
+            $button.removeClass('btn-primary active')
+                .addClass('btn-default');
+            $icon.removeClass('glyphicon-check').addClass('glyphicon-unchecked');
+            $grid.hide();
+        }
+        else{
+            // Activate Grid
+            $checkbox.prop("checked", true);
+            $button.data('state', "on");
+            $button.removeClass('btn-default')
+                .addClass('btn-primary active');
+            $icon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
+            $grid.show();
+        }
     }
 });
