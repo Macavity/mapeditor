@@ -5,13 +5,8 @@ Meteor.startup(function () {
      */
     if (Posts.find().count() === 0) {
         Posts.insert({
-            title: 'Last Anixile RPG - Revived',
-            body: 'Man hat ja sonst nichts zu tun..'
-        });
-
-        Posts.insert({
-            title: 'Mithelfer gesucht!',
-            body: 'Gerne auch frühere Spieler um wiederherzustellen was mal war ;-)'
+            title: 'Tilemap Editor',
+            body: 'Open to suggestions.'
         });
     }
 
@@ -28,6 +23,18 @@ Meteor.startup(function () {
             "tilewidth" : 32,
             "imageheight" : 96,
             "imagewidth" : 96,
+            "margin" : 0,
+            "spacing" : 0
+        });
+        Tilesets.insert({
+            "name" : "magecity",
+            "image" : "tilesets/magecity.png",
+            "firstgid" : 10,
+            "tilecount" : 368,
+            "tileheight" : 32,
+            "tilewidth" : 32,
+            "imageheight" : 1450,
+            "imagewidth" : 256,
             "margin" : 0,
             "spacing" : 0
         });

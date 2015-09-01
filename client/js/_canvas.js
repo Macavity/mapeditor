@@ -2,6 +2,9 @@
 Template.canvas.created = function(){
     this.cursor = [0,0];
 
+};
+
+Template.canvas.rendered = function(){
 
 };
 

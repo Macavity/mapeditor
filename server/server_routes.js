@@ -4,7 +4,7 @@ fs = Npm.require('fs');
 
 WebApp.connectHandlers.use(function(req, res, next) {
     var re = /^\/.uploads\/(.*)$/.exec(req.url);
-    if (re !== null) {   // Only handle URLs that start with /static/*
+    if (re !== null) {   // Only handle URLs that start with /.uploads/*
         var filePath = process.env.PWD + '/.uploads/' + re[1];
         var data = fs.readFileSync(filePath);
         res.writeHead(200, {

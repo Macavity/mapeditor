@@ -49,6 +49,9 @@ MapController = RouteController.extend({
 
         var mapId = Router.current().params._id;
 
+        /**
+         * @type {MapSchema}
+         */
         var map = Maps.findOne({_id: mapId, creatorId: Meteor.userId()});
 
         if(!map){
@@ -66,13 +69,20 @@ MapController = RouteController.extend({
         }
 
         /**
-         * Properties
+         * Properties in Array form for the template
          * @type {Array}
          */
         var properties = [];
 
+        for (var key in map.properties) {
+            if (map.properties.hasOwnProperty(key)) {
+                properties.push({
+                    field: key, value: map.properties[key]
+                });
+            }
+        }
         properties.push({
-            field: "author", value: map.creatorName
+            field: "author", value: map.creatorName, protected: true
         });
         properties.push({
             field: "name", value: map.name
@@ -90,39 +100,53 @@ MapController = RouteController.extend({
             field: "tilewidth", value: map.tilewidth
         });
 
-        /**
-         * Layers
-         */
-        var mapLayers = [
-            {
-                z: 1,
-                id: "background",
-                name: "Background",
-                active: true,
-                tiles: []
-            },
-            {
-                z: 2,
-                id: "floor1",
-                name: "Layer Floor 1",
-                active: false,
-                tiles: []
-            },
-            {
-                z: 3,
-                id: "floor2",
-                name: "Layer Floor 2",
-                active: false,
-                tiles: []
-            },
-            {
-                z: 11,
-                id: "sky1",
-                name: "Layer Sky 1",
-                active: false,
-                tiles: []
+        var canvasWidth = map.width * map.tilewidth;
+        var canvasHeight = map.height * map.tileheight;
+
+        var hasBackgroundLayer = false;
+        var hasFieldTypeLayer = false;
+        var countFloorLayer = 0;
+        var countSkyLayer = 0;
+
+        _.each(map.layers, function(layer, index){
+            var lcName = layer.name.toLowerCase().replace(" ", "");
+
+            layer.id = lcName;
+            layer.active = false;
+            layer.visible = true;
+            layer.canvasWidth = canvasWidth;
+            layer.canvasHeight = canvasHeight;
+
+            if(lcName == "background" || layer.type == "background"){
+                layer.z = 1;
+                hasBackgroundLayer = true;
+                layer.type = "background";
+                layer.active = true;
             }
-        ];
+            else if(lcName == "fieldtypes" || layer.type == "fieldtypes"){
+                layer.z = 100;
+                hasFieldTypeLayer = true;
+                layer.visible = false;      // FieldTypes are invisible at start
+                layer.type = "fieldtypes";
+            }
+            else{
+                // Remove spaces for layer id.
+
+                if(lcName.indexOf("sky") > -1 || layer.type == "sky"){
+                    countSkyLayer++;
+                    // 51 - 99
+                    layer.z = 50 + countSkyLayer;
+                    layer.type = "sky";
+                }
+                else{
+                    countFloorLayer++;
+                    layer.z = 10 + countFloorLayer;
+                    layer.type = "floor";
+                }
+            }
+            map.layers[index] = layer;
+        });
+
 
         Template.mapEdit.helpers({
             activeTileset: function(){
@@ -135,9 +159,9 @@ MapController = RouteController.extend({
             data: {
                 map: map,
                 mapProperties: properties,
-                mapLayers: mapLayers,
-                canvasWidth: (map.width * map.tilewidth),
-                canvasHeight: (map.height * map.tileheight)
+                mapLayers: map.layers,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight
             }
         });
     }
