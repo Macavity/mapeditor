@@ -13,7 +13,7 @@
                     <div class="btn-group" role="group">
                         <button id="btn-show-grid" type="button" class="btn {{#if showGrid}}btn-info active{{else}}btn-default{{/if}}">
                             <i class="state-icon glyphicon {{#if showGrid}}glyphicon-check{{else}}glyphicon-unchecked{{/if}}"></i>
-                            Grid
+                            Show Grid
                         </button>
                         <button id="btn-show-properties" type="button" class="btn {{#if showProperties}}btn-info active{{else}}btn-default{{/if}}">
                             <i class="state-icon glyphicon {{#if showProperties}}glyphicon-check{{else}}glyphicon-unchecked{{/if}}"></i>
@@ -22,11 +22,15 @@
                     </div>
 
                     <div id="toolkit" class="btn-group" role="group">
-                        {{#each availableTools}}
-                            <button data-tool="{{tool}}" title="{{label}}" class="btn btn-default {{#if active}}active{{/if}}">
-                                <span class="glyphicon {{icon}}"></span>
-                            </button>
-                        {{/each}}
+                        <button data-tool="draw" title="Brush Tool (B)" class="btn btn-default {{#if isToolActive "draw"}}active{{/if}}">
+                            <span class="glyphicon glyphicon-pencil {{#if isToolActive "draw"}}active{{/if}}"></span>
+                        </button>
+                        <button data-tool="fill" title="Bucket Fill Tool (F)" class="btn btn-default {{#if isToolActive "fill"}}active{{/if}}">
+                            <span class="glyphicon glyphicon-tint {{#if isToolActive "fill"}}active{{/if}}"></span>
+                        </button>
+                        <button data-tool="erase" title="Eraser (E)" class="btn btn-default {{#if isToolActive "erase"}}active{{/if}}">
+                            <span class="glyphicon glyphicon-erase {{#if isToolActive "erase"}}active{{/if}}"></span>
+                        </button>
                     </div>
                 </div>
             </div>

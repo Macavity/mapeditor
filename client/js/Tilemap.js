@@ -189,6 +189,7 @@ Tilemap = (function ($) {
         return tile;
     };
 
+
     var info = function(string){
         if(logLevel >= LOG_LEVEL.INFO){
             console.log(string);

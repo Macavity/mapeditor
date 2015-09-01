@@ -2,7 +2,10 @@ Template.mapEdit.created = function () {
 
     Session.set('importJson', {});
 
-    this.activeTool = "draw";
+    this.defaultActiveTool = "draw";
+
+    var activeTool = Session.get('activeTool') || this.defaultActiveTool;
+    Session.set('activeTool', activeTool);
 
 };
 
@@ -25,6 +28,14 @@ Template.mapEdit.helpers({
     },
     showGrid: function(){
         return (typeof Session.get('showGrid') === "undefined") ? true : Session.get('showGrid');
+    },
+
+    /*
+     * Tools
+     */
+    isToolActive: function(tool){
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
+        return (activeTool == tool);
     },
 
     tilemapFormData: function(){
@@ -57,7 +68,7 @@ Template.mapEdit.helpers({
             }
         ];
 
-        var activeTool = Template.instance().activeTool;
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
 
         _.each(tools, function(tool, index){
             if(tool.tool == activeTool){
@@ -68,7 +79,8 @@ Template.mapEdit.helpers({
         return tools;
     },
     activeTool: function(){
-        return Template.instance().activeTool;
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
+        return activeTool;
     }
 });
 
@@ -139,7 +151,9 @@ Template.mapEdit.events({
      * @param event
      */
     'click #toolkit button': function(event){
-
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
+        var newTool = $(event.currentTarget).data("tool");
+        Session.set('activeTool', newTool);
     },
     'click #btn-show-grid': function(event){
         // Invert the value
