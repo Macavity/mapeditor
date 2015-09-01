@@ -14,6 +14,19 @@ Template.mapEdit.helpers({
     tilesets: function(){
         return Tilesets.find();
     },
+    activeTileset: function(){
+        return Session.get('activeTileset');
+    },
+    showProperties: function(){
+        return (typeof Session.get('showProperties') === "undefined") ? true : Session.get('showProperties');
+    },
+    showLeftSidebar: function(){
+        return (typeof Session.get('showProperties') === "undefined") ? true : Session.get('showProperties');
+    },
+    showGrid: function(){
+        return (typeof Session.get('showGrid') === "undefined") ? true : Session.get('showGrid');
+    },
+
     tilemapFormData: function(){
         return {
             uploadType: "tilemap"
@@ -46,11 +59,13 @@ Template.mapEdit.helpers({
 
         var activeTool = Template.instance().activeTool;
 
-        _.each(tools, function(tool){
+        _.each(tools, function(tool, index){
             if(tool.tool == activeTool){
                 tool.active = true;
             }
+            tools[index] = tool;
         });
+        return tools;
     },
     activeTool: function(){
         return Template.instance().activeTool;
@@ -126,31 +141,13 @@ Template.mapEdit.events({
     'click #toolkit button': function(event){
 
     },
-    'click #btn-grid-checkbox': function(/*event*/){
-        var $checkbox = $("#grid-checkbox");
-        var $button = $("#btn-grid-checkbox");
-        var $grid = $("#grid");
-        var $icon = $button.find("i");
-
-        var isChecked = $checkbox.is(':checked');
-
-        if(isChecked){
-            // Deaktivate Grid
-            $checkbox.prop("checked", false);
-            $button.data('state', "off");
-            $button.removeClass('btn-primary active')
-                .addClass('btn-default');
-            $icon.removeClass('glyphicon-check').addClass('glyphicon-unchecked');
-            $grid.hide();
-        }
-        else{
-            // Activate Grid
-            $checkbox.prop("checked", true);
-            $button.data('state', "on");
-            $button.removeClass('btn-default')
-                .addClass('btn-primary active');
-            $icon.removeClass('glyphicon-unchecked').addClass('glyphicon-check');
-            $grid.show();
-        }
+    'click #btn-show-grid': function(event){
+        // Invert the value
+        var isActive = $(event.currentTarget).hasClass("active");
+        Session.set('showGrid', !isActive);
+    },
+    'click #btn-show-properties': function(event){
+        // Invert the value
+        Session.set('showProperties', !$(event.currentTarget).hasClass("active"));
     }
 });

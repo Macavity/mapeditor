@@ -21,6 +21,9 @@ Template.canvas.helpers({
             }
         }
     },
+    showGrid: function(){
+        return (typeof Session.get('showGrid') === "undefined") ? true : Session.get('showGrid');
+    },
     brushSelection: function(){
 
         var brushSelection = Session.get('brushSelection');

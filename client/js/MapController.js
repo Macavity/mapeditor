@@ -147,14 +147,6 @@ MapController = RouteController.extend({
             map.layers[index] = layer;
         });
 
-
-        Template.mapEdit.helpers({
-            activeTileset: function(){
-                return Session.get('activeTileset');
-            }
-
-        });
-
         this.render('mapEdit', {
             data: {
                 map: map,
