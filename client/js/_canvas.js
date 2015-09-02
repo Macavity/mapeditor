@@ -58,16 +58,85 @@ Template.canvas.events({
 
         var offset = container.offset();
 
-        var activeTileset = Tilesets.findOne(Session.get('activeTileset'));
-        var tileWidth = activeTileset.tilewidth;
-        var tileHeight = activeTileset.tileheight;
+        var brushSelection = Session.get('brushSelection');
 
-        var x = Math.floor((event.pageX - offset.left) / tileWidth);
-        var y = Math.floor((event.pageY - offset.top) / tileHeight);
+        var tileset = brushSelection.tileset;
 
+        var tilesetTileWidth = tileset.tilewidth;
+        var tilesetTileHeight = tileset.tileheight;
+
+        var tilesetCols = tileset.imagewidth / tilesetTileWidth;
+
+        var brushCols = brushSelection.width / tilesetTileWidth;
+        var brushRows = brushSelection.height / tilesetTileHeight;
+
+        // Coordinates of the clicked tile
+        var x = Math.floor((event.pageX - offset.left) / tilesetTileWidth);
+        var y = Math.floor((event.pageY - offset.top) / tilesetTileHeight);
+
+        // The currently used tool
         var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
 
-        console.log("click on: "+x+"/"+y);
+        // The currently active Layer
+        var activeLayer = container.find("canvas.layer-active");
+        var context = activeLayer[0].getContext("2d");
+
+        console.log("Active Layer: "+activeLayer.data("name"));
+
+        console.dir(tileset);
+        console.dir(brushSelection);
+
+        var indexX;
+        var indexY;
+        var tileId;
+        var firstTileId = tileset.firstgid;
+
+        var tilePosition = 0;
+
+        /*
+            Fass ist 12tes Tile lokal
+
+         */
+
+        // Get X/Y Coordinates of selected brush tile inside tileset
+        var brushStartX = brushSelection.startX/tilesetTileWidth;
+
+        var brushStartY = brushSelection.startY/tilesetTileHeight;
+
+        if(brushCols == 1 && brushRows == 1){
+
+            tileId = firstTileId + (brushStartY * tilesetCols) + brushStartX;
+
+            console.log("Tile:"+tileId+", "+x+"/"+y);
+
+            Tilemap.drawTile(context, x, y, tileId);
+        }
+
+
+        /*for(indexY = 0; indexY < brushRows; indexY++){
+            for(indexX = 0; indexX < brushCols; indexX){
+                /*
+                    brushRows 1
+                    brushCols 1
+                    background -64 -32
+
+                    1       2       3
+                    0,0     1,0     2,0
+
+                    4       (5)       6
+                            32/32
+                    0,1     1,1     2,1
+
+                    7       8       9
+                    0,2     1,2     2,2
+
+                    32/32 durch 32 => x1 y1 => tileId = y*ColCount (3) + (x+1) = 5
+
+                    tile 8:
+                    x1/y2 => firstgid + y*3 + x = 1+6+1 = 8
+            }
+        }
+         */
 
 
         /*
