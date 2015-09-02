@@ -29,7 +29,7 @@ MapController = RouteController.extend({
                     height: $("#mapHeight").val()
                 };
                 Meteor.call('createMap', newMap, function(error, result){
-                    if(!!error){
+                    if(!!error && Meteor.isClient){
                         sAlert.error(error);
                     }
                     else {
@@ -54,7 +54,7 @@ MapController = RouteController.extend({
          */
         var map = Maps.findOne({_id: mapId, creatorId: Meteor.userId()});
 
-        if(!map){
+        if(!map && Meteor.isClient){
             sAlert("This Map doesn't exist.");
             this.render("access_denied");
             return;
@@ -117,6 +117,7 @@ MapController = RouteController.extend({
             if(layer.type == "background"){
                 // Background Layer
                 hasBackgroundLayer = true;
+                layer.active = true;
             }
             else if(layer.type == "fieldtypes"){
                 // Field Type Layer
