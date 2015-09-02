@@ -52,23 +52,61 @@ Tilemap = (function ($) {
      */
     var map;
 
+    var allTilesets;
+
+    var localToGlobalTile;
+
+    var layerIdIndex;
+
     /**
      *
      * @param {MapSchema} mapParam
+     * @param allTilesetsParam
      */
-    var initialize = function(mapParam){
+    var initialize = function(mapParam, allTilesetsParam){
 
         map = mapParam;
 
+        allTilesets = allTilesetsParam;
+
+        var lastTileset = map.tilesets[map.tilesets.length-1];
+
+        // preallocate arrays
+        localToGlobalTile = new Array(lastTileset.firstgid + lastTileset.tilecount);
+        layerIdIndex = new Array(map.layers.length);
+
+        initCanvasElements();
+
+        convertTileData();
+
+        if(map.tilesets.length){
+            loadSprites();
+        }
+        else {
+            drawMap();
+        }
+
+        initialized = true;
+
+    };
+
+    /**
+     * Get the context of every layer's canvas
+     */
+    var initCanvasElements = function(){
         var canvasElements = $("#canvas").find("canvas");
 
         _.each(canvasElements, function(canvas, index){
             layers[index] = canvas.getContext("2d");
+            layerIdIndex[index] = $(canvas).data("id");
         });
+    };
 
-        _.each(map.tilesets, function(tileset, index){
+    var loadSprites = function(){
+        _.each(allTilesets, function(tileset, index){
+            spritesToLoad++;
             var img = new Image();
-            img.src = tileset.image;
+            img.src = "/.uploads/"+tileset.image;
             img.onload = allSpritesLoaded;
 
             tileset.colCount = Math.floor(tileset.imagewidth / tileset.tilewidth);
@@ -76,18 +114,59 @@ Tilemap = (function ($) {
 
             tileset.img = img;
 
-            map.tilesets[index] = tileset;
-
-            sprites[index] = img;
+            allTilesets[index] = tileset;
         });
-        spritesToLoad = sprites.length;
+    };
 
-        if(spritesToLoad == 0){
-            drawMap();
-        }
+    /**
+     * The Maps use tile ids relative to the actually used tilesets
+     * The Editor has all tilesets available so all relative tile ids have to be converted
+     * to the global tile ids
+     */
+    var convertTileData = function(){
 
-        initialized = true;
+        var localTileset, globalTileset, relativeId, globalId;
 
+        var tryouts = 5;
+        var countAllTilesets = allTilesets.length;
+
+        _.each(map.layers, function(layer, layerIndex){
+            _.each(layer.data, function(localTile, tileIndex){
+
+                //if(--tryouts > 0){
+
+                    if(typeof localToGlobalTile[localTile] !== "undefined"){
+                        layer.data[tileIndex] = localToGlobalTile[localTile];
+                    }
+                    else if(localTile !== 0){
+                        //debug("---------------------");
+                        //debug("LocalTile: "+localTile);
+
+                        // Find Local Tileset
+                        localTileset = getLocalTilesetByTile(localTile);
+                        //debug("localTileset:"); debug(localTileset);
+
+                        // Find Global Tileset
+                        globalTileset = false;
+                        for (var i = 0; i < countAllTilesets; i++) {
+                            if (allTilesets[i]._id == localTileset.id)
+                                globalTileset = allTilesets[i];
+                        }
+                        //debug("globalTileset:"); debug(globalTileset);
+
+                        relativeId = localTile - localTileset.firstgid;
+                        //debug("relativeId: "+relativeId);
+
+                        globalId = globalTileset.firstgid + relativeId;
+                        //debug("globalId: "+globalId);
+                        localToGlobalTile[localTile] = globalId;
+                        layer.data[tileIndex] = globalId;
+
+                    }
+                //}
+            });
+            map.layers[layerIndex] = layer;
+        });
     };
 
     var allSpritesLoaded = function(){
@@ -124,6 +203,16 @@ Tilemap = (function ($) {
         if(!tile || tile === 0){
             return;
         }
+
+        // Clear the tile first.
+        context.clearRect(
+            x * map.tilewidth,
+            y * map.tileheight,
+            map.tilewidth,
+            map.tileheight
+        );
+
+        // Draw the Tile
         context.drawImage(
             tile.image,
             // The X coordinate where to start clipping
@@ -143,30 +232,62 @@ Tilemap = (function ($) {
             map.tileheight);
     };
 
+    var eraseTile = function(context, posX, posY){
+
+        var tilewidth = map.tilewidth;
+        var tileheight = map.tileheight;
+
+        var x = Math.floor(posX / tilewidth);
+        var y = Math.floor(posY / tileheight);
+
+        // Clear the tile first.
+        debug("eraseTile: "+x+"/"+y);
+        context.clearRect(
+            x * tilewidth,
+            y * tileheight,
+            tilewidth,
+            tileheight
+        );
+    };
+
+    var getLocalTilesetByTile = function(tileId){
+        var i;
+        for (i = map.tilesets.length-1; i >= 0; i--) {
+            if (map.tilesets[i].firstgid <= tileId)
+                break;
+        }
+        return map.tilesets[i];
+    };
+
+    var getGlobalTilesetByTile = function(tileId){
+        var i;
+        for (i = allTilesets.length-1; i >= 0; i--) {
+            if (allTilesets[i].firstgid <= tileId)
+                break;
+        }
+        return allTilesets[i];
+    };
+
     /**
      *
      * @param tileId
      * @returns {{x: number, y: number, image: HTMLImageElement}}
      */
     var getTile = function(tileId){
+        //debug("getTile: "+tileId);
         var tile = {
             x: 0,
             y: 0,
             image: HTMLImageElement
         };
 
+
         /*
          * Loop through the tilesets searching for the one where firstgid <= tileId
          */
-        var i;
-        for (i = map.tilesets.length-1; i >= 0; i--) {
-            if (map.tilesets[i].firstgid <= tileId)
-                break;
-        }
+        var tileset = getGlobalTilesetByTile(tileId);
 
-        var tileset = map.tilesets[i];
-
-        tile.image = sprites[i];
+        tile.image = tileset.img;
 
         /*
          * Calculate x/y offset based on the properties of this tileset
@@ -189,6 +310,13 @@ Tilemap = (function ($) {
         return tile;
     };
 
+    var getLayerContext = function(layerId){
+
+        var index = layerIdIndex.indexOf(layerId);
+        return layers[index];
+
+    };
+
     var info = function(string){
         if(logLevel >= LOG_LEVEL.INFO){
             console.log(string);
@@ -196,7 +324,7 @@ Tilemap = (function ($) {
     };
 
     var warn = function(string){
-        if(logLevel >= LOG_LEVEL.WARN){
+        if(logLevel == LOG_LEVEL.WARN || logLevel == LOG_LEVEL.DEBUG){
             console.log(string);
         }
     };
@@ -211,7 +339,9 @@ Tilemap = (function ($) {
     return {
         initialize: initialize,
         drawMap: drawMap,
-        drawTile: drawTile
+        eraseTile: eraseTile,
+        drawTile: drawTile,
+        getLayer: getLayerContext
     };
 
 }($));

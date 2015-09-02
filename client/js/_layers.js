@@ -4,6 +4,9 @@ Template.layers.created = function(){
 };
 
 Template.layers.helpers({
+    isLayertype: function(type){
+        return (this.type == type);
+    }
 });
 
 Template.layers.events({
@@ -27,11 +30,15 @@ Template.layers.events({
         var layerId = li.data("id");
         var layer = $("#layer-"+layerId);
 
+        var canvasWrapper = $("#canvas");
+
+        canvasWrapper.find("canvas").removeClass("layer-active");
         $("#layerlist").find(".layer-active").removeClass("layer-active");
 
         if(li.hasClass("layer-active") == false){
             li.addClass("layer-active");
             layer.addClass("layer-active");
+            canvasWrapper.find("#layer-"+layerId).addClass("layer-active");
         }
 
     }

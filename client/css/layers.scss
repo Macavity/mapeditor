@@ -1,0 +1,44 @@
+
+@import "colors";
+@import "mixins";
+
+/*
+ * Layer Box
+ */
+
+ul#layerlist {
+  list-style: none;
+  padding: 0px;
+
+  li {
+    cursor: pointer;
+
+    &:hover {
+      background-color: $listHoverColor;
+      .badge {
+        @include prefix(box-shadow, inset 1px #000);
+      }
+    }
+
+    i {
+      width: 30px;
+      opacity: 1;
+
+      @include prefix(transition, opacity .15s ease-in-out);
+
+      &.layer-active-indicator {
+        opacity: 0;
+      }
+    }
+
+    &.layer-invisible i {
+      opacity: 0;
+    }
+
+    &.layer-active {
+      i.layer-active-indicator {
+        opacity: 1;
+      }
+    }
+  }
+}

@@ -5,13 +5,13 @@
         </div>
         <div id="tilemap">
             {{#each layers}}
-                <canvas id="layer-{{id}}" class="layer {{#if active}}layer-active{{/if}} {{#unless visible}}layer-invisible{{/unless}}" data-name="{{name}}" style="z-index: {{z}}; width:{{canvasWidth}}px; height: {{canvasHeight}}px" width="{{canvasWidth}}" height= "{{canvasHeight}}">
+                <canvas id="layer-{{id}}" class="layer {{#if active}}layer-active{{/if}} {{#unless visible}}layer-invisible{{/unless}}" data-name="{{name}}" data-id="{{id}}" style="z-index: {{z}}; width:{{canvasWidth}}px; height: {{canvasHeight}}px" width="{{canvasWidth}}" height= "{{canvasHeight}}">
 
                 </canvas>
             {{/each}}
         </div>
         {{! A scalable grid in the background }}
-        <div id="grid" style="width:{{canvasWidth}}px; height: {{canvasHeight}}px; background-size: {{tileset.tilewidth}}px {{tileset.tileheight}}px;background-image:
+        <div id="grid" class="{{#unless showGrid}}hidden{{/unless}}" style="width:{{canvasWidth}}px; height: {{canvasHeight}}px; background-size: {{tileset.tilewidth}}px {{tileset.tileheight}}px;background-image:
                 repeating-linear-gradient(0deg, #000, #000 1px, transparent 1px, transparent {{tileset.tilewidth}}px),
                 repeating-linear-gradient(-90deg, #000, #000 1px, transparent 1px, transparent {{tileset.tileheight}}px);"></div>
     </div>

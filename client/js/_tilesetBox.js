@@ -46,11 +46,11 @@ Template.tilesetBox.events({
     },
     'mousedown': function(event){
         AppState.mousedown = true;
-        console.log("AppState.mousedown: "+AppState.mousedown);
+        //debug("AppState.mousedown: "+AppState.mousedown);
     },
     'mouseup': function(event){
         AppState.mousedown = false;
-        console.log("AppState.mousedown: "+AppState.mousedown);
+        //debug("AppState.mousedown: "+AppState.mousedown);
     },
 
     /**
@@ -191,22 +191,22 @@ Template.tilesetBox.events({
 
             // Normalize selection, so that the start coordinates
             // are smaller than the end coordinates
-            startX = selectionFrom[0] < selectionTo[0] ? selectionFrom[0] : selectionTo[0];
-            startY = selectionFrom[1] < selectionTo[1] ? selectionFrom[1] : selectionTo[1];
-            endX = selectionFrom[0] > selectionTo[0] ? selectionFrom[0] : selectionTo[0];
-            endY = selectionFrom[1] > selectionTo[1] ? selectionFrom[1] : selectionTo[1];
+            startX = (selectionFrom[0] < selectionTo[0]) ? selectionFrom[0] : selectionTo[0];
+            startY = (selectionFrom[1] < selectionTo[1]) ? selectionFrom[1] : selectionTo[1];
+            endX = (selectionFrom[0] > selectionTo[0]) ? selectionFrom[0] : selectionTo[0];
+            endY = (selectionFrom[1] > selectionTo[1]) ? selectionFrom[1] : selectionTo[1];
 
             // Save brushSelection
             /*Session.set('brushSelection', {
                 //[[startX/tileWidth, startY/tileHeight],[endX/tileWidth, endY/tileHeight]]
             });*/
         }
-
-
-        startX = selectionFrom[0];
-        startY = selectionFrom[1];
-        endX = selectionTo[0];
-        endY = selectionTo[1];
+        else{
+            startX = selectionFrom[0];
+            startY = selectionFrom[1];
+            endX = selectionTo[0];
+            endY = selectionTo[1];
+        }
 
         /**
          * Change the canvas brush
@@ -216,8 +216,11 @@ Template.tilesetBox.events({
         Session.set('brushSelection', {
             width: brushWidth,
             height: brushHeight,
+            tileset: activeTileset,
             backgroundImage: "/.uploads/"+activeTileset.image,
-            backgroundPosition: (-startX) + "px " + (-startY) + "px"
+            backgroundPosition: (-startX) + "px " + (-startY) + "px",
+            startX: startX,
+            startY: startY
         });
         //console.log("saved brushSelection: w:"+brushWidth+",h:"+brushHeight);
 
