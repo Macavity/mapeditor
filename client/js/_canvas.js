@@ -29,6 +29,18 @@ Template.canvas.helpers({
 
         var brushSelection = Session.get('brushSelection');
 
+        // The currently used tool
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
+
+        if(activeTool == "erase"){
+            return {
+                width: 32,
+                height: 32,
+                backgroundImage: "",
+                backgroundPosition: ""
+            }
+        }
+
         if(brushSelection === false){
             //console.log("no brushSelection");
             return {
@@ -58,6 +70,27 @@ Template.canvas.events({
 
         var offset = container.offset();
 
+        // The currently active Layer
+        var activeLayer = container.find("canvas.layer-active");
+        var context = activeLayer[0].getContext("2d");
+
+        // The currently used tool
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
+
+        var posX = (event.pageX - offset.left);
+        var posY = (event.pageY - offset.top);
+
+        /*
+         * Erase Tool
+         */
+        if(activeTool == "erase"){
+            Tilemap.eraseTile(context, posX, posY);
+            return;
+        }
+        /*
+         * Draw Tool
+         */
+
         var brushSelection = Session.get('brushSelection');
 
         var tileset = brushSelection.tileset;
@@ -71,15 +104,8 @@ Template.canvas.events({
         var brushRows = brushSelection.height / tilesetTileHeight;
 
         // Coordinates of the clicked tile
-        var x = Math.floor((event.pageX - offset.left) / tilesetTileWidth);
-        var y = Math.floor((event.pageY - offset.top) / tilesetTileHeight);
-
-        // The currently used tool
-        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
-
-        // The currently active Layer
-        var activeLayer = container.find("canvas.layer-active");
-        var context = activeLayer[0].getContext("2d");
+        var x = Math.floor(posX / tilesetTileWidth);
+        var y = Math.floor(posY / tilesetTileHeight);
 
         console.log("Active Layer: "+activeLayer.data("name"));
 
@@ -92,11 +118,6 @@ Template.canvas.events({
         var firstTileId = tileset.firstgid;
 
         var tilePosition = 0;
-
-        /*
-            Fass ist 12tes Tile lokal
-
-         */
 
         // Get X/Y Coordinates of selected brush tile inside tileset
         var brushStartX = brushSelection.startX/tilesetTileWidth;
@@ -137,16 +158,6 @@ Template.canvas.events({
             }
         }
          */
-
-
-        /*
-        selection.css({
-            left: selectionX,
-            top: selectionY,
-            width: tileWidth,
-            height: tileHeight
-        });
-        */
     },
     /**
      * Move the selection element
@@ -158,6 +169,9 @@ Template.canvas.events({
         var offset =  container.offset();
 
         var selection = container.find(".selection");
+
+        // The currently used tool
+        var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
 
         var activeTileset = Tilesets.findOne(Session.get('activeTileset'));
         var tileWidth = activeTileset.tilewidth;
@@ -177,6 +191,19 @@ Template.canvas.events({
             });
         }
 
+    },
+    'mouseleave #canvas': function(){
+        var selection = $("#canvas").find(".selection");
+
+        selection.hide();
+    },
+    'mouseenter #canvas': function(){
+        var selection = $("#canvas").find(".selection");
+        var activeBrush = Session.get('brushSelection') || false;
+
+        if(activeBrush){
+            selection.show();
+        }
     },
     /**
      * @param event

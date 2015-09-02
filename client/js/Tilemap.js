@@ -56,6 +56,8 @@ Tilemap = (function ($) {
 
     var localToGlobalTile;
 
+    var layerIdIndex;
+
     /**
      *
      * @param {MapSchema} mapParam
@@ -69,8 +71,9 @@ Tilemap = (function ($) {
 
         var lastTileset = map.tilesets[map.tilesets.length-1];
 
-        // preallocate array
+        // preallocate arrays
         localToGlobalTile = new Array(lastTileset.firstgid + lastTileset.tilecount);
+        layerIdIndex = new Array(map.layers.length);
 
         initCanvasElements();
 
@@ -95,6 +98,7 @@ Tilemap = (function ($) {
 
         _.each(canvasElements, function(canvas, index){
             layers[index] = canvas.getContext("2d");
+            layerIdIndex[index] = $(canvas).data("id");
         });
     };
 
@@ -228,6 +232,24 @@ Tilemap = (function ($) {
             map.tileheight);
     };
 
+    var eraseTile = function(context, posX, posY){
+
+        var tilewidth = map.tilewidth;
+        var tileheight = map.tileheight;
+
+        var x = Math.floor(posX / tilewidth);
+        var y = Math.floor(posY / tileheight);
+
+        // Clear the tile first.
+        debug("eraseTile: "+x+"/"+y);
+        context.clearRect(
+            x * tilewidth,
+            y * tileheight,
+            tilewidth,
+            tileheight
+        );
+    };
+
     var getLocalTilesetByTile = function(tileId){
         var i;
         for (i = map.tilesets.length-1; i >= 0; i--) {
@@ -288,6 +310,13 @@ Tilemap = (function ($) {
         return tile;
     };
 
+    var getLayerContext = function(layerId){
+
+        var index = layerIdIndex.indexOf(layerId);
+        return layers[index];
+
+    };
+
     var info = function(string){
         if(logLevel >= LOG_LEVEL.INFO){
             console.log(string);
@@ -310,7 +339,9 @@ Tilemap = (function ($) {
     return {
         initialize: initialize,
         drawMap: drawMap,
-        drawTile: drawTile
+        eraseTile: eraseTile,
+        drawTile: drawTile,
+        getLayer: getLayerContext
     };
 
 }($));
