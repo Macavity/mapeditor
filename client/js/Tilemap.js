@@ -63,13 +63,37 @@ Tilemap = (function ($) {
 
         map = mapParam;
 
+        allTilesets = allTilesetsParam;
+
+        initCanvasElements();
+
+        if(map.tilesets.length){
+            loadSprites();
+        }
+        else {
+            drawMap();
+        }
+
+        convertTileData();
+
+        initialized = true;
+
+    };
+
+    /**
+     * Get the context of every layer's canvas
+     */
+    var initCanvasElements = function(){
         var canvasElements = $("#canvas").find("canvas");
 
         _.each(canvasElements, function(canvas, index){
             layers[index] = canvas.getContext("2d");
         });
+    };
 
+    var loadSprites = function(){
         _.each(map.tilesets, function(tileset, index){
+            spritesToLoad++;
             var img = new Image();
             img.src = tileset.image;
             img.onload = allSpritesLoaded;
@@ -83,13 +107,14 @@ Tilemap = (function ($) {
 
             sprites[index] = img;
         });
-        spritesToLoad = sprites.length;
+    };
 
-        if(spritesToLoad == 0){
-            drawMap();
-        }
-
-        initialized = true;
+    /**
+     * The Maps use tile ids relative to the actually used tilesets
+     * The Editor has all tilesets available so all relative tile ids have to be converted
+     * to the global tile ids
+     */
+    var convertTileData = function(){
 
     };
 
@@ -146,6 +171,14 @@ Tilemap = (function ($) {
             map.tileheight);
     };
 
+    var getMapTileset = function(tileId){
+        _.each(map.tilesets, function(tileset,index){
+            if(tileset._id == tileId){
+
+            }
+        });
+    };
+
     /**
      *
      * @param tileId
@@ -191,7 +224,6 @@ Tilemap = (function ($) {
 
         return tile;
     };
-
 
     var info = function(string){
         if(logLevel >= LOG_LEVEL.INFO){
