@@ -199,6 +199,16 @@ Tilemap = (function ($) {
         if(!tile || tile === 0){
             return;
         }
+
+        // Clear the tile first.
+        context.clearRect(
+            x * map.tilewidth,
+            y * map.tileheight,
+            map.tilewidth,
+            map.tileheight
+        );
+
+        // Draw the Tile
         context.drawImage(
             tile.image,
             // The X coordinate where to start clipping
