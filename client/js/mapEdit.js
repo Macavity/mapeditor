@@ -10,7 +10,7 @@ Template.mapEdit.created = function () {
 };
 
 Template.mapEdit.rendered = function(){
-    Tilemap.initialize(this.data.map);
+    Tilemap.initialize(this.data.map, this.data.allTilesets);
 };
 
 Template.mapEdit.helpers({

@@ -60,13 +60,11 @@ MapController = RouteController.extend({
             return;
         }
 
-        var activeTileset = Session.get('activeTileset');
-        if(typeof activeTileset === "undefined" || activeTileset === ""){
-            var oneTileset = Tilesets.findOne({name: {$ne: "000-Types"}});
-            if(oneTileset){
-                Session.set('activeTileset', oneTileset._id);
-            }
-        }
+        var allTilesets = Tilesets.find().fetch();
+
+        // allTilesets[0] is for FieldTypes
+        var activeTileset = Session.get('activeTileset') || allTilesets[1]._id || false;
+        Session.set('activeTileset', activeTileset);
 
         /**
          * Properties in Array form for the template
@@ -108,48 +106,39 @@ MapController = RouteController.extend({
         var countFloorLayer = 0;
         var countSkyLayer = 0;
 
-        _.each(map.layers, function(layer, index){
-            var lcName = layer.name.toLowerCase().replace(" ", "");
 
-            layer.id = lcName;
+        _.each(map.layers, function(layer, index){
+
             layer.active = false;
             layer.visible = true;
             layer.canvasWidth = canvasWidth;
             layer.canvasHeight = canvasHeight;
 
-            if(lcName == "background" || layer.type == "background"){
-                layer.z = 1;
+            if(layer.type == "background"){
+                // Background Layer
                 hasBackgroundLayer = true;
-                layer.type = "background";
-                layer.active = true;
             }
-            else if(lcName == "fieldtypes" || layer.type == "fieldtypes"){
-                layer.z = 100;
+            else if(layer.type == "fieldtypes"){
+                // Field Type Layer
                 hasFieldTypeLayer = true;
-                layer.visible = false;      // FieldTypes are invisible at start
-                layer.type = "fieldtypes";
+
+                // FieldTypes are invisible at start
+                layer.visible = false;
+            }
+            else if(layer.type == "sky"){
+                // Sky Layer
             }
             else{
-                // Remove spaces for layer id.
-
-                if(lcName.indexOf("sky") > -1 || layer.type == "sky"){
-                    countSkyLayer++;
-                    // 51 - 99
-                    layer.z = 50 + countSkyLayer;
-                    layer.type = "sky";
-                }
-                else{
-                    countFloorLayer++;
-                    layer.z = 10 + countFloorLayer;
-                    layer.type = "floor";
-                }
+                // Floor Layer
             }
+
             map.layers[index] = layer;
         });
 
         this.render('mapEdit', {
             data: {
                 map: map,
+                allTilesets: allTilesets,
                 mapProperties: properties,
                 mapLayers: map.layers,
                 canvasWidth: canvasWidth,

@@ -52,11 +52,14 @@ Tilemap = (function ($) {
      */
     var map;
 
+    var allTilesets;
+
     /**
      *
      * @param {MapSchema} mapParam
+     * @param allTilesetsParam
      */
-    var initialize = function(mapParam){
+    var initialize = function(mapParam, allTilesetsParam){
 
         map = mapParam;
 
