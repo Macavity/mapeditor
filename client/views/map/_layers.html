@@ -6,7 +6,17 @@
     <div class="panel-body">
         <ul id="layerlist">
             {{#each layers}}
-              <li data-id="{{id}}" class="{{#if active}}layer-active{{/if}} {{#unless visible}}layer-invisible{{/unless}}"><i class="layer-active-indicator glyphicon glyphicon-hand-right"></i><i class="glyphicon glyphicon-eye-open toggle-layer"></i>{{name}}</li>
+              <li data-id="{{id}}" class="{{#if active}}layer-active{{/if}} {{#unless visible}}layer-invisible{{/unless}}">
+                  <i class="layer-active-indicator glyphicon glyphicon-hand-right"></i>
+                  <i class="glyphicon glyphicon-eye-open toggle-layer"></i>
+                  {{name}}
+                  {{#if isLayertype "background"}}
+                      <span class="badge right">Bg</span>
+                  {{/if}}
+                  {{#if isLayertype "sky"}}
+                      <span class="badge badge-info right">Sky</span>
+                  {{/if}}
+              </li>
             {{/each}}
         </ul>
     </div>
