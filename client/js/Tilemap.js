@@ -270,6 +270,21 @@ Tilemap = (function ($) {
 
     /**
      *
+     * @param tileName
+     * @returns {Boolean|Object}
+     */
+    var getGlobalTilesetByName = function(tileName){
+        var i, length = allTilesets.length;
+        for(i = 0; i < length; i++){
+            if(allTilesets[i].name == tileName){
+                return allTilesets[i];
+            }
+        }
+        return false;
+    };
+
+    /**
+     *
      * @param tileId
      * @returns {{x: number, y: number, image: HTMLImageElement}}
      */
@@ -341,6 +356,8 @@ Tilemap = (function ($) {
         drawMap: drawMap,
         eraseTile: eraseTile,
         drawTile: drawTile,
+        allTilesets: function(){ return allTilesets },
+        getGlobalTilesetByName: getGlobalTilesetByName,
         getLayer: getLayerContext
     };
 

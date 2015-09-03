@@ -1,0 +1,63 @@
+<template name="importPreview">
+<div class="container">
+    <table class="table" width="100%">
+        <thead>
+        <tr>
+            <th>Property</th>
+            <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each properties}}
+            <tr>
+                <td>{{label}}</td>
+                <td>{{value}}</td>
+            </tr>
+        {{/each}}
+        </tbody>
+    </table>
+
+    <h3>Layers</h3>
+    <table class="table" width="100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each layers}}
+            <tr>
+                <td>{{name}}</td>
+                <td>{{type}}</td>
+            </tr>
+        {{/each}}
+        </tbody>
+    </table>
+
+    <h3>Tilesets</h3>
+    <table class="table" width="100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>&nbsp;</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each tilesets}}
+            <tr>
+                <td>{{name}}</td>
+                <td>
+                    <select name="tileset-{{id}}" id="tileset-{{id}}">
+                        {{#each allTilesets}}
+                            <option value="{{id}}" selected={{#if isFoundTileset}}"selected"{{/if}}>{{name}}</option>
+                        {{/each}}
+                    </select>
+                </td>
+            </tr>
+        {{/each}}
+        </tbody>
+    </table>
+
+</div>
+</template>

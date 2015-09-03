@@ -30,6 +30,10 @@ Template.mapEdit.helpers({
         return (typeof Session.get('showGrid') === "undefined") ? true : Session.get('showGrid');
     },
 
+    importJsonPreview: function(){
+        return Session.get('importJsonPreview');
+    },
+
     /*
      * Tools
      */
@@ -81,9 +85,25 @@ Template.mapEdit.helpers({
     activeTool: function(){
         var activeTool = Session.get('activeTool') || Template.instance().defaultActiveTool;
         return activeTool;
+    },
+    allTilesets: function(){
+        return Tilemap.allTilesets();
     }
 });
 
+Template.selectTileset.helpers({
+    isFoundTileset: function(tilesetId){
+        console.log("foundTileset "+this.foundTileset+" == "+tilesetId);
+        if(this.foundTileset == tilesetId){
+            return true;
+        }
+        return false;
+    }
+});
+
+/*
+ * Events
+ */
 Template.mapEdit.events({
     /**
      * Import JSON Map File
@@ -91,6 +111,9 @@ Template.mapEdit.events({
      */
     'change #importJsonFile': function(event){
         var files = event.target.files; // FileList object
+
+        var allTilesets = Tilemap.allTilesets();
+        var countAllTilesets = allTilesets.length;
 
         // Loop through the FileList and render image files as thumbnails.
         for (var i = 0, file; file = files[i]; i++) {
@@ -106,15 +129,91 @@ Template.mapEdit.events({
             reader.onload = function(e) {
                 var json = JSON.parse(e.target.result);
 
+                // Preview Map Properties
+                var layers = new Array(json.layers.length);
+
+                _.each(json.layers, function(layer,index){
+                    layers[index] = {
+                        name: layer.name,
+                        type: layer.type
+                    }
+                });
+
+                var importTilesets = new Array(json.tilesets.length);
+                var foundTileset;
+                var i = 0;
+                var tilesetIteration;
+
+                _.each(json.tilesets, function(tileset, index){
+
+                    importTilesets[index] = {
+                        name: tileset.name,
+                        image: tileset.image,
+                        foundTileset: false,
+                        allTilesets: new Array(countAllTilesets)
+                    };
 
 
-                Session.set('importJson', json);
+                    for(i = 0; i < countAllTilesets; i++){
+
+                        tilesetIteration = allTilesets[i];
+
+                        if(allTilesets[i].name == tileset.name){
+                            tilesetIteration.isFoundTileset = true;
+                        }
+                        else{
+                            tilesetIteration.isFoundTileset = false;
+                        }
+                        importTilesets[index].allTilesets[i] = tilesetIteration;
+                    }
+
+                    foundTileset = Tilemap.getGlobalTilesetByName(tileset.name);
+
+                    if(foundTileset){
+                        if(foundTileset.tilecount == tileset.tilecount
+                            && foundTileset.imageheight == tileset.imageheight
+                            && foundTileset.imagewidth == tileset.imagewidth){
+
+                            importTilesets[index].foundTileset = foundTileset._id;
+                        }
+                    }
+
+                });
+
+                console.dir(layers);
+
+                var jsonPreview = {
+                    properties: [
+                        { label: "Name", value: json.name },
+                        { label: "Creator", value: json.properties.author || false },
+                        { label: "Width", value: json.width },
+                        { label: "Height", value: json.height },
+                        { label: "Tile Width", value: json.tilewidth },
+                        { label: "Tile Height", value: json.tileheight },
+                        { label: "Width", value: json.width },
+                        { label: "Width", value: json.width }
+                    ],
+                    layers: layers,
+                    tilesets: importTilesets
+                };
+                Blaze.renderWithData(Template.importPreview, {
+                        layers: layers,
+                        properties: jsonPreview.properties,
+                        tilesets: importTilesets
+                    },
+                    $("#importContent")[0]);
+                $("#importContent").show();
+                Session.set('importJsonPreview', jsonPreview);
             };
 
             // Read in the image file as a data URL.
             reader.readAsText(file);
         }
     },
+    /**
+     * Submit Import Modal
+     * @param event
+     */
     'click #import-json-data': function(event){
         var json = Session.get('importJson');
 
