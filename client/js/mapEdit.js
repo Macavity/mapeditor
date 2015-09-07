@@ -91,16 +91,6 @@ Template.mapEdit.helpers({
     }
 });
 
-Template.selectTileset.helpers({
-    isFoundTileset: function(tilesetId){
-        console.log("foundTileset "+this.foundTileset+" == "+tilesetId);
-        if(this.foundTileset == tilesetId){
-            return true;
-        }
-        return false;
-    }
-});
-
 /*
  * Events
  */
@@ -114,6 +104,9 @@ Template.mapEdit.events({
 
         var allTilesets = Tilemap.allTilesets();
         var countAllTilesets = allTilesets.length;
+
+        var importContent = $("#importContent");
+        importContent.empty().show();
 
         // Loop through the FileList and render image files as thumbnails.
         for (var i = 0, file; file = files[i]; i++) {
@@ -184,7 +177,7 @@ Template.mapEdit.events({
 
                 var jsonPreview = {
                     properties: [
-                        { label: "Name", value: json.name },
+                        { label: "Name", value: json.properties.name },
                         { label: "Creator", value: json.properties.author || false },
                         { label: "Width", value: json.width },
                         { label: "Height", value: json.height },
@@ -201,8 +194,7 @@ Template.mapEdit.events({
                         properties: jsonPreview.properties,
                         tilesets: importTilesets
                     },
-                    $("#importContent")[0]);
-                $("#importContent").show();
+                    importContent[0]);
                 Session.set('importJsonPreview', jsonPreview);
             };
 
