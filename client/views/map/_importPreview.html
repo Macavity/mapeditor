@@ -38,7 +38,7 @@
         <tbody>
         {{#each layers}}
             <tr>
-                <td>{{name}}</td>
+                <td><label for="layer-type-{{id}}">{{name}}</label></td>
                 <td>{{type}}</td>
                 <td>=></td>
                 <td>
@@ -66,13 +66,17 @@
         <tbody>
         {{#each tilesets}}
             <tr>
-                <td>{{name}}</td>
+                <td><label for="tileset-{{id}}">{{name}}</label></td>
                 <td>
+                    {{#if tilesetWarning}}
+                        <div class="alert alert-warning" role="alert">I didn't find a matching tileset in the collection. Please upload the tileset first.</div>
+                    {{else}}
                     <select name="tileset-{{id}}" id="tileset-{{id}}" class="import-tileset">
                         {{#each tilesetOptions}}
                             <option value="{{_id}}" selected={{isFoundTileset}}>{{name}}</option>
                         {{/each}}
                     </select>
+                    {{/if}}
                 </td>
             </tr>
         {{/each}}

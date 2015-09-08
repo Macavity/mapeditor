@@ -97,6 +97,9 @@ Template.importPreview.helpers({
             return true;
         }
         return false;
+    },
+    tilesetWarning: function(){
+        return (this.tilesetOptions.length == 0);
     }
 });
 
@@ -161,6 +164,7 @@ Template.mapEdit.events({
                         id: index,
                         name: layer.name,
                         type: layer.type,
+                        data: layer.data,
                         newType: newType
                     }
                 });
@@ -182,8 +186,10 @@ Template.mapEdit.events({
                         name: tileset.name,
                         image: tileset.image,
                         foundTileset: false,
-                        tilesetOptions: new Array(countAllTilesets)
+                        tilesetOptions: new Array(0),
+                        oldFirstGid: tileset.firstgid
                     };
+                    //console.log("Tileset in map file: "+tileset.name+", "+tileset.tilecount)
 
                     for(i = 0; i < countAllTilesets; i++){
 
@@ -200,6 +206,7 @@ Template.mapEdit.events({
                                 foundTileset = Tilemap.getGlobalTilesetByName(tileset.name);
 
                                 if(foundTileset){
+                                    //console.log("[+] match: "+tilesetIteration.name+", "+tilesetIteration.tilecount);
                                     tilesetIteration.isFoundTileset = true;
                                     importTilesets[index].foundTileset = foundTileset._id;
                                 }
@@ -207,8 +214,15 @@ Template.mapEdit.events({
 
                             importTilesets[index].tilesetOptions[i] = tilesetIteration;
                         }
+                        else {
+                            //console.log("[-] no match: "+tilesetIteration.name+", "+tilesetIteration.tilecount);
+                        }
 
 
+                    }
+
+                    if(importTilesets[index].tilesetOptions.length == 0){
+                        //importTilesets[index].warning = true;
                     }
 
                 });
@@ -218,6 +232,21 @@ Template.mapEdit.events({
                  * Preview Map Properties
                  * --------------------------------------
                  */
+                var importMapData = {
+                    name: json.properties.name,
+                    width: json.width,
+                    height: json.height,
+                    tilewidth: json.tilewidth,
+                    tileheight: json.tileheight,
+                    oldTilesets: json.tilesets,
+                    importTilesetData: importTilesets,
+                    layers: layers,
+                    properties: {
+
+                    }
+                };
+
+
                 var jsonPreview = {
                     properties: [
                         { label: "Name", value: json.properties.name },
@@ -226,8 +255,6 @@ Template.mapEdit.events({
                         { label: "Height", value: json.height },
                         { label: "Tile Width", value: json.tilewidth },
                         { label: "Tile Height", value: json.tileheight },
-                        { label: "Width", value: json.width },
-                        { label: "Width", value: json.width }
                     ],
                     layers: layers,
                     tilesets: importTilesets
@@ -238,47 +265,12 @@ Template.mapEdit.events({
                         tilesets: importTilesets
                     },
                     importContent[0]);
-                Session.set('importJsonPreview', jsonPreview);
+                Session.set('importMapData', importMapData);
             };
 
             // Read in the image file as a data URL.
             reader.readAsText(file);
         }
-    },
-    /**
-     * Submit Import Modal
-     * @param event
-     */
-    'click #import-json-data': function(event){
-        var json = Session.get('importJson');
-
-        var properties = [];
-
-
-        if(typeof json.properties.author !== "undefined"){
-            properties.push({
-                field: "author", value: json.properties.author
-            });
-        }
-        if(typeof json.properties.name !== "undefined"){
-            properties.push({
-                field: "name", value: json.properties.name
-            });
-        }
-        properties.push({
-            field: "width", value: json.width
-        });
-        properties.push({
-            field: "height", value: json.height
-        });
-        properties.push({
-            field: "tileheight", value: json.tileheight
-        });
-        properties.push({
-            field: "tilewidth", value: json.tilewidth
-        });
-
-        Session.set('mapProperties', properties);
     },
     /**
      * Switch currently used tool
@@ -297,5 +289,132 @@ Template.mapEdit.events({
     'click #btn-show-properties': function(event){
         // Invert the value
         Session.set('showProperties', !$(event.currentTarget).hasClass("active"));
+    },
+
+    /**
+     * Submit Import Modal
+     * @param event
+     */
+    'click #import-json-data': function(event){
+        var importMapData = Session.get('importMapData');
+
+        var oldTilesets = importMapData.tilesets;
+        var importTilesetData = importMapData.importTilesetData;
+        var importLayers = importMapData.layers;
+
+        var assignedLayerType;
+        var layer;
+        var countLayerTypes = [];
+        var layerTypeBg = 0;
+        var layerTypeFt = 1;
+        var layerTypeFloor = 2;
+        var layerTypeSky = 3;
+
+        /*
+         * Prepare Imported Tilesets
+         */
+        var assignedTilesetId, assignedTileset, oldFirstGid;
+        _.each(importTilesetData, function(importTileset, index){
+            assignedTilesetId = $("#tileset-"+importTileset.id).val();
+
+            oldFirstGid = importTileset.oldFirstGid;
+
+            _.each(importTileset.tilesetOptions, function(option, index){
+                if(!!option && option._id == assignedTilesetId){
+                    importTileset.newFirstGid = option.firstgid;
+                }
+            });
+
+            importTilesetData[index] = importTileset;
+
+        });
+
+        _.each(importLayers, function(importLayer, layerIndex){
+
+            // Reset Counters
+            countLayerTypes = [0,0,0,0];
+
+            layer = {};
+
+            // Layer Type
+            assignedLayerType = $("#layer-type-"+importLayer.id).val();
+            layer.type = assignedLayerType;
+
+            // Layer Id based on selected type
+            if(layer.type == "background"){
+                layer.id = (++countLayerTypes[layerTypeBg] === 1) ? "background" : "background"+countLayerTypes[layerTypeBg];
+            }
+            else if(layer.type == "fieldtypes"){
+                layer.id = (++countLayerTypes[layerTypeFt] === 1) ? "fieldtypes" : "fieldtypes"+countLayerTypes[layerTypeFt];
+            }
+            else if(layer.type == "floor"){
+                layer.id = (++countLayerTypes[layerTypeFloor] === 1) ? "floor" : "floor"+countLayerTypes[layerTypeFloor];
+            }
+            else if(layer.type == "sky"){
+                layer.id = (++countLayerTypes[layerTypeSky] === 1) ? "sky" : "sky"+countLayerTypes[layerTypeSky];
+            }
+
+            layer.name = importLayer.name;
+            layer.height = importLayer.height;
+            layer.width = importLayer.width;
+
+            layer.x = 0;
+            layer.y = 0;
+            layer.z = Tilemap.calcLayerZ(layer.type, countLayerTypes);
+            layer.visible = (layer.type !== "fieldtypes");
+            layer.opacity = (layer.type === "fieldtypes") ? 0.8 : 1.0;
+
+            // preallocate data array
+            layer.data = new Array(importLayer.data.length);
+
+
+
+            /*
+             * Layer Data
+             */
+
+            var i, importTileset;
+
+            _.each(importLayer.data, function(importTile, importTileIndex){
+
+                // Get Import Tileset
+                for (i = importTilesetData.length-1; i >= 0; i--) {
+                    if (importTilesetData[i].oldFirstGid <= importTile)
+                        break;
+                }
+                importTileset = importTilesetData[i];
+
+                if(typeof importTileset === "undefined" || typeof importTileset.newFirstGid === "undefined"){
+                    // The user didn't select a matching tileset => remove this tile
+                    importTile = 0;
+                }
+                else if(importTileset.oldFirstGid == importTileset.newFirstGid){
+                    // Lucky one
+                }
+                else {
+                    importTile = importTile + (importTileset.newFirstGid - importTileset.oldFirstGid);
+                }
+
+                layer.data[importTileIndex] = importTile;
+
+            });
+
+            importLayers[layerIndex] = layer;
+
+        });
+
+        importMapData.layers = importLayers;
+
+        importMapData.tilesets = Tilemap.allTilesets();
+
+        // Cleanup
+        delete importMapData.oldTilesets;
+        delete importMapData.importTilesetData;
+
+        Tilemap.initialize(importMapData);
+
     }
+});
+
+Template.importPreview.events({
 });

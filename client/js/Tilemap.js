@@ -58,6 +58,22 @@ Tilemap = (function ($) {
 
     var layerIdIndex;
 
+    var layerTypeBg = 0;
+    var layerTypeFt = 1;
+    var layerTypeFloor = 2;
+    var layerTypeSky = 3;
+
+    var layerTypeStartZ = [
+        // Background   1-9
+        1,
+        // Field Type   100+
+        100,
+        // Floor        10-49
+        11,
+        // Sky          50-99
+        51
+    ];
+
     /**
      *
      * @param {MapSchema} mapParam
@@ -67,9 +83,9 @@ Tilemap = (function ($) {
 
         map = mapParam;
 
-        allTilesets = allTilesetsParam;
-
-
+        if(typeof allTilesetsParam !== "undefined"){
+            allTilesets = allTilesetsParam;
+        }
 
         var lastTileset = map.tilesets[map.tilesets.length-1];
 
@@ -334,6 +350,44 @@ Tilemap = (function ($) {
 
     };
 
+    /**
+     * Calculates the Z Value of a layer according to its type
+     * and the count of layer of the same type
+     * @param layerType
+     * @param countLayerTypes
+     * @returns {number}
+     */
+    var calcLayerZ = function(layerType, countLayerTypes){
+
+        var layerTypeId = getLayerTypeId(layerType);
+
+        var layerTypeCount = countLayerTypes[layerTypeId];
+
+        return (layerTypeStartZ+layerTypeCount-1);
+
+    };
+
+    /**
+     *
+     * @param layerType
+     * @returns {Number}
+     */
+    var getLayerTypeId = function(layerType){
+        if(layerType == "background"){
+            return layerTypeBg;
+        }
+        else if(layerType == "fieldtypes"){
+            return layerTypeFt;
+        }
+        else if(layerType == "sky"){
+            return layerTypeSky;
+        }
+        else{
+            return layerTypeFloor;
+        }
+
+    };
+
     var info = function(string){
         if(logLevel >= LOG_LEVEL.INFO){
             console.log(string);
@@ -358,6 +412,7 @@ Tilemap = (function ($) {
         drawMap: drawMap,
         eraseTile: eraseTile,
         drawTile: drawTile,
+        calcLayerZ:calcLayerZ,
         allTilesets: function(){ return allTilesets },
         getGlobalTilesetByName: getGlobalTilesetByName,
         getLayer: getLayerContext
