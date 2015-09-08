@@ -131,7 +131,11 @@ Template.mapEdit.events({
             reader.onload = function(e) {
                 var json = JSON.parse(e.target.result);
 
-                // Preview Map Properties
+                /*
+                 * --------------------------------------
+                 * Preview layer types
+                 * --------------------------------------
+                 */
                 var layers = new Array(json.layers.length);
 
                 var newType = "";
@@ -161,6 +165,11 @@ Template.mapEdit.events({
                     }
                 });
 
+                /*
+                 * --------------------------------------
+                 * Preview tileset assignments
+                 * --------------------------------------
+                 */
                 var importTilesets = new Array(json.tilesets.length);
                 var foundTileset;
                 var i = 0;
@@ -169,41 +178,46 @@ Template.mapEdit.events({
                 _.each(json.tilesets, function(tileset, index){
 
                     importTilesets[index] = {
+                        id: index,
                         name: tileset.name,
                         image: tileset.image,
                         foundTileset: false,
-                        allTilesets: new Array(countAllTilesets)
+                        tilesetOptions: new Array(countAllTilesets)
                     };
-
 
                     for(i = 0; i < countAllTilesets; i++){
 
                         tilesetIteration = allTilesets[i];
 
-                        if(allTilesets[i].name == tileset.name){
-                            tilesetIteration.isFoundTileset = true;
-                        }
-                        else{
+                        // The base values of the selected tilesets have to match
+                        if(tilesetIteration.tilecount == tileset.tilecount
+                            && tilesetIteration.imageheight == tileset.imageheight
+                            && tilesetIteration.imagewidth == tileset.imagewidth){
+
                             tilesetIteration.isFoundTileset = false;
+
+                            if(tilesetIteration.name == tileset.name){
+                                foundTileset = Tilemap.getGlobalTilesetByName(tileset.name);
+
+                                if(foundTileset){
+                                    tilesetIteration.isFoundTileset = true;
+                                    importTilesets[index].foundTileset = foundTileset._id;
+                                }
+                            }
+
+                            importTilesets[index].tilesetOptions[i] = tilesetIteration;
                         }
-                        importTilesets[index].allTilesets[i] = tilesetIteration;
-                    }
 
-                    foundTileset = Tilemap.getGlobalTilesetByName(tileset.name);
 
-                    if(foundTileset){
-                        if(foundTileset.tilecount == tileset.tilecount
-                            && foundTileset.imageheight == tileset.imageheight
-                            && foundTileset.imagewidth == tileset.imagewidth){
-
-                            importTilesets[index].foundTileset = foundTileset._id;
-                        }
                     }
 
                 });
 
-                console.dir(layers);
-
+                /*
+                 * --------------------------------------
+                 * Preview Map Properties
+                 * --------------------------------------
+                 */
                 var jsonPreview = {
                     properties: [
                         { label: "Name", value: json.properties.name },

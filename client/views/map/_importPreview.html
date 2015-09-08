@@ -18,6 +18,15 @@
     </table>
 
     <h3>Layers</h3>
+    <p>
+        TileStove distinguishes between different layer types:
+    </p>
+    <ul>
+        <li>Background: There will always be exactly 1 Background-Layer</li>
+        <li>Floor: Every map can have up to 40 Floor Layers that will be beneath the player.</li>
+        <li>Sky: Every map can have up to 40 Sky Layers that will be ontop of the player.</li>
+        <li>Field Types: Every map will always have at least 1 Field Type layer that defines generic properties of the field.</li>
+    </ul>
     <table class="table" width="100%">
         <thead>
         <tr>
@@ -33,26 +42,12 @@
                 <td>{{type}}</td>
                 <td>=></td>
                 <td>
-                    <select id="layer-type-{{id}}" name="layer-type-{{id}}">
+                    <select id="layer-type-{{id}}" name="layer-type-{{id}}" class="import-layer">
                         <option value="background" selected={{isFieldType "background"}}>Background</option>
                         <option value="floor" selected={{isFieldType "floor"}}>Floor</option>
                         <option value="sky" selected={{isFieldType "sky"}}>Sky</option>
                         <option value="fieldtypes" selected={{isFieldType "fieldtypes"}}>Field Types</option>
                     </select>
-                    {{!--<div class="btn-group" data-toggle="buttons">
-                        <label class="btn btn-default">
-                            <input type="radio" id="layer-type-{{id}}-background" name="layer-type-{{id}}" value="background" checked={{isFieldType "background"}}/> Background
-                        </label>
-                        <label class="btn btn-default">
-                            <input type="radio" id="layer-type-{{id}}-floor" name="layer-type-{{id}}" value="floor" checked={{isFieldType "floor"}}/> Floor
-                        </label>
-                        <label class="btn btn-default">
-                            <input type="radio" id="layer-type-{{id}}-sky" name="layer-type-{{id}}" value="sky" checked={{isFieldType "sky"}}/> Sky
-                        </label>
-                        <label class="btn btn-default">
-                            <input type="radio" id="layer-type-{{id}}-fieldtypes" name="layer-type-{{id}}" value="fieldtypes" checked={{isFieldType "fieldtypes"}}/> Field Type
-                        </label>
-                    </div>--}}
                 </td>
             </tr>
         {{/each}}
@@ -60,6 +55,7 @@
     </table>
 
     <h3>Tilesets</h3>
+    <p>Select which tileset in the opened tilemap corresponds to which available tileset. You can select any tilesets in the database that match in imageheight, imagewidth and tilecount.</p>
     <table class="table" width="100%">
         <thead>
         <tr>
@@ -72,9 +68,9 @@
             <tr>
                 <td>{{name}}</td>
                 <td>
-                    <select name="tileset-{{id}}" id="tileset-{{id}}">
-                        {{#each allTilesets}}
-                            <option value="{{id}}" selected={{#if isFoundTileset}}"selected"{{/if}}>{{name}}</option>
+                    <select name="tileset-{{id}}" id="tileset-{{id}}" class="import-tileset">
+                        {{#each tilesetOptions}}
+                            <option value="{{_id}}" selected={{isFoundTileset}}>{{name}}</option>
                         {{/each}}
                     </select>
                 </td>
