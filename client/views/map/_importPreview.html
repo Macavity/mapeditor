@@ -23,6 +23,7 @@
         <tr>
             <th>Name</th>
             <th>Type</th>
+            <th>&nbsp;</th>
         </tr>
         </thead>
         <tbody>
@@ -30,6 +31,29 @@
             <tr>
                 <td>{{name}}</td>
                 <td>{{type}}</td>
+                <td>=></td>
+                <td>
+                    <select id="layer-type-{{id}}" name="layer-type-{{id}}">
+                        <option value="background" selected={{isFieldType "background"}}>Background</option>
+                        <option value="floor" selected={{isFieldType "floor"}}>Floor</option>
+                        <option value="sky" selected={{isFieldType "sky"}}>Sky</option>
+                        <option value="fieldtypes" selected={{isFieldType "fieldtypes"}}>Field Types</option>
+                    </select>
+                    {{!--<div class="btn-group" data-toggle="buttons">
+                        <label class="btn btn-default">
+                            <input type="radio" id="layer-type-{{id}}-background" name="layer-type-{{id}}" value="background" checked={{isFieldType "background"}}/> Background
+                        </label>
+                        <label class="btn btn-default">
+                            <input type="radio" id="layer-type-{{id}}-floor" name="layer-type-{{id}}" value="floor" checked={{isFieldType "floor"}}/> Floor
+                        </label>
+                        <label class="btn btn-default">
+                            <input type="radio" id="layer-type-{{id}}-sky" name="layer-type-{{id}}" value="sky" checked={{isFieldType "sky"}}/> Sky
+                        </label>
+                        <label class="btn btn-default">
+                            <input type="radio" id="layer-type-{{id}}-fieldtypes" name="layer-type-{{id}}" value="fieldtypes" checked={{isFieldType "fieldtypes"}}/> Field Type
+                        </label>
+                    </div>--}}
+                </td>
             </tr>
         {{/each}}
         </tbody>

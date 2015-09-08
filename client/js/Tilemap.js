@@ -69,6 +69,8 @@ Tilemap = (function ($) {
 
         allTilesets = allTilesetsParam;
 
+
+
         var lastTileset = map.tilesets[map.tilesets.length-1];
 
         // preallocate arrays

@@ -91,6 +91,15 @@ Template.mapEdit.helpers({
     }
 });
 
+Template.importPreview.helpers({
+    isFieldType: function(comparison){
+        if(this.newType == comparison){
+            return true;
+        }
+        return false;
+    }
+});
+
 /*
  * Events
  */
@@ -125,10 +134,30 @@ Template.mapEdit.events({
                 // Preview Map Properties
                 var layers = new Array(json.layers.length);
 
+                var newType = "";
+                var lcName = "";
+
                 _.each(json.layers, function(layer,index){
+
+                    lcName = layer.name.toLowerCase();
+
+                    if(lcName === "background"){
+                        newType = "background";
+                    }
+                    else if(lcName === "fieldtypes" || lcName === "field types"){
+                        newType = "fieldtypes"
+                    }
+                    else if(lcName.indexOf("sky") > -1 || lcName == "layer 4"){
+                        newType = "sky";
+                    }
+                    else {
+                        newType = "floor";
+                    }
                     layers[index] = {
+                        id: index,
                         name: layer.name,
-                        type: layer.type
+                        type: layer.type,
+                        newType: newType
                     }
                 });
 
