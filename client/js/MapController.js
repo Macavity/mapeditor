@@ -66,6 +66,40 @@ MapController = RouteController.extend({
         var activeTileset = Session.get('activeTileset') || allTilesets[1]._id || false;
         Session.set('activeTileset', activeTileset);
 
+        // If the map has no tilesets yet, assign all tilesets
+        // @TODO Always use all tilesets
+        if(!map.tilesets){
+            map.tilesets = allTilesets;
+        }
+
+        // Add the default layers if non are existent yet
+        if(!map.layers){
+            map.layers = [{
+                    "id": "fieldtypes",
+                    "name" : "FieldTypes",
+                    "opacity" : 0.8,
+                    "type" : "fieldtypes",
+                    "visible" : false,
+                    "width" : map.width,
+                    "height": map.height,
+                    "x" : 0,
+                    "y" : 0,
+                    "z": 100
+                },
+                {
+                    "id": "background",
+                    "name" : "Background",
+                    "opacity" : 0.8,
+                    "type" : "background",
+                    "visible" : true,
+                    "width" : map.width,
+                    "height": map.height,
+                    "x" : 0,
+                    "y" : 0,
+                    "z": 1
+                }];
+        }
+
         /**
          * Properties in Array form for the template
          * @type {Array}
