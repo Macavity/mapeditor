@@ -93,8 +93,8 @@ Template.mapEdit.helpers({
 
 Template.importPreview.helpers({
     isFieldType: function(comparison){
-        if(this.newType == comparison){
-            return true;
+        if(this.type == comparison){
+            return "selected";
         }
         return false;
     },
@@ -140,6 +140,7 @@ Template.mapEdit.events({
                  * --------------------------------------
                  */
                 var layers = new Array(json.layers.length);
+                console.log("import layer count:"+json.layers.length);
 
                 var newType = "";
                 var lcName = "";
@@ -147,6 +148,8 @@ Template.mapEdit.events({
                 _.each(json.layers, function(layer,index){
 
                     lcName = layer.name.toLowerCase();
+
+                    console.log("layer #"+index+" "+lcName);
 
                     if(lcName === "background"){
                         newType = "background";
@@ -163,11 +166,12 @@ Template.mapEdit.events({
                     layers[index] = {
                         id: index,
                         name: layer.name,
-                        type: layer.type,
-                        data: layer.data,
-                        newType: newType
+                        type: newType,
+                        data: layer.data
                     }
                 });
+
+                console.log(layers);
 
                 /*
                  * --------------------------------------
@@ -259,11 +263,7 @@ Template.mapEdit.events({
                     layers: layers,
                     tilesets: importTilesets
                 };
-                Blaze.renderWithData(Template.importPreview, {
-                        layers: layers,
-                        properties: jsonPreview.properties,
-                        tilesets: importTilesets
-                    },
+                Blaze.renderWithData(Template.importPreview, jsonPreview,
                     importContent[0]);
                 Session.set('importMapData', importMapData);
             };
@@ -304,7 +304,14 @@ Template.mapEdit.events({
 
         var assignedLayerType;
         var layer;
-        var countLayerTypes = [];
+
+        /**
+         * Counter for how many layers there are of each type
+         * used for giving the layers unique ids
+         *
+         * @type {number[]}
+         */
+        var countLayerTypes = [0,0,0,0];
         var layerTypeBg = 0;
         var layerTypeFt = 1;
         var layerTypeFloor = 2;
@@ -331,8 +338,6 @@ Template.mapEdit.events({
 
         _.each(importLayers, function(importLayer, layerIndex){
 
-            // Reset Counters
-            countLayerTypes = [0,0,0,0];
 
             layer = {};
 
@@ -411,7 +416,7 @@ Template.mapEdit.events({
         delete importMapData.oldTilesets;
         delete importMapData.importTilesetData;
 
-        Tilemap.initialize(importMapData);
+        Tilemap.importTileMap(importMapData);
 
     }
 });
