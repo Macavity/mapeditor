@@ -66,81 +66,56 @@ MapController = RouteController.extend({
         var activeTileset = Session.get('activeTileset') || allTilesets[1]._id || false;
         Session.set('activeTileset', activeTileset);
 
+        // If the map has no tilesets yet, assign all tilesets
+        // @TODO Always use all tilesets
+        if(!map.tilesets){
+            map.tilesets = allTilesets;
+        }
+
+        // Add the default layers if non are existent yet
+        if(!map.layers){
+            map.layers = [{
+                    "id": "fieldtypes",
+                    "name" : "FieldTypes",
+                    "opacity" : 0.8,
+                    "type" : "fieldtypes",
+                    "visible" : false,
+                    "width" : map.width,
+                    "height": map.height,
+                    "x" : 0,
+                    "y" : 0,
+                    "z": 100
+                },
+                {
+                    "id": "background",
+                    "name" : "Background",
+                    "opacity" : 0.8,
+                    "type" : "background",
+                    "visible" : true,
+                    "width" : map.width,
+                    "height": map.height,
+                    "x" : 0,
+                    "y" : 0,
+                    "z": 1
+                }];
+        }
+
         /**
          * Properties in Array form for the template
          * @type {Array}
          */
-        var properties = [];
 
-        for (var key in map.properties) {
-            if (map.properties.hasOwnProperty(key)) {
-                properties.push({
-                    field: key, value: map.properties[key]
-                });
-            }
-        }
-        properties.push({
-            field: "author", value: map.creatorName, protected: true
-        });
-        properties.push({
-            field: "name", value: map.name
-        });
-        properties.push({
-            field: "width", value: map.width
-        });
-        properties.push({
-            field: "height", value: map.height
-        });
-        properties.push({
-            field: "tileheight", value: map.tileheight
-        });
-        properties.push({
-            field: "tilewidth", value: map.tilewidth
-        });
 
         var canvasWidth = map.width * map.tilewidth;
         var canvasHeight = map.height * map.tileheight;
 
-        var hasBackgroundLayer = false;
-        var hasFieldTypeLayer = false;
-        var countFloorLayer = 0;
-        var countSkyLayer = 0;
-
-
-        _.each(map.layers, function(layer, index){
-
-            layer.active = false;
-            layer.visible = true;
-            layer.canvasWidth = canvasWidth;
-            layer.canvasHeight = canvasHeight;
-
-            if(layer.type == "background"){
-                // Background Layer
-                hasBackgroundLayer = true;
-                layer.active = true;
-            }
-            else if(layer.type == "fieldtypes"){
-                // Field Type Layer
-                hasFieldTypeLayer = true;
-
-                // FieldTypes are invisible at start
-                layer.visible = false;
-            }
-            else if(layer.type == "sky"){
-                // Sky Layer
-            }
-            else{
-                // Floor Layer
-            }
-
-            map.layers[index] = layer;
-        });
+        map.layers = Tilemap.prepareLayersForCanvas(map.layers, canvasWidth, canvasHeight);
 
         this.render('mapEdit', {
             data: {
                 map: map,
                 allTilesets: allTilesets,
-                mapProperties: properties,
+                mapProperties: Tilemap.mapPropertiesList(map),
                 mapLayers: map.layers,
                 canvasWidth: canvasWidth,
                 canvasHeight: canvasHeight

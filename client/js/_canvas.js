@@ -93,6 +93,10 @@ Template.canvas.events({
 
         var brushSelection = Session.get('brushSelection');
 
+        if(!brushSelection){
+            return;
+        }
+
         var tileset = brushSelection.tileset;
 
         var tilesetTileWidth = tileset.tilewidth;

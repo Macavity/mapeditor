@@ -1,0 +1,87 @@
+<template name="importPreview">
+<div class="container">
+    <table class="table" width="100%">
+        <thead>
+        <tr>
+            <th>Property</th>
+            <th>Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each properties}}
+            <tr>
+                <td>{{label}}</td>
+                <td>{{value}}</td>
+            </tr>
+        {{/each}}
+        </tbody>
+    </table>
+
+    <h3>Layers</h3>
+    <p>
+        TileStove distinguishes between different layer types:
+    </p>
+    <ul>
+        <li>Background: There will always be exactly 1 Background-Layer</li>
+        <li>Floor: Every map can have up to 40 Floor Layers that will be beneath the player.</li>
+        <li>Sky: Every map can have up to 40 Sky Layers that will be ontop of the player.</li>
+        <li>Field Types: Every map will always have at least 1 Field Type layer that defines generic properties of the field.</li>
+    </ul>
+    <table class="table" width="100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>&nbsp;</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each layers}}
+            <tr>
+                <td><label for="layer-type-{{id}}">{{name}}</label></td>
+                <td>{{type}}</td>
+                <td>=&gt;</td>
+                <td>
+                    <select id="layer-type-{{id}}" name="layer-type-{{id}}" class="import-layer">
+                        <option value="background" selected={{isFieldType "background"}}>Background</option>
+                        <option value="floor" selected={{isFieldType "floor"}}>Floor</option>
+                        <option value="sky" selected={{isFieldType "sky"}}>Sky</option>
+                        <option value="fieldtypes" selected={{isFieldType "fieldtypes"}}>Field Types</option>
+                    </select>
+                </td>
+            </tr>
+        {{/each}}
+        </tbody>
+    </table>
+
+    <h3>Tilesets</h3>
+    <p>Select which tileset in the opened tilemap corresponds to which available tileset. You can select any tilesets in the database that match in imageheight, imagewidth and tilecount.</p>
+    <table class="table" width="100%">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>&nbsp;</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{#each tilesets}}
+            <tr>
+                <td><label for="tileset-{{id}}">{{name}}</label></td>
+                <td>
+                    {{#if tilesetWarning}}
+                        <div class="alert alert-warning" role="alert">I didn't find a matching tileset in the collection. Please upload the tileset first.</div>
+                    {{else}}
+                    <select name="tileset-{{id}}" id="tileset-{{id}}" class="import-tileset">
+                        {{#each tilesetOptions}}
+                            <option value="{{_id}}" selected={{isFoundTileset}}>{{name}}</option>
+                        {{/each}}
+                    </select>
+                    {{/if}}
+                </td>
+            </tr>
+        {{/each}}
+        </tbody>
+    </table>
+
+</div>
+</template>
