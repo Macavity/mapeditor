@@ -58,6 +58,22 @@ Tilemap = (function ($) {
 
     var layerIdIndex;
 
+    var layerTypeBg = 0;
+    var layerTypeFt = 1;
+    var layerTypeFloor = 2;
+    var layerTypeSky = 3;
+
+    var layerTypeStartZ = [
+        // Background   1-9
+        1,
+        // Field Type   100+
+        100,
+        // Floor        10-49
+        11,
+        // Sky          50-99
+        51
+    ];
+
     /**
      *
      * @param {MapSchema} mapParam
@@ -67,7 +83,12 @@ Tilemap = (function ($) {
 
         map = mapParam;
 
-        allTilesets = allTilesetsParam;
+        if(typeof allTilesetsParam !== "undefined"){
+            allTilesets = allTilesetsParam;
+        }
+
+        // Reset variables
+        layers = [];
 
         var lastTileset = map.tilesets[map.tilesets.length-1];
 
@@ -87,6 +108,126 @@ Tilemap = (function ($) {
         }
 
         initialized = true;
+
+    };
+
+    var importTileMap = function(newMapData){
+        map = newMapData;
+
+        // Reset Variables
+        layers = [];
+
+        var lastTileset = allTilesets[allTilesets.length-1];
+
+        // preallocate arrays
+        localToGlobalTile = new Array(lastTileset.firstgid + lastTileset.tilecount);
+        layerIdIndex = new Array(map.layers.length);
+
+        /*
+         * Section: Canvas
+         */
+        var canvasSection = $("#section-canvas");
+
+        // Delete all currently existing canvas elements
+        canvasSection.empty();
+
+        var brushSelection = Session.get('brushSelection');
+
+        var canvasWidth = map.width * map.tilewidth;
+        var canvasHeight = map.height * map.tileheight;
+
+        map.layers = prepareLayersForCanvas(map.layers, canvasWidth, canvasHeight);
+
+        Blaze.renderWithData(Template.canvas, {
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight,
+            layers: map.layers
+        }, canvasSection[0]);
+
+        /*
+         * Section: Properties
+         */
+        var propertiesSection = $("#section-properties").empty();
+
+        // Delete all currently existing canvas elements
+        canvasSection.empty();
+
+        Blaze.renderWithData(Template.properties, {
+            properties: mapPropertiesList(map)
+        }, propertiesSection[0]);
+
+    };
+
+    /**
+     *
+     * @param {[LayerSchema]} layers
+     * @returns {*}
+     * @param canvasWidth
+     * @param canvasHeight
+     */
+    var prepareLayersForCanvas = function(layers, canvasWidth, canvasHeight){
+        _.each(layers, function(layer, index){
+            /**
+             * @type LayerSchema
+             * @var layer
+             */
+
+            layer.active = false;
+            layer.visible = true;
+            layer.canvasWidth = canvasWidth;
+            layer.canvasHeight = canvasHeight;
+
+            if(layer.type == "background"){
+                layer.active = true;
+            }
+            else if(layer.type == "fieldtypes"){
+                // FieldTypes are invisible at start
+                layer.visible = false;
+            }
+            else if(layer.type == "sky"){
+                // Sky Layer
+            }
+            else{
+                // Floor Layer
+            }
+
+            layers[index] = layer;
+        });
+
+        return layers;
+
+    };
+
+    var mapPropertiesList = function(map){
+        var properties = [];
+
+        for (var key in map.properties) {
+            if (map.properties.hasOwnProperty(key)) {
+                properties.push({
+                    field: key, value: map.properties[key]
+                });
+            }
+        }
+        properties.push({
+            field: "author", value: map.creatorName, protected: true
+        });
+        properties.push({
+            field: "name", value: map.name
+        });
+        properties.push({
+            field: "width", value: map.width
+        });
+        properties.push({
+            field: "height", value: map.height
+        });
+        properties.push({
+            field: "tileheight", value: map.tileheight
+        });
+        properties.push({
+            field: "tilewidth", value: map.tilewidth
+        });
+
+        return properties;
 
     };
 
@@ -270,6 +411,21 @@ Tilemap = (function ($) {
 
     /**
      *
+     * @param tileName
+     * @returns {Boolean|Object}
+     */
+    var getGlobalTilesetByName = function(tileName){
+        var i, length = allTilesets.length;
+        for(i = 0; i < length; i++){
+            if(allTilesets[i].name == tileName){
+                return allTilesets[i];
+            }
+        }
+        return false;
+    };
+
+    /**
+     *
      * @param tileId
      * @returns {{x: number, y: number, image: HTMLImageElement}}
      */
@@ -317,6 +473,54 @@ Tilemap = (function ($) {
 
     };
 
+    /**
+     * Calculates the Z Value of a layer according to its type
+     * and the count of layer of the same type
+     * @param layerType
+     * @param countLayerTypes
+     * @returns {number}
+     */
+    var calcLayerZ = function(layerType, countLayerTypes){
+
+        //console.log("calcLayerZ "+layerType);
+
+        var layerTypeId = getLayerTypeId(layerType);
+
+
+
+        var layerTypeCount = countLayerTypes[layerTypeId];
+
+        //console.log("|- LayerType: "+layerTypeId);
+        //console.log("|- LayerType Count: "+layerTypeCount);
+
+        var z = (layerTypeStartZ[layerTypeId] + layerTypeCount - 1);
+
+        //console.log("|- Z: "+z);
+
+        return z;
+    };
+
+    /**
+     *
+     * @param layerType
+     * @returns {Number}
+     */
+    var getLayerTypeId = function(layerType){
+        if(layerType == "background"){
+            return layerTypeBg;
+        }
+        else if(layerType == "fieldtypes"){
+            return layerTypeFt;
+        }
+        else if(layerType == "sky"){
+            return layerTypeSky;
+        }
+        else{
+            return layerTypeFloor;
+        }
+
+    };
+
     var info = function(string){
         if(logLevel >= LOG_LEVEL.INFO){
             console.log(string);
@@ -338,9 +542,15 @@ Tilemap = (function ($) {
     // Return public variables and methods
     return {
         initialize: initialize,
+        importTileMap: importTileMap,
+        prepareLayersForCanvas: prepareLayersForCanvas,
+        mapPropertiesList: mapPropertiesList,
         drawMap: drawMap,
         eraseTile: eraseTile,
         drawTile: drawTile,
+        calcLayerZ:calcLayerZ,
+        allTilesets: function(){ return allTilesets },
+        getGlobalTilesetByName: getGlobalTilesetByName,
         getLayer: getLayerContext
     };
 
