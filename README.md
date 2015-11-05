@@ -97,6 +97,7 @@ Keep in mind that this editor is still in a very early stage and not working yet
 
 * Placing single tiles with the "Draw Tool"
 * Erase tiles with the "Erase Tool"
+* Open files from Tiled in json format
 
 # To Do
 
@@ -115,6 +116,6 @@ Open to suggestions :)
 # Credits
 
 Based on an old tile based browsergame for [Last Anixile](http://www.last-anixile.de)
-The working original was written in PHP and rests in the legacy branch. Bear in mind that the code was created in 2005 ;-) - 'twas a different time then.. I made just rough corrections so it works outside it's previous frame.
+The working original was written in PHP and rests in the [legacy branch](https://github.com/Macavity/mapeditor/tree/legacy). Bear in mind that the code was created in 2005 ;-) - 'twas a different time then.. I made just rough corrections so it works outside it's previous frame.
 
 * Tileset magecity was made by [Hyptosis on opengameart](http://opengameart.org/content/mage-city-arcanos)
