@@ -88,10 +88,24 @@ Keep in mind that this editor is still in a very early stage and not working yet
 
 # How to use
 
-1. [Install Meteor](https://www.meteor.com/install) - on linux/mac: ```curl https://install.meteor.com/ | sh```
-2. Fork/clone the repository
-3. Go into your local folder of the repository and start meteor from the terminal/shell with ```meteor```
-4. Unless port 3000 was already used you can now use the editor in your browser [http://localhost:3000](http://localhost:3000)
+## Installation
+
+```bash
+$ npm install
+```
+
+## Running the app
+
+```bash
+# development
+$ npm run start
+
+# watch mode
+$ npm run start:dev
+
+# production mode
+$ npm run start:prod
+```
 
 # Features
 
