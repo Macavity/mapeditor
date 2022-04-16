@@ -32,7 +32,7 @@ services:
   server:
     container_name: mapeditor_server
     build:
-      context: .
+      context: ./server
       dockerfile: Dockerfile
     #stdin_open: true
     restart: on-failure
@@ -43,13 +43,19 @@ services:
     depends_on:
       - db_postgres
     volumes:
-      - .:/app
+      - ./server:/server
     command: "npm run start:dev"
     ports:
       # Host:Container
       - "${APP_PORT}:8888"
     expose:
       - "${APP_PORT}"
+
+#  client:
+#    container_name: mapeditor_frontend
+#    build:
+#      context: ./client
+
 networks:
   fullstack:
     driver: bridge
