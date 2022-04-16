@@ -1,11 +1,13 @@
-FROM golang:latest
+FROM node:lts-alpine
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-
-RUN go mod download
-
 COPY . .
 
-EXPOSE 8080
+RUN ["npm", "install", "-g", "nodemon", "--silent"]
+RUN ["npm", "install", "-g", "@nestjs/cli"]
+RUN ["apk", "add", "--no-cache", "bash"]
+
+RUN ["npm", "install"]
+
+EXPOSE 8888

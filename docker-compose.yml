@@ -2,7 +2,7 @@ version: '3'
 services:
   db_postgres:
     image: postgres:latest
-    container_name: full_db_postgres
+    container_name: mapeditor_db
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -17,7 +17,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    container_name: pgadmin_container
+    container_name: mapeditor_pdadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
@@ -29,13 +29,14 @@ services:
       - fullstack
     restart: unless-stopped
 
-  app:
-    container_name: app
+  server:
+    container_name: mapeditor_server
     build:
       context: .
       dockerfile: Dockerfile
     #stdin_open: true
     restart: on-failure
+    env_file: .env
     #tty: true
     networks:
       - fullstack
@@ -43,9 +44,10 @@ services:
       - db_postgres
     volumes:
       - .:/app
-    command: /bin/sh -c "go run . 2>> log.stderr.log"
+    command: "npm run start:dev"
     ports:
-      - "${APP_PORT}:8080"
+      # Host:Container
+      - "${APP_PORT}:8888"
     expose:
       - "${APP_PORT}"
 networks:
