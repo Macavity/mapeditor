@@ -8,12 +8,13 @@ import { initializeSwagger } from "./plugins/swagger";
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    initializeSwagger(app);
+    await initializeSwagger(app);
+    // await runDbMigrations();
     app.enableCors();
 
     await app.listen(8888);
     Logger.log(
-        `Server started inside the contain on Port 8888.`,
+        `Server started inside the container on Port 8888.`,
         "Bootstrap",
     );
     Logger.log(

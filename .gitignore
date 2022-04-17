@@ -36,3 +36,5 @@ lerna-debug.log*
 .env
 server/node_modules
 server/dist
+frontend/.vscode
+static

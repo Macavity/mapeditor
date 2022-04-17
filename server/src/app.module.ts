@@ -4,9 +4,10 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { TileMapsModule } from './tile-maps/tile-maps.module';
 import { UsersModule } from './users/users.module';
+import { TileSetsModule } from './tile-sets/tile-sets.module';
 
 @Module({
-  imports: [UsersModule, TileMapsModule, DatabaseModule],
+  imports: [UsersModule, TileMapsModule, DatabaseModule, TileSetsModule],
   controllers: [AppController],
   providers: [AppService],
 })
