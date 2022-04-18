@@ -1,15 +1,39 @@
 <script setup lang="ts">
-  import { CreateMapDto } from "@/maps/dtos/CreateMap.dto";
-  import { ref } from "vue";
+  import { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
+  import { ref } from 'vue';
+  import { MapService } from '@/maps/MapService';
+  import { useMapStore } from '@/maps/MapStore';
+  import { useToast } from 'vue-toast-notification';
+  import { useRouter } from 'vue-router';
 
-  const name = ref("");
+  const router = useRouter();
+  const store = useMapStore();
+  const name = ref('');
   const width = ref(20);
   const height = ref(20);
+  const tileSize = ref(32);
 
-  function createMap() {
-    const newMap = new CreateMapDto(name.value, width.value, height.value);
-    console.log(newMap);
+  async function createMap() {
+    const newMap = new CreateMapDto(
+      name.value,
+      width.value,
+      height.value,
+      tileSize.value,
+      tileSize.value
+    );
 
+    MapService.createMap(newMap)
+      .then((map) => {
+        router.push({ name: 'map-edit', params: { id: map.uuid } });
+      })
+      .catch((error) => {
+        console.error(error);
+        useToast().error(
+          'Failed to create new Map: ' +
+            error.response.data.message.join('<br>'),
+          { duration: 10000 }
+        );
+      });
     //
     //
     // Meteor.call('createMap', newMap, function(error, result){
@@ -24,28 +48,28 @@
 </script>
 
 <template>
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 class="panel-title">Create new Map</h3>
-    </div>
-    <div class="panel-body">
-      <form>
-        <div class="form-group">
+  <div class="card mb-3">
+    <div class="card-header">Create New Map</div>
+    <div class="card-body">
+      <div class="card-text">
+        <div class="form-group mb-2">
           <label>Name</label>
           <input v-model="name" type="text" class="form-control" />
         </div>
-        <div class="form-group">
+        <div class="form-group mb-2">
           <label>Fields per Row (Width)</label>
           <input v-model.number="width" type="text" class="form-control" />
         </div>
-        <div class="form-group">
+        <div class="form-group mb-2">
           <label>Number of Rows (Height)</label>
           <input v-model.number="height" type="text" class="form-control" />
         </div>
-      </form>
-    </div>
-    <div class="panel-footer">
-      <button @click="createMap" class="btn btn-primary">Create</button>
+        <div class="form-group mb-2">
+          <label>Tile Size (Width and Height)</label>
+          <input v-model.number="tileSize" type="text" class="form-control" />
+        </div>
+      </div>
+      <button @click="createMap" class="btn btn-primary mt-3">Create</button>
     </div>
   </div>
 </template>

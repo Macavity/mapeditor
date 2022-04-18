@@ -5,10 +5,6 @@
 
 <template>
   <div class="manage-maps">
-    <h1>Manage Maps</h1>
-
-    <CreateMapPanel />
-
-    <MapList />
+    <h1>Edit Map</h1>
   </div>
 </template>

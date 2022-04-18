@@ -1,16 +1,19 @@
-import { defineStore } from "pinia";
+import { defineStore } from 'pinia';
+import { MapService } from '@/maps/MapService';
 
-const useMapStore = defineStore({
-  id: "mapStore",
+export const useMapStore = defineStore({
+  id: 'mapStore',
   state: () => ({
-    mapEntries: [],
+    loaded: false,
+    mapEntries: [] as IMap[],
   }),
   getters: {
     maps: (state) => state.mapEntries,
   },
   actions: {
-    loadMaps() {
-      const maps = loadMapsFromAPI();
+    async loadMaps() {
+      this.mapEntries = await MapService.getMaps();
+      this.loaded = true;
     },
   },
 });

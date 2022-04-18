@@ -17,13 +17,12 @@
 </template>
 
 <script setup lang="ts">
-  import { useTileSetStore } from "@/tilesets/TileSetStore";
+  import { useTileSetStore } from '@/tilesets/TileSetStore';
 
   const store = useTileSetStore();
-  console.log("store", store);
 
   if (store.tileSets.length === 0) {
-    console.log("TileSets empty => Trigger loading.");
+    console.log('TileSets empty => Trigger loading.');
     store.loadTileSets();
   }
 </script>

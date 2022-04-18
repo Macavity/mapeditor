@@ -1,12 +1,19 @@
-import type { CreateMapDto } from "@/maps/dtos/CreateMap.dto";
-import { mande } from "mande";
+import type { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
+import { mande } from 'mande';
+import axios from 'axios';
 
-const maps = mande("/api/maps/");
+const URL = 'http://localhost:8085/tile-maps';
 
-export function createMap(newMap: CreateMapDto): Promise<IMap> {
-  return maps.post(newMap);
-}
+export class MapService {
+  static async createMap(newMap: CreateMapDto): Promise<IMap> {
+    return axios.post<IMap>(URL, newMap).then((response) => {
+      return response.data;
+    });
+  }
 
-export function getMaps(): Promise<IMap[]> {
-  return maps.get<IMap[]>();
+  static async getMaps(): Promise<IMap[]> {
+    return axios.get<IMap[]>(URL).then((response) => {
+      return response.data;
+    });
+  }
 }
