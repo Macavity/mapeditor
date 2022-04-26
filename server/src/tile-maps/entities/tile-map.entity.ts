@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { IsInt, IsNotEmpty } from 'class-validator';
 import {
     Column,
@@ -16,6 +17,7 @@ import { Layer } from './layer.entity';
 @Entity()
 export class TileMap {
     @PrimaryGeneratedColumn()
+    @Exclude()
     public id: number;
 
     @Column()

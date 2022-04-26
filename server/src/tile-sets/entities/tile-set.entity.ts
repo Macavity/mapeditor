@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import {
     Column,
     CreateDateColumn,
@@ -6,14 +7,16 @@ import {
     Generated,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
-} from "typeorm";
+} from 'typeorm';
 
 @Entity()
 export class TileSet {
     @PrimaryGeneratedColumn()
+    @Exclude()
     public id: number;
 
-    @Generated("uuid")
+    @Column()
+    @Generated('uuid')
     public uuid: string;
 
     @Column()

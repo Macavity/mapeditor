@@ -4,6 +4,7 @@ services:
     image: postgres:latest
     container_name: mapeditor_db
     env_file: .env
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -53,10 +54,19 @@ services:
     expose:
       - "${APP_PORT}"
 
-#  client:
-#    container_name: mapeditor_frontend
-#    build:
-#      context: ./client
+  client:
+    container_name: mapeditor_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: on-failure
+    env_file: .env
+    networks:
+      - mapeditor
+    depends_on:
+      - server
+    volumes:
+      - ./frontend:/frontend
 
 networks:
   mapeditor:

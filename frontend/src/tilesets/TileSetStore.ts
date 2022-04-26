@@ -1,8 +1,5 @@
 import { defineStore } from 'pinia';
-import { TileSetFactory } from '@/tilesets/TileSetFactory';
-import { mande } from 'mande';
-
-const api = mande('http://localhost:8085/tile-sets');
+import { TileSetService } from '@/tilesets/TileSetService';
 
 export const useTileSetStore = defineStore({
   id: 'tileSetStore',
@@ -14,8 +11,7 @@ export const useTileSetStore = defineStore({
   },
   actions: {
     async loadTileSets() {
-      this.tileSetEntries = await api.get<ITileSet[]>('');
-      console.log(this.tileSetEntries);
+      this.tileSetEntries = await TileSetService.getTileSets();
     },
   },
 });
