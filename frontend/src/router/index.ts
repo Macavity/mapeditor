@@ -15,13 +15,18 @@ const router = createRouter({
       component: () => import('../views/ManageMapsView.vue'),
     },
     {
-      path: '/map/edit/:id',
+      path: '/map/edit/:uuid',
       name: 'map-edit',
       component: () => import('../views/MapEditView.vue'),
     },
     {
       path: '/manage-tilesets',
       name: 'tilesets',
+      component: () => import('../views/ManageTilesetsView.vue'),
+    },
+    {
+      path: '/test-drive',
+      name: 'test',
       component: () => import('../views/ManageTilesetsView.vue'),
     },
   ],

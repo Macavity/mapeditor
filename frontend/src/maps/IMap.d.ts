@@ -1,8 +1,8 @@
 interface IMap {
   name: string;
   uuid: string;
-  creatorId: string;
-  creatorName: string;
+  // creatorId: string;
+  // creatorName: string;
   width: number;
   height: number;
   tileWidth: number;

@@ -20,15 +20,14 @@ import { TileMapsService } from './tile-maps.service';
         type: TileMap,
     },
     params: {
-        id: {
+        uuid: {
+            field: 'uuid',
+            type: 'uuid',
             primary: true,
-            disabled: true,
-        },
-    },
-    serialize: {
-        get: TileMap,
+        }
     },
     query: {
+        alwaysPaginate: true,
         sort: [
             {
                 field: 'name',
