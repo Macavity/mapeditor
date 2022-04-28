@@ -11,8 +11,8 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
+import { Layer } from '../../layers/entities/layer.entity';
 import { User } from '../../users/entities/user.entity';
-import { Layer } from './layer.entity';
 
 @Entity()
 export class TileMap {

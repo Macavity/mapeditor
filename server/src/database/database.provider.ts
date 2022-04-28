@@ -1,15 +1,15 @@
-import { TypeOrmModuleOptions } from "@nestjs/typeorm";
-import { Layer } from "../tile-maps/entities/layer.entity";
-import { TileMap } from "../tile-maps/entities/tile-map.entity";
-import { TileSet } from "../tile-sets/entities/tile-set.entity";
-import { User } from "../users/entities/user.entity";
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { Layer } from '../layers/entities/layer.entity';
+import { TileMap } from '../tile-maps/entities/tile-map.entity';
+import { TileSet } from '../tile-sets/entities/tile-set.entity';
+import { User } from '../users/entities/user.entity';
 
-export const environmentName = process.env.NODE_ENV || "prod";
+export const environmentName = process.env.NODE_ENV || 'prod';
 
 export function databaseConfig(): TypeOrmModuleOptions {
     return {
         name: process.env.NODE_ENV,
-        type: "postgres",
+        type: 'postgres',
         host: process.env.DB_HOST,
         port: Number(process.env.DB_PORT),
         username: process.env.DB_USER,
