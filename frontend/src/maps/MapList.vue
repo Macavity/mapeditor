@@ -22,9 +22,9 @@
 </template>
 
 <script setup lang="ts">
-  import { useMapStore } from '@/maps/MapStore';
   import { RouteFactory } from '@/router/RouteFactory';
   import { useRouter } from 'vue-router';
+  import { useMapStore } from '@/maps/MapStore';
 
   const router = useRouter();
   const goToMapEdit = (uuid: string) =>

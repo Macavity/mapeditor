@@ -2,12 +2,12 @@
   import { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
   import { ref } from 'vue';
   import { MapService } from '@/maps/MapService';
-  import { useMapStore } from '@/maps/MapStore';
+  import { useEditorStore } from '@/editor/MapStore';
   import { useToast } from 'vue-toast-notification';
   import { useRouter } from 'vue-router';
 
   const router = useRouter();
-  const store = useMapStore();
+  const store = useEditorStore();
   const name = ref('');
   const width = ref(20);
   const height = ref(20);

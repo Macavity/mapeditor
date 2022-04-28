@@ -1,10 +1,12 @@
-
 @import "mixins";
 
 /*
  * Global
  */
-*:focus { outline: none; }
+*:focus {
+  outline: none;
+}
+
 html, body {
   width: 100%;
   min-height: 100%;
@@ -43,97 +45,15 @@ $zBackground: 1;
 $zCanvas: 0;
 
 
-#section-canvas {
-  height: 100%;
-  position: relative;
-  overflow: scroll;
-}
-
-#canvas {
-  position: relative;
-  z-index: $zCanvas;
-
-  display: block;
-  overflow: hidden;
-  background-color: gray;
-
-  .selection {
-    position: absolute;
-    z-index: $zSelection;
-    opacity: 0.5;
-
-    pointer-events: none;
-    box-shadow: inset 0px 0px 0px 1px #000;
-  }
-
-  #brush {
-
-  }
-
-  #grid {
-    $width: 32px;
-    $height: 32px;
-
-    background-size: $width $height;
-    background-image:
-    repeating-linear-gradient(0deg, #000, #000 1px, transparent 1px, transparent $width),
-    repeating-linear-gradient(-90deg, #000, #000 1px, transparent 1px, transparent $height);
-    height:100%;
-    width:100%;
-    opacity:0.4;
-    position:absolute;
-    top:0;
-    left:0;
-    z-index: $zGrid;
-
-  }
-
-  .layer {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    opacity: 1;
-
-    @include prefix(transition, opacity .15s ease-in-out);
-
-    &.layer-invisible {
-      opacity: 0;
-    }
-
-  }
-
-}
-
-#tilemap{
-  position: relative;
-
-  .layer {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-  }
-}
-
-/*
- * Properties
- */
-.form-properties {
-  label {
-    width: 100px;
-  }
-}
-.panel-body {
-  padding: 10px;
-}
-
 /*
  * Tileset Box
  */
-#section-tilesets{
+#section-tilesets {
   .btn-group {
     margin-bottom: 10px;
   }
 }
+
 #tileset-wrapper {
   position: relative;
 

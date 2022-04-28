@@ -1,6 +1,6 @@
 import type { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
 import axios from 'axios';
-import { MapDto } from '@/maps/dtos/Map.dto';
+import { MapDto } from '@/editor/Map.dto';
 
 const URL = 'http://localhost:8085/tile-maps';
 
