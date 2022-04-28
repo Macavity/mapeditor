@@ -1,8 +1,8 @@
 <template>
-  <div class="panel-heading">
-    <h2 class="panel-title">Minimap</h2>
+  <div class="card">
+    <div class="card-header">Minimap</div>
+    <div class="card-body"></div>
   </div>
-  <div class="panel-body"></div>
 </template>
 
 <script>

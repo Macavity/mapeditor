@@ -1,7 +1,6 @@
-import type { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
 import axios from 'axios';
 
-const URL = 'http://localhost:8085/tile-sets';
+const URL = import.meta.env.VITE_API_URL + '/tile-sets';
 
 export class TileSetService {
   static async getTileSets(): Promise<ITileSet[]> {

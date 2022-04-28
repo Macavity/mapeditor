@@ -1,7 +1,8 @@
-import { MapLayerType } from "@/maps/MapLayerType";
+import { MapLayerType } from '@/maps/MapLayerType';
 
 interface IMapLayer {
-  id: string;
+  id: number;
+  uuid: string;
   name: string;
   type: MapLayerType;
   height: number;

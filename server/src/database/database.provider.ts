@@ -1,5 +1,5 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Layer } from '../layers/entities/layer.entity';
+import { Layer } from '../tile-maps/entities/layer.entity';
 import { TileMap } from '../tile-maps/entities/tile-map.entity';
 import { TileSet } from '../tile-sets/entities/tile-set.entity';
 import { User } from '../users/entities/user.entity';

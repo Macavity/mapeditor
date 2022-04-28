@@ -1,3 +1,4 @@
+import { IsNotEmpty } from 'class-validator';
 import {
     Column,
     CreateDateColumn,
@@ -8,7 +9,8 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
-import { TileMap } from '../../tile-maps/entities/tile-map.entity';
+import { LayerType } from './layer-type';
+import { TileMap } from './tile-map.entity';
 
 @Entity()
 export class Layer {
@@ -20,10 +22,18 @@ export class Layer {
     public uuid: string;
 
     @ManyToOne(() => TileMap, (map) => map.layers)
+    @IsNotEmpty()
     public tileMap: TileMap;
 
     @Column()
     public name: string;
+
+    @Column({
+        type: 'enum',
+        enum: LayerType,
+        default: LayerType.Floor,
+    })
+    public type: LayerType;
 
     @Column({ default: 0 })
     public x: number;

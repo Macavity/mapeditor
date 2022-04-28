@@ -2,7 +2,7 @@ import type { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
 import axios from 'axios';
 import { MapDto } from '@/editor/Map.dto';
 
-const URL = 'http://localhost:8085/tile-maps';
+const URL = import.meta.env.VITE_API_URL + '/tile-maps';
 
 export class MapService {
   static async createMap(newMap: CreateMapDto): Promise<IMap> {
@@ -29,6 +29,13 @@ export class MapService {
         dto.tileHeight,
         dto.tileWidth
       );
+    });
+  }
+
+  static async getMapLayers(uuid: string) {
+    return axios.get(URL + '/' + uuid + '/layers').then((response) => {
+      console.log('MapLayers', response.data);
+      return response.data;
     });
   }
 }
