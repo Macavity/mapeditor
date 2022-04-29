@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import type { IMapLayer } from '@/types/IMapLayer';
   import { MapLayerType } from '@/maps/MapLayerType';
-  import { ref } from 'vue';
   import { useEditorStore } from '@/editor/EditorStore';
 
   const props = defineProps<{
@@ -16,13 +15,9 @@
   const isSky = (layer: IMapLayer) => layer.type === MapLayerType.Sky;
   const isBackground = (layer: IMapLayer) =>
     layer.type === MapLayerType.Background;
-  let activeLayerId = ref(null as number | null);
 
   const toggleLayerVisibility = (layerId: number) => {
     store.toggleLayerVisibility(layerId);
-  };
-  const toggleActiveLayer = (layerId: number) => {
-    activeLayerId.value = layerId;
   };
 </script>
 
@@ -34,14 +29,15 @@
         <li
           v-for="layer in store.layers"
           :key="layer.id"
-          @click="toggleActiveLayer(layer.id)"
+          @click="store.activateLayer(layer.id)"
           class="layer"
           :class="{ 'layer--active': true, 'layer--hidden': false }"
         >
           <i
-            v-if="layer.id === activeLayerId"
+            v-if="layer.id === store.activeLayer"
             class="bi bi-arrow-right-circle"
-          ></i>
+          ></i
+          >&nbsp;
           <i
             @click="toggleLayerVisibility(layer.id)"
             class="bi"

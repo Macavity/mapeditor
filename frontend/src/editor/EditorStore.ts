@@ -12,6 +12,7 @@ export const useEditorStore = defineStore({
     showGrid: false,
     showProperties: false,
     showLeftSideBar: false,
+    activeLayer: null as number | null,
     activeTool: EditorTool.DRAW,
     map: null as MapDto | null,
     layers: [] as IMapLayer[],
@@ -20,8 +21,23 @@ export const useEditorStore = defineStore({
     isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
     isFillToolActive: (state) => state.activeTool === EditorTool.FILL,
     isEraseToolActive: (state) => state.activeTool === EditorTool.ERASE,
+    canvasWidth: (state) => {
+      if (!state.map) {
+        return 0;
+      }
+      return state.map.width * state.map.tileWidth;
+    },
+    canvasHeight: (state) => {
+      if (!state.map) {
+        return 0;
+      }
+      return state.map.height * state.map.tileHeight;
+    },
   },
   actions: {
+    activateLayer(layerId: number) {
+      this.activeLayer = layerId;
+    },
     toggleGrid() {
       this.showGrid = !this.showGrid;
     },

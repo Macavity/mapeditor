@@ -1,4 +1,5 @@
 interface ITileSet {
+  uuid: string;
   name: string;
   image: string;
   firstGid: number;

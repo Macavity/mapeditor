@@ -29,17 +29,17 @@
           'col-md-9': !store.showProperties,
         }"
       >
-        <!--        {{ >canvas map = map layers = mapLayers canvasWidth = canvasWidth canvasHeight = canvasHeight }}-->
+        <CanvasLayers />
       </section>
 
       <aside id="aside-right" class="col-md-3">
-        <section id="section-minimap" class="panel panel-primary">
+        <section id="section-minimap" class="mb-2" v-if="false">
           <EditorMiniMap />
         </section>
-        <section id="section-layers" class="panel panel-primary">
+        <section id="section-layers" class="mb-2">
           <EditorLayers :layers="[]" />
         </section>
-        <section id="section-tilesets" class="panel panel-primary">
+        <section id="section-tilesets" class="mb-2">
           <TileSetBox />
         </section>
       </aside>
@@ -56,6 +56,7 @@
   import EditorMiniMap from '@/editor/EditorMiniMap.vue';
   import EditorLayers from '@/editor/EditorLayers.vue';
   import EditorToolbar from '@/editor/EditorToolbar.vue';
+  import CanvasLayers from '@/editor/CanvasLayers.vue';
 
   const props = defineProps<{
     map: MapDto;
@@ -140,16 +141,6 @@
       &.layer-invisible {
         opacity: 0;
       }
-    }
-  }
-
-  #tilemap {
-    position: relative;
-
-    .layer {
-      position: absolute;
-      width: 100%;
-      height: 100%;
     }
   }
 </style>
