@@ -1,0 +1,58 @@
+@import "mixins";
+
+/*
+ * Global
+ */
+*:focus {
+  outline: none;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+
+}
+
+a {
+  color: #4183c4;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.container {
+  width: 100%;
+}
+
+
+/*******************************************
+ *              Canvas
+ *******************************************/
+
+$zGrid: 100;
+$zSelection: 99;
+
+// Layers are 2-98
+$zBackground: 1;
+$zCanvas: 0;
+
+
+/*
+ * Tileset Box
+ */
+#section-tilesets {
+  .btn-group {
+    margin-bottom: 10px;
+  }
+}
+
+
+

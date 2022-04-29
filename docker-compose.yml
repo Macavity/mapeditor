@@ -1,0 +1,77 @@
+version: '3'
+services:
+  db_postgres:
+    image: postgres:latest
+    container_name: mapeditor_db
+    env_file: .env
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - DATABASE_HOST=${DB_HOST}
+    ports:
+      - '5432:5432'
+    volumes:
+      - mapeditor_db:/var/lib/postgresql/data
+    networks:
+      - mapeditor
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: mapeditor_pdadmin
+    env_file: .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    depends_on:
+      - db_postgres
+    ports:
+      - "5050:80"
+    networks:
+      - mapeditor
+    restart: unless-stopped
+
+  server:
+    container_name: mapeditor_server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    #stdin_open: true
+    restart: on-failure
+    env_file: .env
+    #tty: true
+    networks:
+      - mapeditor
+    depends_on:
+      - db_postgres
+    volumes:
+      - ./server:/server
+    command: "npm run start:dev"
+    ports:
+      # Host:Container
+      - "${APP_PORT}:8888"
+    expose:
+      - "${APP_PORT}"
+
+  client:
+    container_name: mapeditor_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: on-failure
+    env_file: .env
+    networks:
+      - mapeditor
+    depends_on:
+      - server
+    volumes:
+      - ./frontend:/frontend
+
+networks:
+  mapeditor:
+    driver: bridge
+
+volumes:
+  server:
+  mapeditor_db:
