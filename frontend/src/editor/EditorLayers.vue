@@ -3,10 +3,6 @@
   import { MapLayerType } from '@/maps/MapLayerType';
   import { useEditorStore } from '@/editor/EditorStore';
 
-  const props = defineProps<{
-    layers: IMapLayer[];
-  }>();
-
   const store = useEditorStore();
   if (store.map) {
     store.loadLayersForMap(store.map.uuid);

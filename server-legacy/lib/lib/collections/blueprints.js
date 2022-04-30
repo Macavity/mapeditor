@@ -1,1 +1,0 @@
-Blueprints = new Mongo.Collection('blueprints');

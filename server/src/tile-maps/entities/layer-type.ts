@@ -1,6 +1,6 @@
 export enum LayerType {
-    Background,
-    Floor,
-    Sky,
-    FieldTypes,
+  Background,
+  Floor,
+  Sky,
+  FieldTypes,
 }

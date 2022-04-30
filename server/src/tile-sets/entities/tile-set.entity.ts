@@ -1,57 +1,57 @@
 import { Exclude } from 'class-transformer';
 import {
-    Column,
-    CreateDateColumn,
-    DeleteDateColumn,
-    Entity,
-    Generated,
-    PrimaryGeneratedColumn,
-    UpdateDateColumn,
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  Generated,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()
 export class TileSet {
-    @PrimaryGeneratedColumn()
-    @Exclude()
-    public id: number;
+  @PrimaryGeneratedColumn()
+  @Exclude()
+  public id: number;
 
-    @Column()
-    @Generated('uuid')
-    public uuid: string;
+  @Column()
+  @Generated('uuid')
+  public uuid: string;
 
-    @Column()
-    public imageWidth: number;
+  @Column()
+  public imageWidth: number;
 
-    @Column()
-    public imageHeight: number;
+  @Column()
+  public imageHeight: number;
 
-    @Column()
-    public name: string;
+  @Column()
+  public name: string;
 
-    @Column()
-    public tileWidth: number;
+  @Column()
+  public tileWidth: number;
 
-    @Column()
-    public tileHeight: number;
+  @Column()
+  public tileHeight: number;
 
-    @Column()
-    public tileCount: number;
+  @Column()
+  public tileCount: number;
 
-    @Column()
-    public firstGid: number;
+  @Column()
+  public firstGid: number;
 
-    @Column({ default: 0 })
-    public margin: number;
+  @Column({ default: 0 })
+  public margin: number;
 
-    @Column({ default: 0 })
-    public spacing: number;
+  @Column({ default: 0 })
+  public spacing: number;
 
-    @CreateDateColumn()
-    createdDate: Date;
+  @CreateDateColumn()
+  createdDate: Date;
 
-    @UpdateDateColumn()
-    updatedDate: Date;
+  @UpdateDateColumn()
+  updatedDate: Date;
 
-    @DeleteDateColumn()
-    deletedDate: Date;
+  @DeleteDateColumn()
+  deletedDate: Date;
 }

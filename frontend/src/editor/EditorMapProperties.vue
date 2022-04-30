@@ -29,7 +29,7 @@
     map: MapDto;
   }>();
 
-  const properties = [];
+  const properties = [] as Array<{ field: string; value: string | number }>;
 
   // for (var key in props.map.properties) {
   //   if (map.properties.hasOwnProperty(key)) {

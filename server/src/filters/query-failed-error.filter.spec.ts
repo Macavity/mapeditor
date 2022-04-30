@@ -1,7 +1,7 @@
-import { QueryFailedExceptionFilter } from "./query-failed-error.filter";
+import { QueryFailedExceptionFilter } from './query-failed-error.filter';
 
-describe("QueryFailedExceptionFilter", () => {
-    it("should be defined", () => {
-        expect(new QueryFailedExceptionFilter()).toBeDefined();
-    });
+describe('QueryFailedExceptionFilter', () => {
+  it('should be defined', () => {
+    expect(new QueryFailedExceptionFilter()).toBeDefined();
+  });
 });

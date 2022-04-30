@@ -18,7 +18,7 @@
           class="panel panel-primary"
           :class="{ 'd-none': !store.showProperties }"
         >
-          <EditorMapProperties :map="store.map" />
+          <EditorMapProperties v-if="store.map" :map="store.map" />
         </section>
       </aside>
 

@@ -11,8 +11,8 @@
   };
 
   onMounted(() => {
-    for (const layer in store.layers) {
-      console.log('Draw Layer', layer.id);
+    for (const layer of store.layers) {
+      console.log('Draw Layer', layer.uuid);
     }
   });
 
@@ -44,7 +44,7 @@
 
 <template>
   <div
-    @mousemove=""
+    @mousemove="onMouseMove"
     :style="{
       width: store.canvasWidth + 'px',
       height: store.canvasHeight + 'px',

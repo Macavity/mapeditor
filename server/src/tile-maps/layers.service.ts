@@ -8,47 +8,33 @@ import { LayerFactory } from './layer.factory';
 
 @Injectable()
 export class LayersService extends TypeOrmCrudService<Layer> {
-    constructor(
-        @InjectRepository(Layer) public repository: Repository<Layer>
-    ) {
-        super(repository);
+  constructor(@InjectRepository(Layer) public repository: Repository<Layer>) {
+    super(repository);
+  }
+
+  async findByMap(tileMap: TileMap): Promise<Layer[] | null> {
+    const results = await this.repository.find({
+      where: {
+        tileMap,
+      },
+    });
+
+    if (results) {
+      return results;
     }
 
-    async findByMap(tileMap: TileMap): Promise<Layer[] | null> {
-        const results = await this.repository.find({
-            where: {
-                tileMap,
-            },
-        });
+    return null;
+  }
 
-        if (results) {
-            return results;
-        }
+  async createDefaultLayers(tileMap: TileMap) {
+    const layers = await this.findByMap(tileMap);
 
-        return null;
+    if (layers && layers.length > 0) {
+      return;
     }
 
-    async createDefaultLayers(tileMap: TileMap) {
-        const layers = await this.findByMap(tileMap);
+    const backgroundLayer = LayerFactory.createNewBackground(tileMap);
 
-        if (layers && layers.length > 0) {
-            return;
-        }
-
-        const backgroundLayer = LayerFactory.createNewBackground(tileMap);
-
-        return this.repository.save(backgroundLayer);
-    }
-
-    async findSortedLayersForMap(uuid: string) {
-        return Promise.resolve(undefined);
-    }
-
-    async findByMapUuid(uuid: string) {
-        return this.repository.find({
-            where: {
-                tileMap: uuid,
-            },
-        });
-    }
+    return this.repository.save(backgroundLayer);
+  }
 }
