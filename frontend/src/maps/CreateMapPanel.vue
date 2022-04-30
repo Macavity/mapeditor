@@ -1,13 +1,11 @@
 <script setup lang="ts">
   import { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
-  import { ref } from 'vue';
   import { MapService } from '@/maps/MapService';
-  import { useEditorStore } from '@/editor/MapStore';
   import { useToast } from 'vue-toast-notification';
   import { useRouter } from 'vue-router';
+  import { ref } from 'vue';
 
   const router = useRouter();
-  const store = useEditorStore();
   const name = ref('');
   const width = ref(20);
   const height = ref(20);
@@ -34,16 +32,6 @@
           { duration: 10000 }
         );
       });
-    //
-    //
-    // Meteor.call('createMap', newMap, function(error, result){
-    //   if(!!error && Meteor.isClient){
-    //     sAlert.error(error);
-    //   }
-    //   else {
-    //     Router.go('/map/edit/'+result);
-    //   }
-    // });
   }
 </script>
 

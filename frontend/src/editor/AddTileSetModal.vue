@@ -1,7 +1,10 @@
+<script lang="ts">
+  import type { IWindow } from '@/external';
+
+  declare let window: IWindow;
+</script>
 <script lang="ts" setup>
   import { onMounted, ref } from 'vue';
-
-  declare var window: any;
 
   const props = defineProps<{
     show: boolean;
@@ -10,7 +13,7 @@
   const emit = defineEmits(['close', 'addTileSet']);
 
   const url = '';
-  let modal: any;
+  let modal: { show: () => void; hide: () => void };
   const showModal = ref(props.show);
 
   onMounted(() => {
@@ -53,7 +56,7 @@
           </h5>
           <button
             type="button"
-            @click="$emit('close')"
+            @click="close"
             class="btn-close"
             data-bs-dismiss="modal"
             aria-label="Close"
@@ -78,7 +81,7 @@
         </div>
         <div class="modal-footer">
           <button
-            @click="$emit('close')"
+            @click="close"
             type="button"
             class="btn btn-secondary"
             data-bs-dismiss="modal"
