@@ -9,7 +9,7 @@ export class TileSetFactory {
     imageHeight: number,
     imageWidth: number,
     margin: number,
-    spacing: number
+    spacing: number,
   ): ITileSet {
     return {
       name,

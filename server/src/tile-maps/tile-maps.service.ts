@@ -6,15 +6,15 @@ import { TileMap } from './entities/tile-map.entity';
 
 @Injectable()
 export class TileMapsService extends TypeOrmCrudService<TileMap> {
-    constructor(
-        @InjectRepository(TileMap) public repository: Repository<TileMap>,
-    ) {
-        super(repository);
-    }
+  constructor(
+    @InjectRepository(TileMap) public repository: Repository<TileMap>,
+  ) {
+    super(repository);
+  }
 
-    async findByUuid(uuid: string) {
-        return this.repository.findOne({
-            uuid,
-        });
-    }
+  async findByUuid(uuid: string) {
+    return this.repository.findOne({
+      uuid,
+    });
+  }
 }

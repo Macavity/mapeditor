@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { mockRepositoryProvider } from '../../test/mocks/repositories';
+import { Layer } from './entities/layer.entity';
 import { LayersService } from './layers.service';
 
 describe('LayersService', () => {
@@ -6,7 +8,7 @@ describe('LayersService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [LayersService],
+      providers: [LayersService, mockRepositoryProvider(Layer)],
     }).compile();
 
     service = module.get<LayersService>(LayersService);

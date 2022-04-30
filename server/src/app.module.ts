@@ -7,9 +7,8 @@ import { TileSetsModule } from './tile-sets/tile-sets.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
-    imports: [UsersModule, TileMapsModule, DatabaseModule, TileSetsModule],
-    controllers: [AppController],
-    providers: [AppService],
+  imports: [UsersModule, TileMapsModule, DatabaseModule, TileSetsModule],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule {
-}
+export class AppModule {}

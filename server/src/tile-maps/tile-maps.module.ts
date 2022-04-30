@@ -8,9 +8,8 @@ import { TileMapsController } from './tile-maps.controller';
 import { TileMapsService } from './tile-maps.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([TileMap, Layer])],
-    controllers: [TileMapsController, LayersController],
-    providers: [TileMapsService, LayersService],
+  imports: [TypeOrmModule.forFeature([TileMap, Layer])],
+  controllers: [TileMapsController, LayersController],
+  providers: [TileMapsService, LayersService],
 })
-export class TileMapsModule {
-}
+export class TileMapsModule {}

@@ -1,11 +1,11 @@
 import {
-    ClassSerializerInterceptor,
-    Controller,
-    Logger,
-    UseFilters,
-    UseInterceptors,
-    UsePipes,
-    ValidationPipe
+  ClassSerializerInterceptor,
+  Controller,
+  Logger,
+  UseFilters,
+  UseInterceptors,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Crud } from '@nestjsx/crud';
@@ -16,32 +16,32 @@ import { LayersService } from './layers.service';
 @Controller('layers')
 @ApiTags('Layers')
 @Crud({
-    model: {
-        type: Layer,
+  model: {
+    type: Layer,
+  },
+  params: {
+    uuid: {
+      field: 'uuid',
+      type: 'uuid',
+      primary: true,
     },
-    params: {
-        uuid: {
-            field: 'uuid',
-            type: 'uuid',
-            primary: true,
-        }
-    },
-    query: {
-        sort: [
-            {
-                field: 'z',
-                order: 'DESC',
-            },
-        ],
-    },
+  },
+  query: {
+    sort: [
+      {
+        field: 'z',
+        order: 'DESC',
+      },
+    ],
+  },
 })
 @UsePipes(new ValidationPipe())
 @UseInterceptors(ClassSerializerInterceptor)
 @UseFilters(new QueryFailedExceptionFilter())
 export class LayersController {
-    private logger: Logger;
+  private logger: Logger;
 
-    constructor(private readonly service: LayersService) {
-        this.logger = new Logger(LayersController.name);
-    }
+  constructor(private readonly service: LayersService) {
+    this.logger = new Logger(LayersController.name);
+  }
 }

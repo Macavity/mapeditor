@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint-fe:
-    name: Lint JavaScript
+    name: Lint Frontend
     runs-on: ubuntu-latest
 
     strategy:
@@ -38,6 +38,38 @@ jobs:
         run: |
           npm run lint
           npm run typecheck
+
+  test-fe:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    needs: lint-fe
+
+    strategy:
+      matrix:
+        node-version: [ 16.x ]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache Node Modules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: NPM install
+        run: npm install
+        working-directory: frontend
+
+      - name: Run Tests
+        working-directory: frontend
+        run: |
+          npm run test
 
   lint-server:
     name: Lint NestJS
@@ -69,3 +101,36 @@ jobs:
         working-directory: server
         run: |
           npm run lint
+          npm run typecheck
+
+  test-server:
+    name: Lint NestJS
+    runs-on: ubuntu-latest
+    needs: lint-server
+
+    strategy:
+      matrix:
+        node-version: [ 16.x ]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache Node Modules
+        uses: actions/cache@v2
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: NPM install
+        run: npm install
+        working-directory: server
+
+      - name: Lint
+        working-directory: server
+        run: |
+          npm run test

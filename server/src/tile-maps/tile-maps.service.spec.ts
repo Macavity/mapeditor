@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { mockRepositoryProvider } from '../../test/mocks/repositories';
+import { TileMap } from './entities/tile-map.entity';
 import { TileMapsService } from './tile-maps.service';
 
 describe('TileMapsService', () => {
@@ -6,7 +8,7 @@ describe('TileMapsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TileMapsService],
+      providers: [TileMapsService, mockRepositoryProvider(TileMap)],
     }).compile();
 
     service = module.get<TileMapsService>(TileMapsService);
