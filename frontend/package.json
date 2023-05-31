@@ -2,7 +2,8 @@
   "name": "mapeditor",
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite",
+    "start": "vite",
+    "start:docker": "vite --host",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview --port 5050",
     "test:unit": "vitest --environment jsdom",

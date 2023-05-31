@@ -19,7 +19,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    container_name: mapeditor_pdadmin
+    container_name: mapeditor_pgadmin
     env_file: .env
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
@@ -47,6 +47,7 @@ services:
       - db_postgres
     volumes:
       - ./server:/server
+      - /server/node_modules
     command: "npm run start:dev"
     ports:
       # Host:Container
@@ -67,6 +68,11 @@ services:
       - server
     volumes:
       - ./frontend:/frontend
+      - /frontend/node_modules/
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
 
 networks:
   mapeditor:

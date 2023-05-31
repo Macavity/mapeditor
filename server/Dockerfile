@@ -10,4 +10,6 @@ RUN ["apk", "add", "--no-cache", "bash"]
 
 RUN ["npm", "install"]
 
+CMD ["npm", "run", "start:dev"]
+
 EXPOSE 8888
