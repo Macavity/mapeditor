@@ -27,7 +27,7 @@
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
     "@nestjs/swagger": "^5.2.1",
-    "@nestjs/typeorm": "^8.0.3",
+    "@nestjs/typeorm": "^8.1.4",
     "@nestjsx/crud": "^5.0.0-alpha.3",
     "@nestjsx/crud-typeorm": "^5.0.0-alpha.3",
     "class-transformer": "^0.5.1",
@@ -40,7 +40,7 @@
     "rxjs": "^7.2.0",
     "stream": "^0.0.2",
     "swagger-ui-express": "^4.3.0",
-    "typeorm": "^0.2.34"
+    "typeorm": "^0.3.17"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.1.8",
