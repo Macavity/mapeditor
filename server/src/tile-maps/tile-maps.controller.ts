@@ -9,13 +9,13 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
-import { Crud, CrudController } from '@nestjsx/crud';
-import { NotFoundError } from 'rxjs';
-import { QueryFailedExceptionFilter } from '../filters/query-failed-error.filter';
-import { TileMap } from './entities/tile-map.entity';
-import { LayersService } from './layers.service';
-import { TileMapsService } from './tile-maps.service';
+import {ApiTags} from '@nestjs/swagger';
+import {Crud, CrudController} from '@nestjsx/crud';
+import {NotFoundError} from 'rxjs';
+import {QueryFailedExceptionFilter} from '../filters/query-failed-error.filter';
+import {TileMap} from './entities/tile-map.entity';
+import {LayersService} from './layers.service';
+import {TileMapsService} from './tile-maps.service';
 
 @Controller('tile-maps')
 @ApiTags('TileMaps')
