@@ -1,4 +1,5 @@
-import { defineStore } from 'pinia';
+import {defineStore} from 'pinia';
+import {TileSetService} from "@/tilesets/TileSetService";
 
 export const useTileSetStore = defineStore({
   id: 'tileSetStore',
@@ -8,7 +9,7 @@ export const useTileSetStore = defineStore({
   }),
   getters: {
     tileSets: (state) =>
-      state.tileSetEntries.filter((entry) => entry.name !== '000-Types'),
+      state.tileSetEntries,
     activeTileSet: (state) => {
       return state.tileSetEntries.find(
         (entry) => entry.uuid === state.activeTileSetUUID
@@ -23,7 +24,7 @@ export const useTileSetStore = defineStore({
       this.tileSetEntries.push(tileSet);
     },
     async loadTileSets() {
-      //this.tileSetEntries = await TileSetService.getTileSets();
+      this.tileSetEntries = await TileSetService.getTileSets();
     },
   },
 });

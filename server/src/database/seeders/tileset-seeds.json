@@ -1,17 +1,5 @@
 [
   {
-    "name": "000-Types",
-    "image": "tilesets/000-Types.png",
-    "firstGid": 1,
-    "tileCount": 3,
-    "tileHeight": 32,
-    "tileWidth": 32,
-    "imageHeight": 96,
-    "imageWidth": 96,
-    "margin": 0,
-    "spacing": 0
-  },
-  {
     "name": "magecity",
     "image": "tilesets/magecity.png",
     "firstGid": 10,

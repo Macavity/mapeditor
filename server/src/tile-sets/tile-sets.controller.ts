@@ -1,40 +1,62 @@
 import {
+  Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
+  Get,
   Logger,
+  Param,
+  Post,
+  Put,
   UseFilters,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
-import { Crud, CrudController } from '@nestjsx/crud';
-import { QueryFailedExceptionFilter } from '../filters/query-failed-error.filter';
-import { TileSet } from './entities/tile-set.entity';
-import { TileSetsService } from './tile-sets.service';
+import {ApiTags} from '@nestjs/swagger';
+import {TileSetsService} from './tile-sets.service';
+import {TileSet} from './entities/tile-set.entity';
+import {CreateTileSetDto} from './dto/create-tileset.dto';
+import {QueryFailedExceptionFilter} from '../filters/query-failed-error.filter';
+import {UpdateTileSetDto} from "./dto/update-tileset.dto";
 
 @Controller('tile-sets')
 @ApiTags('TileSets')
-@Crud({
-  model: {
-    type: TileSet,
-  },
-  query: {
-    sort: [
-      {
-        field: 'name',
-        order: 'ASC',
-      },
-    ],
-  },
-})
 @UsePipes(new ValidationPipe())
 @UseInterceptors(ClassSerializerInterceptor)
 @UseFilters(new QueryFailedExceptionFilter())
-export class TileSetsController implements CrudController<TileSet> {
+export class TileSetsController {
   private logger: Logger;
 
-  constructor(public readonly service: TileSetsService) {
+  constructor(private readonly tileSetsService: TileSetsService) {
     this.logger = new Logger(TileSetsController.name);
+  }
+
+  @Post()
+  async create(@Body() createTileSetDto: CreateTileSetDto): Promise<TileSet> {
+    return this.tileSetsService.create(createTileSetDto);
+  }
+
+  @Get()
+  async findAll(): Promise<TileSet[]> {
+    return this.tileSetsService.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<TileSet> {
+    return this.tileSetsService.findOne(id);
+  }
+
+  @Put(':id')
+  async update(
+      @Param('id') id: string,
+      @Body() updateTileSetDto: UpdateTileSetDto,
+  ): Promise<TileSet> {
+    return this.tileSetsService.update(id, updateTileSetDto);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.tileSetsService.remove(id);
   }
 }
