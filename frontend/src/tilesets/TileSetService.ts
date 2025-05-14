@@ -14,4 +14,10 @@ export class TileSetService {
       return response.data;
     });
   }
+
+  static async deleteTileSet(uuid: string): Promise<void> {
+    return axios.delete(`${URL}/${uuid}`).then((response) => {
+      return response.data;
+    });
+  }
 }

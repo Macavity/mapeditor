@@ -1,5 +1,6 @@
 import {defineStore} from 'pinia';
 import {TileSetService} from "@/tilesets/TileSetService";
+import { useToast } from 'vue-toast-notification';
 
 export const useTileSetStore = defineStore({
   id: 'tileSetStore',
@@ -26,5 +27,15 @@ export const useTileSetStore = defineStore({
     async loadTileSets() {
       this.tileSetEntries = await TileSetService.getTileSets();
     },
+    async deleteTileSet(uuid: string) {
+      try {
+        await TileSetService.deleteTileSet(uuid);
+        this.tileSetEntries = this.tileSetEntries.filter(set => set.uuid !== uuid);
+        useToast().success('Tileset deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete tileset:', error);
+        useToast().error('Failed to delete tileset');
+      }
+    }
   },
 });
