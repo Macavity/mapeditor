@@ -10,7 +10,12 @@ async function bootstrap() {
 
   await initializeSwagger(app);
   // await runDbMigrations();
-  app.enableCors();
+  app.enableCors({
+    origin: ['http://localhost:3000', 'http://client:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
 
   await app.listen(8888, '0.0.0.0');
   Logger.log(`Server started inside the container on Port 8888 (0.0.0.0).`, 'Bootstrap');
