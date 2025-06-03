@@ -36,11 +36,9 @@ export class MapService {
     }
 
     static async getMapDto(uuid: string): Promise<MapDto> {
-        return axios.get<MapDto>(this.BASE_URL + '/' + uuid).then((response) => {
-            console.log('Map DTO', response.data);
-            const dto = response.data;
-            return new MapDto(dto.uuid, dto.name, dto.height, dto.width, dto.tileHeight, dto.tileWidth);
-        });
+        const response = await axios.get<{ data: TileMap }>(`${this.BASE_URL}/${uuid}`);
+        const data = response.data.data;
+        return new MapDto(data.uuid, data.name, data.height, data.width, data.tile_height, data.tile_width);
     }
 
     // static async getMapLayers(uuid: string) {
