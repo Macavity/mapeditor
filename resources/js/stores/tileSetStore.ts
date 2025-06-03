@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
-import {TileSetService} from "@/tilesets/TileSetService";
 import { useToast } from 'vue-toast-notification';
+import { TileSetService } from '@/services/TileSetService';
 
 export const useTileSetStore = defineStore({
   id: 'tileSetStore',
