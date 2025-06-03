@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { CreateMapDto } from '@/maps/dtos/CreateMap.dto';
-  import { MapService } from '@/maps/MapService';
+  import { CreateMapDto } from '@/dtos/CreateMap.dto';
+  import { MapService } from '@/services/MapService';
   import { useToast } from 'vue-toast-notification';
   import { useRouter } from 'vue-router';
   import { ref } from 'vue';

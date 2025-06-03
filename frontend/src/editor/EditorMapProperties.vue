@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-  import type { MapDto } from './Map.dto';
+  import type { MapDto } from '@/dtos/Map.dto';
 
   const props = defineProps<{
     map: MapDto;

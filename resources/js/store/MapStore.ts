@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia';
-import { MapService } from '@/maps/MapService';
+import { MapService } from '@/services/MapService';
 
-export const useMapStore = defineStore({
-  id: 'mapStore',
+export const useMapStore = defineStore('mapStore',{
   state: () => ({
     loaded: false,
     mapEntries: [] as IMap[],
