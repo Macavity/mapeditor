@@ -5,7 +5,7 @@ export enum MapLayerType {
     FieldTypes,
 }
 
-interface IMapLayer {
+export type MapLayer = {
     id: number;
     uuid: string;
     name: string;
@@ -18,4 +18,4 @@ interface IMapLayer {
     data: [];
     visible: boolean;
     opacity: number;
-}
+};
