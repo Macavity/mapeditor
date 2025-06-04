@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
-import { IMapLayer, MapLayerType } from '@/types/MapLayer';
+import { MapLayer, MapLayerType } from '@/types/MapLayer';
 
 const store = useEditorStore();
 if (store.map) {
     store.loadLayersForMap(store.map.uuid);
 }
 
-const isSky = (layer: IMapLayer) => layer.type === MapLayerType.Sky;
-const isBackground = (layer: IMapLayer) => layer.type === MapLayerType.Background;
+const isSky = (layer: MapLayer) => layer.type === MapLayerType.Sky;
+const isBackground = (layer: MapLayer) => layer.type === MapLayerType.Background;
 
 const toggleLayerVisibility = (layerId: number) => {
     store.toggleLayerVisibility(layerId);
@@ -46,8 +46,6 @@ const toggleLayerVisibility = (layerId: number) => {
 </template>
 
 <style scoped lang="scss">
-@import '../assets/mixins';
-
 $listHoverColor: #e6e6e6;
 
 ul {
@@ -60,15 +58,14 @@ ul {
         &:hover {
             background-color: $listHoverColor;
             .badge {
-                @include prefix(box-shadow, inset 1px #000);
+                box-shadow: inset 0 0 1px #000;
             }
         }
 
         i {
             width: 30px;
             opacity: 1;
-
-            @include prefix(transition, opacity 0.15s ease-in-out);
+            transition: opacity 0.15s ease-in-out;
         }
     }
 }

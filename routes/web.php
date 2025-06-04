@@ -20,6 +20,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('manage-tilesets', function () {
         return Inertia::render('ManageTilesets');
     })->name('manage-tilesets');
+
+    Route::get('maps/{uuid}/edit', function (string $uuid) {
+        return Inertia::render('MapEditor', [
+            'uuid' => $uuid
+        ]);
+    })->name('maps.edit');
 });
 
 require __DIR__.'/settings.php';

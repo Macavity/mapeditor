@@ -59,8 +59,6 @@ const map = reactive(props.map);
 </script>
 
 <style lang="scss">
-@import '../assets/mixins';
-
 $zGrid: 100;
 $zSelection: 99;
 
@@ -91,9 +89,6 @@ $zCanvas: 0;
         box-shadow: inset 0px 0px 0px 1px #000;
     }
 
-    #brush {
-    }
-
     #grid {
         $width: 32px;
         $height: 32px;
@@ -117,7 +112,7 @@ $zCanvas: 0;
         left: 0px;
         opacity: 1;
 
-        @include prefix(transition, opacity 0.15s ease-in-out);
+        transition: opacity 0.15s ease-in-out;
 
         &.layer-invisible {
             opacity: 0;
