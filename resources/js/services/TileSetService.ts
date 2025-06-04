@@ -1,23 +1,28 @@
+import type { TileSet } from '@/types/TileSet';
 import axios from 'axios';
 
-const URL = import.meta.env.VITE_API_URL + '/tile-sets';
-
 export class TileSetService {
-  static async getTileSets(): Promise<ITileSet[]> {
-    return axios.get<ITileSet[]>(URL).then((response) => {
-      return response.data;
-    });
-  }
+    static async getTileSets(): Promise<TileSet[]> {
+        const response = await axios.get('/api/tile-sets');
+        return response.data.data;
+    }
 
-  static async getTileSet(uuid: string): Promise<ITileSet> {
-    return axios.get<ITileSet>(URL + '/' + uuid).then((response) => {
-      return response.data;
-    });
-  }
+    static async getTileSet(uuid: string): Promise<TileSet> {
+        const response = await axios.get(`/api/tile-sets/${uuid}`);
+        return response.data.data;
+    }
 
-  static async deleteTileSet(uuid: string): Promise<void> {
-    return axios.delete(`${URL}/${uuid}`).then((response) => {
-      return response.data;
-    });
-  }
+    static async createTileSet(tileSet: Partial<TileSet>): Promise<TileSet> {
+        const response = await axios.post('/api/tile-sets', tileSet);
+        return response.data.data;
+    }
+
+    static async updateTileSet(uuid: string, tileSet: Partial<TileSet>): Promise<TileSet> {
+        const response = await axios.put(`/api/tile-sets/${uuid}`, tileSet);
+        return response.data.data;
+    }
+
+    static async deleteTileSet(uuid: string): Promise<void> {
+        await axios.delete(`/api/tile-sets/${uuid}`);
+    }
 }

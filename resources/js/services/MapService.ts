@@ -1,5 +1,5 @@
 import { MapDto } from '@/dtos/Map.dto';
-import type { TileMap } from '@/types/maps';
+import type { TileMap } from '@/types/TileMap';
 import axios from 'axios';
 
 export class MapService {
@@ -29,8 +29,8 @@ export class MapService {
         await axios.delete(`${this.BASE_URL}/${uuid}`);
     }
 
-    static async getMaps(): Promise<IMap[]> {
-        return axios.get<IMap[]>(this.BASE_URL).then((response) => {
+    static async getMaps(): Promise<TileMap[]> {
+        return axios.get<TileMap[]>(this.BASE_URL).then((response) => {
             return response.data;
         });
     }

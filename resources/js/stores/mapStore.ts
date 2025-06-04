@@ -1,5 +1,5 @@
 import { MapService } from '@/services/MapService';
-import type { TileMap } from '@/types/maps';
+import type { TileMap } from '@/types/TileMap';
 import { defineStore } from 'pinia';
 
 interface MapState {

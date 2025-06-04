@@ -12,9 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('layers', function (Blueprint $table) {
-            $table->id();
+            $table->bigIncrements('id');
             $table->uuid('uuid')->unique();
-            $table->foreignId('tile_map_id')->constrained('tile_maps')->cascadeOnDelete();
+            $table->unsignedBigInteger('tile_map_id');
+            $table->foreign('tile_map_id')
+                ->references('id')
+                ->on('tile_maps')
+                ->onDelete('cascade');
             $table->string('name');
             $table->enum('type', ['background', 'floor', 'sky', 'field_type'])->default('background');
             $table->integer('x')->default(0);

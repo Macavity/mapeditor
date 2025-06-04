@@ -2,9 +2,9 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 import DeleteUser from '@/components/DeleteUser.vue';
-import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import HeadingSmall from '@/components/ui/HeadingSmall.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -70,7 +70,7 @@ const submit = () => {
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
-                        <p class="-mt-4 text-sm text-muted-foreground">
+                        <p class="text-muted-foreground -mt-4 text-sm">
                             Your email address is unverified.
                             <Link
                                 :href="route('verification.send')"

@@ -3,7 +3,6 @@ import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 // Components
-import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import HeadingSmall from '@/components/ui/HeadingSmall.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 

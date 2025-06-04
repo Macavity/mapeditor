@@ -50,6 +50,7 @@ class TileSetController extends Controller
             'spacing' => $request->spacing ?? 0,
         ]);
 
+        session()->flash('success', 'Tile set created successfully.');
         return new TileSetResource($tileSet);
     }
 
@@ -91,6 +92,7 @@ class TileSetController extends Controller
             'spacing' => $request->spacing ?? $tileSet->spacing,
         ]);
 
+        session()->flash('success', 'Tile set updated successfully.');
         return new TileSetResource($tileSet);
     }
 
@@ -99,6 +101,7 @@ class TileSetController extends Controller
         $tileSet = TileSet::where('uuid', $uuid)->firstOrFail();
         $tileSet->delete();
 
+        session()->flash('success', 'Tile set deleted successfully.');
         return response()->noContent();
     }
 } 
