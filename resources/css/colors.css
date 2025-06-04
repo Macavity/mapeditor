@@ -1,0 +1,21 @@
+:root {
+    /* Brand Colors */
+    --brand-blue: hsl(217 91% 60%); /* Tailwind blue-500 */
+    --brand-indigo: hsl(239 84% 67%); /* Tailwind indigo-500 */
+    --brand-purple: hsl(271 91% 65%); /* For potential tertiary actions */
+
+    /* Semantic Colors */
+    --color-primary: var(--brand-blue);
+    --color-primary-foreground: hsl(0 0% 100%);
+    --color-secondary: var(--brand-indigo);
+    --color-secondary-foreground: hsl(0 0% 100%);
+
+    /* States */
+    --color-hover-light: hsl(217 91% 95%); /* Light blue for hover */
+    --color-hover-dark: hsl(217 91% 15%); /* Dark blue for hover in dark mode */
+}
+
+.dark {
+    --color-hover-light: hsl(217 91% 15%);
+    --color-hover-dark: hsl(217 91% 95%);
+}

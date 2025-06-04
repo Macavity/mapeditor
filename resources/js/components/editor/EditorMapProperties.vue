@@ -19,12 +19,25 @@
                     />
                 </div>
             </div>
+
+            <!-- Action Buttons - Temporarily hidden
+            <div class="flex gap-2">
+                <button class="border-primary text-primary hover:bg-primary rounded-lg border px-3 py-1 transition-colors hover:text-white">
+                    <Plus class="h-4 w-4" />
+                </button>
+                <button class="border-error-500 text-error-500 hover:bg-error-500 rounded-lg border px-3 py-1 transition-colors hover:text-white">
+                    <Minus class="h-4 w-4" />
+                </button>
+            </div>
+            -->
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import type { TileMap } from '@/types/TileMap';
+// Commented out until needed
+// import { Minus, Plus } from 'lucide-vue-next';
 
 const props = defineProps<{
     map: TileMap;

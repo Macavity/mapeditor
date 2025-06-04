@@ -5,6 +5,7 @@ import { useEditorStore } from '@/stores/editorStore';
 import { type BreadcrumbItem } from '@/types';
 import type { TileMap } from '@/types/TileMap';
 import { Head, Link } from '@inertiajs/vue3';
+import { AlertTriangle, ArrowLeft } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -56,17 +57,17 @@ onMounted(() => {
             <!-- Error State -->
             <div v-else-if="error" class="flex h-full flex-col items-center justify-center gap-4">
                 <div class="text-error-500 flex items-center gap-2">
-                    <i class="bi bi-exclamation-triangle text-2xl"></i>
+                    <AlertTriangle class="h-6 w-6" />
                     <span class="text-xl">{{ error }}</span>
                 </div>
-                <Link href="/manage-maps" class="btn btn-primary">
-                    <i class="bi bi-arrow-left"></i>
+                <Link href="/manage-maps" class="btn btn-primary flex items-center gap-2">
+                    <ArrowLeft class="h-4 w-4" />
                     Return to Maps
                 </Link>
             </div>
 
             <!-- Editor State -->
-            <div v-else-if="map" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border">
+            <div v-else-if="map" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border p-4">
                 <Editor :map="map" />
             </div>
         </div>

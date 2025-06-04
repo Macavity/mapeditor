@@ -9,6 +9,7 @@ export type TileSet = {
 
     imageWidth: number;
     imageHeight: number;
+    imageUrl?: string;
 
     tileWidth: number;
     tileHeight: number;
@@ -16,4 +17,4 @@ export type TileSet = {
 
     margin: number;
     spacing: number;
-}
+};

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
 import { EditorTool } from '@/types/EditorTool';
+import { Eraser, FileJson, Grid, Layers, Paintbrush, PaintBucket } from 'lucide-vue-next';
 
 const store = useEditorStore();
 </script>
@@ -11,10 +12,11 @@ const store = useEditorStore();
         <div class="flex" role="group">
             <button
                 type="button"
-                class="border-primary text-primary hover:bg-primary rounded-lg border px-4 py-2 transition-colors hover:text-white"
+                class="border-primary text-primary hover:bg-primary flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors hover:text-white"
                 data-toggle="modal"
                 data-target="#import-json-modal"
             >
+                <FileJson class="h-4 w-4" />
                 Import JSON File
             </button>
         </div>
@@ -25,9 +27,13 @@ const store = useEditorStore();
                 type="button"
                 @click="store.toggleGrid()"
                 class="flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
-                :class="[store.showGrid ? 'bg-secondary border-secondary text-white' : 'border-secondary text-secondary hover:bg-secondary/10']"
+                :class="[
+                    store.showGrid
+                        ? 'bg-secondary text-secondary-foreground border-secondary'
+                        : 'border-secondary text-secondary hover:bg-secondary/10',
+                ]"
             >
-                <i class="bi" :class="{ 'bi-check-square': store.showGrid, 'bi-square': !store.showGrid }"></i>
+                <Grid class="h-4 w-4" />
                 Show Grid
             </button>
 
@@ -35,9 +41,13 @@ const store = useEditorStore();
                 type="button"
                 @click="store.toggleProperties()"
                 class="flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
-                :class="[store.showProperties ? 'bg-secondary border-secondary text-white' : 'border-secondary text-secondary hover:bg-secondary/10']"
+                :class="[
+                    store.showProperties
+                        ? 'bg-secondary text-secondary-foreground border-secondary'
+                        : 'border-secondary text-secondary hover:bg-secondary/10',
+                ]"
             >
-                <i class="bi" :class="{ 'bi-check-square': store.showProperties, 'bi-square': !store.showProperties }"></i>
+                <Layers class="h-4 w-4" />
                 Show Properties
             </button>
         </div>
@@ -48,27 +58,33 @@ const store = useEditorStore();
                 @click="store.selectTool(EditorTool.DRAW)"
                 title="Brush Tool (B)"
                 class="flex items-center rounded-lg border px-4 py-2 transition-colors"
-                :class="[store.isDrawToolActive ? 'bg-primary border-primary text-white' : 'border-primary text-primary hover:bg-primary/10']"
+                :class="[
+                    store.isDrawToolActive ? 'bg-primary text-primary-foreground border-primary' : 'border-primary text-primary hover:bg-primary/10',
+                ]"
             >
-                <span class="bi bi-pencil"></span>
+                <Paintbrush class="h-4 w-4" />
             </button>
 
             <button
                 @click="store.selectTool(EditorTool.FILL)"
                 title="Bucket Fill Tool (F)"
                 class="flex items-center rounded-lg border px-4 py-2 transition-colors"
-                :class="[store.isFillToolActive ? 'bg-primary border-primary text-white' : 'border-primary text-primary hover:bg-primary/10']"
+                :class="[
+                    store.isFillToolActive ? 'bg-primary text-primary-foreground border-primary' : 'border-primary text-primary hover:bg-primary/10',
+                ]"
             >
-                <span class="bi bi-bucket"></span>
+                <PaintBucket class="h-4 w-4" />
             </button>
 
             <button
                 @click="store.selectTool(EditorTool.ERASE)"
                 title="Eraser (E)"
                 class="flex items-center rounded-lg border px-4 py-2 transition-colors"
-                :class="[store.isEraseToolActive ? 'bg-primary border-primary text-white' : 'border-primary text-primary hover:bg-primary/10']"
+                :class="[
+                    store.isEraseToolActive ? 'bg-primary text-primary-foreground border-primary' : 'border-primary text-primary hover:bg-primary/10',
+                ]"
             >
-                <span class="bi bi-eraser"></span>
+                <Eraser class="h-4 w-4" />
             </button>
         </div>
     </div>
