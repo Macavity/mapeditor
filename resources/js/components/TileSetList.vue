@@ -1,6 +1,6 @@
 <template>
     <div class="tile-set-list">
-        <div v-if="page.props.flash.success" class="mb-4 border-l-4 border-green-500 bg-green-100 p-4 text-green-700">
+        <div v-if="page.props.flash?.success" class="mb-4 border-l-4 border-green-500 bg-green-100 p-4 text-green-700">
             {{ page.props.flash.success }}
         </div>
 
@@ -61,20 +61,20 @@
 </template>
 
 <script setup lang="ts">
-import { useTileSetStore } from '@/stores/TileSetStore';
-import type { Page } from '@inertiajs/core';
+import { useTileSetStore } from '@/stores/tileSetStore';
+import type { PageProps } from '@inertiajs/core';
 import { router, usePage } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 
 interface Props {
-    flash: {
+    flash?: {
         success?: string;
         error?: string;
     };
     [key: string]: unknown;
 }
 
-const page = usePage<Page<Props>>();
+const page = usePage<PageProps & { props: Props }>();
 const store = useTileSetStore();
 const loading = ref(false);
 const error = ref<string | null>(null);
