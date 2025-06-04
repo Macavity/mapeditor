@@ -3,7 +3,6 @@ import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 // Components
-import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -17,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import HeadingSmall from '@/components/ui/HeadingSmall.vue';
 import { Input } from '@/components/ui/input';
+import InputError from '@/components/ui/input/InputError.vue';
 import { Label } from '@/components/ui/label';
 
 const passwordInput = ref<HTMLInputElement | null>(null);

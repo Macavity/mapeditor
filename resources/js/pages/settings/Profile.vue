@@ -2,10 +2,10 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 import DeleteUser from '@/components/DeleteUser.vue';
-import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import HeadingSmall from '@/components/ui/HeadingSmall.vue';
 import { Input } from '@/components/ui/input';
+import InputError from '@/components/ui/input/InputError.vue';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
