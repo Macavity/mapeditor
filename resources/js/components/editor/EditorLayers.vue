@@ -3,9 +3,6 @@ import { useEditorStore } from '@/stores/editorStore';
 import { MapLayer, MapLayerType } from '@/types/MapLayer';
 
 const store = useEditorStore();
-if (store.map) {
-    store.loadLayersForMap(store.map.uuid);
-}
 
 const isSky = (layer: MapLayer) => layer.type === MapLayerType.Sky;
 const isBackground = (layer: MapLayer) => layer.type === MapLayerType.Background;

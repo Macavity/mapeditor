@@ -6,83 +6,67 @@ const store = useEditorStore();
 </script>
 
 <template>
-    <div class="btn-toolbar mb-3" role="toolbar">
-        <div class="btn-group me-2" role="group">
-            <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#import-json-modal">Import JSON File</button>
+    <div class="flex items-center gap-4" role="toolbar">
+        <!-- Import JSON Button -->
+        <div class="flex" role="group">
+            <button
+                type="button"
+                class="border-primary text-primary hover:bg-primary rounded-lg border px-4 py-2 transition-colors hover:text-white"
+                data-toggle="modal"
+                data-target="#import-json-modal"
+            >
+                Import JSON File
+            </button>
         </div>
 
-        <div class="btn-group me-2" role="group">
+        <!-- Toggle Buttons -->
+        <div class="flex gap-2" role="group">
             <button
-                id="btn-show-grid"
                 type="button"
                 @click="store.toggleGrid()"
-                class="btn"
-                :class="{
-                    'btn-secondary': store.showGrid,
-                    'btn-outline-secondary': !store.showGrid,
-                }"
+                class="flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
+                :class="[store.showGrid ? 'bg-secondary border-secondary text-white' : 'border-secondary text-secondary hover:bg-secondary/10']"
             >
-                <i
-                    class="bi"
-                    :class="{
-                        'bi-check-square': store.showGrid,
-                        'bi-square': !store.showGrid,
-                    }"
-                ></i>
+                <i class="bi" :class="{ 'bi-check-square': store.showGrid, 'bi-square': !store.showGrid }"></i>
                 Show Grid
             </button>
+
             <button
-                id="btn-show-properties"
                 type="button"
                 @click="store.toggleProperties()"
-                :class="{
-                    'btn-secondary': store.showProperties,
-                    'btn-outline-secondary': !store.showProperties,
-                }"
-                class="btn"
+                class="flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
+                :class="[store.showProperties ? 'bg-secondary border-secondary text-white' : 'border-secondary text-secondary hover:bg-secondary/10']"
             >
-                <i
-                    class="bi"
-                    :class="{
-                        'bi-check-square': store.showProperties,
-                        'bi-square': !store.showProperties,
-                    }"
-                ></i>
+                <i class="bi" :class="{ 'bi-check-square': store.showProperties, 'bi-square': !store.showProperties }"></i>
                 Show Properties
             </button>
         </div>
 
-        <div id="toolkit" class="btn-group me-3" role="group">
+        <!-- Tools -->
+        <div class="flex gap-2" role="group">
             <button
                 @click="store.selectTool(EditorTool.DRAW)"
                 title="Brush Tool (B)"
-                class="btn"
-                :class="{
-                    'btn-primary': store.isDrawToolActive,
-                    'btn-outline-primary': !store.isDrawToolActive,
-                }"
+                class="flex items-center rounded-lg border px-4 py-2 transition-colors"
+                :class="[store.isDrawToolActive ? 'bg-primary border-primary text-white' : 'border-primary text-primary hover:bg-primary/10']"
             >
                 <span class="bi bi-pencil"></span>
             </button>
+
             <button
                 @click="store.selectTool(EditorTool.FILL)"
                 title="Bucket Fill Tool (F)"
-                class="btn"
-                :class="{
-                    'btn-primary': store.isFillToolActive,
-                    'btn-outline-primary': !store.isFillToolActive,
-                }"
+                class="flex items-center rounded-lg border px-4 py-2 transition-colors"
+                :class="[store.isFillToolActive ? 'bg-primary border-primary text-white' : 'border-primary text-primary hover:bg-primary/10']"
             >
                 <span class="bi bi-bucket"></span>
             </button>
+
             <button
                 @click="store.selectTool(EditorTool.ERASE)"
                 title="Eraser (E)"
-                class="btn"
-                :class="{
-                    'btn-primary': store.isEraseToolActive,
-                    'btn-outline-primary': !store.isEraseToolActive,
-                }"
+                class="flex items-center rounded-lg border px-4 py-2 transition-colors"
+                :class="[store.isEraseToolActive ? 'bg-primary border-primary text-white' : 'border-primary text-primary hover:bg-primary/10']"
             >
                 <span class="bi bi-eraser"></span>
             </button>

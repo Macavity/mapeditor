@@ -16,6 +16,7 @@ class TileMap extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'uuid',
         'width',
         'height',
         'name',
@@ -36,6 +37,14 @@ class TileMap extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     protected static function boot()
     {

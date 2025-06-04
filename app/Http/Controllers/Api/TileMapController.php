@@ -9,7 +9,6 @@ use App\Http\Resources\TileMapResource;
 use App\Models\TileMap;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 
 class TileMapController extends Controller
@@ -53,11 +52,9 @@ class TileMapController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id): JsonResponse
+    public function show(TileMap $tileMap): JsonResponse
     {
-        $tileMap = TileMap::with(['creator', 'layers'])->findOrFail($id);
-        
-        return (new TileMapResource($tileMap))
+        return (new TileMapResource($tileMap->load(['creator', 'layers'])))
             ->response()
             ->setStatusCode(200);
     }
@@ -65,10 +62,8 @@ class TileMapController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function update(Request $request, TileMap $tileMap): JsonResponse
     {
-        $tileMap = TileMap::findOrFail($id);
-        
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'width' => 'sometimes|integer|min:1',
@@ -87,9 +82,8 @@ class TileMapController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(TileMap $tileMap): JsonResponse
     {
-        $tileMap = TileMap::findOrFail($id);
         $tileMap->delete();
 
         return response()->json(null, 204);

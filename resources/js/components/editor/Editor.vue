@@ -1,37 +1,39 @@
 <template>
-    <div class="map-edit">
-        <h1>Map: {{ map.name }}</h1>
+    <div class="flex h-full flex-col gap-4">
+        <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
 
-        <div class="row m-b-2">
-            <div class="col-md-12">
-                <EditorToolbar />
-            </div>
+        <div class="mb-4">
+            <EditorToolbar />
         </div>
-        <div class="row">
-            <aside id="aside-left" class="col-md-3" :class="{ 'd-none': !store.showProperties }">
-                <section id="section-properties" class="panel panel-primary" :class="{ 'd-none': !store.showProperties }">
+
+        <div class="flex flex-1 gap-4">
+            <!-- Left Sidebar -->
+            <aside class="w-80 shrink-0 transition-all duration-200" :class="{ hidden: !store.showProperties }">
+                <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <EditorMapProperties v-if="store.map" :map="store.map" />
                 </section>
             </aside>
 
+            <!-- Main Canvas -->
             <section
-                id="section-canvas"
+                class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 overflow-auto rounded-xl border"
                 :class="{
-                    'col-md-6': store.showProperties,
-                    'col-md-9': !store.showProperties,
+                    'max-w-[calc(100%-40rem)]': store.showProperties,
+                    'max-w-[calc(100%-20rem)]': !store.showProperties,
                 }"
             >
                 <CanvasLayers />
             </section>
 
-            <aside id="aside-right" class="col-md-3">
-                <section id="section-minimap" class="mb-2" v-if="false">
+            <!-- Right Sidebar -->
+            <aside class="flex w-80 shrink-0 flex-col gap-4">
+                <section v-if="false" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <EditorMiniMap />
                 </section>
-                <section id="section-layers" class="mb-2">
+                <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <EditorLayers :layers="[]" />
                 </section>
-                <section id="section-tilesets" class="mb-2">
+                <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <TileSetBox />
                 </section>
             </aside>
@@ -46,12 +48,12 @@ import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
 import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
-import type { MapDto } from '@/dtos/Map.dto';
 import { useEditorStore } from '@/stores/editorStore';
+import { TileMap } from '@/types/TileMap';
 import { reactive } from 'vue';
 
 const props = defineProps<{
-    map: MapDto;
+    map: TileMap;
 }>();
 const store = useEditorStore();
 
@@ -59,63 +61,39 @@ const map = reactive(props.map);
 </script>
 
 <style lang="scss">
+// Z-index variables for canvas layering
 $zGrid: 100;
 $zSelection: 99;
-
-// Layers are 2-98
 $zBackground: 1;
 $zCanvas: 0;
 
-#section-canvas {
-    height: 100%;
-    position: relative;
-    overflow: scroll;
-}
-
 #canvas {
-    position: relative;
+    @apply relative block bg-gray-400;
     z-index: $zCanvas;
 
-    display: block;
-    overflow: hidden;
-    background-color: gray;
-
     .selection {
-        position: absolute;
+        @apply pointer-events-none absolute opacity-50;
         z-index: $zSelection;
-        opacity: 0.5;
-
-        pointer-events: none;
-        box-shadow: inset 0px 0px 0px 1px #000;
+        box-shadow: inset 0px 0px 0px 1px theme('colors.black');
     }
 
     #grid {
         $width: 32px;
         $height: 32px;
 
+        @apply absolute inset-0 opacity-40;
+        z-index: $zGrid;
         background-size: $width $height;
         background-image:
-            repeating-linear-gradient(0deg, #000, #000 1px, transparent 1px, transparent $width),
-            repeating-linear-gradient(-90deg, #000, #000 1px, transparent 1px, transparent $height);
-        height: 100%;
-        width: 100%;
-        opacity: 0.4;
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: $zGrid;
+            repeating-linear-gradient(0deg, theme('colors.black'), theme('colors.black') 1px, transparent 1px, transparent $width),
+            repeating-linear-gradient(-90deg, theme('colors.black'), theme('colors.black') 1px, transparent 1px, transparent $height);
     }
 
     .layer {
-        position: absolute;
-        top: 0px;
-        left: 0px;
-        opacity: 1;
-
-        transition: opacity 0.15s ease-in-out;
+        @apply absolute top-0 left-0 opacity-100 transition-opacity duration-150 ease-in-out;
 
         &.layer-invisible {
-            opacity: 0;
+            @apply opacity-0;
         }
     }
 }

@@ -1,7 +1,7 @@
-import type { MapDto } from '@/dtos/Map.dto';
 import { MapService } from '@/services/MapService';
 import { EditorTool } from '@/types/EditorTool';
 import { MapLayer } from '@/types/MapLayer';
+import { TileMap } from '@/types/TileMap';
 import { defineStore } from 'pinia';
 
 export const useEditorStore = defineStore('editorStore', {
@@ -13,7 +13,7 @@ export const useEditorStore = defineStore('editorStore', {
         showLeftSideBar: false,
         activeLayer: null as number | null,
         activeTool: EditorTool.DRAW,
-        map: null as MapDto | null,
+        map: null as TileMap | null,
         layers: [] as MapLayer[],
     }),
     getters: {
@@ -24,13 +24,13 @@ export const useEditorStore = defineStore('editorStore', {
             if (!state.map) {
                 return 0;
             }
-            return state.map.width * state.map.tileWidth;
+            return state.map.width * state.map.tile_width;
         },
         canvasHeight: (state) => {
             if (!state.map) {
                 return 0;
             }
-            return state.map.height * state.map.tileHeight;
+            return state.map.height * state.map.tile_height;
         },
     },
     actions: {
@@ -63,13 +63,16 @@ export const useEditorStore = defineStore('editorStore', {
             });
         },
 
-        async loadLayersForMap(mapUUID: string) {
-            this.layers = await MapService.getMapLayers(mapUUID);
-        },
-
         async loadMap(uuid: string) {
-            this.map = await MapService.getMap(uuid);
-            console.log('Map', uuid, 'loaded');
+            try {
+                const data = await MapService.getMap(uuid);
+                this.map = data;
+                this.layers = data.layers ?? ([] as MapLayer[]);
+                this.loaded = true;
+            } catch (error) {
+                console.error('Error loading map:', error);
+                throw error;
+            }
         },
     },
 });
