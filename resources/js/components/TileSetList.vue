@@ -1,5 +1,16 @@
 <template>
     <div class="tile-set-list">
+        <div class="mb-4 flex justify-end">
+            <Dialog v-model:open="isDialogOpen">
+                <DialogTrigger as-child>
+                    <Button variant="default">Import TileSet</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <ImportTileSetDialog @success="isDialogOpen = false" />
+                </DialogContent>
+            </Dialog>
+        </div>
+
         <div v-if="page.props.flash?.success" class="mb-4 border-l-4 border-green-500 bg-green-100 p-4 text-green-700">
             {{ page.props.flash.success }}
         </div>
@@ -35,22 +46,11 @@
                         <td class="px-6 py-4 text-gray-500">{{ tileSet.tileCount }}</td>
                         <td class="px-6 py-4">
                             <div class="flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    @click="editTileSet(tileSet.uuid)"
-                                    class="ring-offset-background focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="deleteTileSet(tileSet.uuid)"
-                                    :disabled="deleting === tileSet.uuid"
-                                    class="ring-offset-background focus-visible:ring-ring bg-destructive text-destructive-foreground hover:bg-destructive/90 inline-flex h-9 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-                                >
+                                <Button variant="default" @click="editTileSet(tileSet.uuid)"> Edit </Button>
+                                <Button variant="destructive" @click="deleteTileSet(tileSet.uuid)" :disabled="deleting === tileSet.uuid">
                                     <div v-if="deleting === tileSet.uuid" class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                                     <span v-else>Delete</span>
-                                </button>
+                                </Button>
                             </div>
                         </td>
                     </tr>
@@ -61,6 +61,9 @@
 </template>
 
 <script setup lang="ts">
+import ImportTileSetDialog from '@/components/ImportTileSetDialog.vue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useTileSetStore } from '@/stores/tileSetStore';
 import type { PageProps } from '@inertiajs/core';
 import { router, usePage } from '@inertiajs/vue3';
@@ -79,6 +82,7 @@ const store = useTileSetStore();
 const loading = ref(false);
 const error = ref<string | null>(null);
 const deleting = ref<string | null>(null);
+const isDialogOpen = ref(false);
 
 const editTileSet = (uuid: string) => {
     router.visit(`/tile-sets/${uuid}/edit`);

@@ -14,6 +14,7 @@ class TileSetResource extends JsonResource
         return [
             'uuid' => $this->uuid,
             'name' => $this->name,
+            'imageUrl' => $this->image_url,
             'imageWidth' => $this->image_width,
             'imageHeight' => $this->image_height,
             'tileWidth' => $this->tile_width,

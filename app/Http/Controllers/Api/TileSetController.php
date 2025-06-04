@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ImportTileSetRequest;
 use App\Http\Resources\TileSetResource;
 use App\Models\TileSet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class TileSetController extends Controller
 {
@@ -103,5 +109,37 @@ class TileSetController extends Controller
 
         session()->flash('success', 'Tile set deleted successfully.');
         return response()->noContent();
+    }
+
+    public function import(ImportTileSetRequest $request): TileSetResource
+    {
+        $image = $request->file('image');
+        $imagePath = $image->store('tilesets', 'public');
+        
+        // Get image dimensions
+        $manager = new ImageManager(new Driver());
+        $imageInfo = $manager->read(Storage::disk('public')->path($imagePath));
+        $imageWidth = $imageInfo->width();
+        $imageHeight = $imageInfo->height();
+        
+        // Calculate tile count based on image dimensions and tile size
+        $tileCount = floor($imageWidth / $request->tileWidth) * floor($imageHeight / $request->tileHeight);
+        
+        $tileSet = TileSet::create([
+            'uuid' => (string) Str::uuid(),
+            'name' => $request->name,
+            'image_path' => $imagePath,
+            'image_width' => $imageWidth,
+            'image_height' => $imageHeight,
+            'tile_width' => $request->tileWidth,
+            'tile_height' => $request->tileHeight,
+            'tile_count' => $tileCount,
+            'margin' => 0,
+            'spacing' => 0,
+            'first_gid' => 1, // Default value for new tilesets
+        ]);
+
+        session()->flash('success', 'Tile set imported successfully.');
+        return new TileSetResource($tileSet);
     }
 } 

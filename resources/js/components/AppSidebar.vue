@@ -17,7 +17,7 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Maps',
         href: '/manage-maps',
-        icon: LayoutGrid,
+        icon: Folder,
     },
     {
         title: 'Tilesets',

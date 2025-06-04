@@ -1,5 +1,5 @@
-import { TileSetService } from '@/services/TileSetService';
 import type { TileSet } from '@/types/TileSet';
+import axios from 'axios';
 import { defineStore } from 'pinia';
 
 interface TileSetState {
@@ -33,7 +33,8 @@ export const useTileSetStore = defineStore('tileSetStore', {
             this.loading = true;
             this.error = null;
             try {
-                this.tileSetEntries = await TileSetService.getTileSets();
+                const response = await axios.get('/api/tile-sets');
+                this.tileSetEntries = response.data.data;
             } catch (error) {
                 this.error = 'Failed to load tile sets';
                 throw error;
@@ -43,10 +44,23 @@ export const useTileSetStore = defineStore('tileSetStore', {
         },
         async deleteTileSet(uuid: string) {
             try {
-                await TileSetService.deleteTileSet(uuid);
+                await axios.delete(`/api/tile-sets/${uuid}`);
                 this.tileSetEntries = this.tileSetEntries.filter((set) => set.uuid !== uuid);
             } catch (error) {
-                console.error('Failed to delete tile set:', error);
+                this.error = 'Failed to delete tile set';
+                throw error;
+            }
+        },
+        async importTileSet(formData: FormData) {
+            try {
+                const response = await axios.post('/api/tile-sets/import', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+                this.tileSetEntries.push(response.data.data);
+            } catch (error) {
+                this.error = 'Failed to import tile set';
                 throw error;
             }
         },
