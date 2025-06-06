@@ -1,82 +1,78 @@
 services:
-  db_postgres:
-    image: postgres:latest
-    container_name: mapeditor_db
+  db_mysql:
+    image: mysql:8.0
+    container_name: mapeditor_mysql
     env_file: .env
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
-      - DATABASE_HOST=${DB_HOST}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
     ports:
-      - '5432:5432'
+      - '3306:3306'
     volumes:
-      - mapeditor_db:/var/lib/postgresql/data
+      - mapeditor_mysql:/var/lib/mysql
     networks:
       - mapeditor
+    command: --default-authentication-plugin=mysql_native_password
 
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: mapeditor_pgadmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: mapeditor_phpmyadmin
     env_file: .env
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PMA_HOST: db_mysql
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USERNAME}
+      PMA_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     depends_on:
-      - db_postgres
+      - db_mysql
     ports:
-      - "5050:80"
+      - '8080:80'
     networks:
       - mapeditor
     restart: unless-stopped
 
-  server:
-    container_name: mapeditor_server
+  laravel:
+    container_name: mapeditor_laravel
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
-    #stdin_open: true
-    restart: on-failure
+    restart: unless-stopped
     env_file: .env
-    #tty: true
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=db_mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     networks:
       - mapeditor
     depends_on:
-      - db_postgres
+      - db_mysql
     volumes:
-      - ./server:/server
-      - /server/node_modules
-    command: "npm run start:dev"
+      - .:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
     ports:
-      # Host:Container
-      - "${APP_PORT}:8888"
+      - '8000:8000'
     expose:
-      - "${APP_PORT}"
-
-  client:
-    container_name: mapeditor_frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    restart: on-failure
-    env_file: .env
-    networks:
-      - mapeditor
-    depends_on:
-      - server
-    volumes:
-      - ./frontend:/frontend
-      - /frontend/node_modules/
-    ports:
-      - "3000:3000"
-    expose:
-      - "3000"
+      - '8000'
+    command: >
+      sh -c "composer install &&
+             npm install &&
+             npm run build &&
+             php artisan key:generate --force &&
+             php artisan migrate --force &&
+             php artisan storage:link &&
+             php artisan serve --host=0.0.0.0 --port=8000"
 
 networks:
   mapeditor:
     driver: bridge
 
 volumes:
-  server:
-  mapeditor_db:
+  mapeditor_mysql:
