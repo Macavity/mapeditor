@@ -133,7 +133,7 @@ class TileMapController extends Controller
         $validated = $request->validate([
             'layers' => 'required|array',
             'layers.*.uuid' => 'required|string|exists:layers,uuid',
-            'layers.*.data' => 'required|array',
+            'layers.*.data' => 'sometimes|array', // Optional field, empty arrays allowed
             'layers.*.visible' => 'sometimes|boolean',
             'layers.*.opacity' => 'sometimes|numeric|min:0|max:1',
             'layers.*.z' => 'sometimes|integer|min:0',
@@ -149,9 +149,12 @@ class TileMapController extends Controller
                     throw new \Exception("Layer with UUID {$layerData['uuid']} not found or does not belong to this map");
                 }
                 
-                $updateData = ['data' => $layerData['data']];
+                $updateData = [];
                 
-                // Only update optional fields if provided
+                // Only update fields if provided
+                if (isset($layerData['data'])) {
+                    $updateData['data'] = $layerData['data'];
+                }
                 if (isset($layerData['visible'])) {
                     $updateData['visible'] = $layerData['visible'];
                 }
@@ -162,7 +165,11 @@ class TileMapController extends Controller
                     $updateData['z'] = $layerData['z'];
                 }
                 
-                $layer->update($updateData);
+                // Only update if there are fields to update
+                if (!empty($updateData)) {
+                    $layer->update($updateData);
+                }
+                
                 $layers[] = $layer->fresh();
             }
             
@@ -215,13 +222,21 @@ class TileMapController extends Controller
 
         $validated = $request->validate([
             'data' => 'required|array',
-            'data.*.x' => 'required|integer|min:0',
-            'data.*.y' => 'required|integer|min:0',
-            'data.*.brush' => 'required|array',
-            'data.*.brush.tileset' => 'required|string',
-            'data.*.brush.tileX' => 'required|integer|min:0',
-            'data.*.brush.tileY' => 'required|integer|min:0',
         ]);
+
+        // Only validate tile data structure if array is not empty
+        if (!empty($validated['data'])) {
+            $tileValidation = $request->validate([
+                'data.*.x' => 'required|integer|min:0',
+                'data.*.y' => 'required|integer|min:0',
+                'data.*.brush' => 'required|array',
+                'data.*.brush.tileset' => 'required|string',
+                'data.*.brush.tileX' => 'required|integer|min:0',
+                'data.*.brush.tileY' => 'required|integer|min:0',
+            ]);
+            
+            $validated = array_merge($validated, $tileValidation);
+        }
 
         $layer->update(['data' => $validated['data']]);
 
