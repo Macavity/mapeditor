@@ -1,4 +1,5 @@
 import { MapDto } from '@/dtos/Map.dto';
+import type { MapLayer } from '@/types/MapLayer';
 import type { TileMap } from '@/types/TileMap';
 import axios from 'axios';
 
@@ -41,10 +42,8 @@ export class MapService {
         return new MapDto(data.uuid, data.name, data.height, data.width, data.tile_height, data.tile_width);
     }
 
-    // static async getMapLayers(uuid: string) {
-    //   return axios.get(this.BASE_URL + '/' + uuid + '/layers').then((response) => {
-    //     console.log('MapLayers', response.data);
-    //     return response.data;
-    //   });
-    // }
+    static async getMapLayers(uuid: string): Promise<MapLayer[]> {
+        const response = await axios.get<{ data: MapLayer[] }>(`${this.BASE_URL}/${uuid}/layers`);
+        return response.data.data;
+    }
 }

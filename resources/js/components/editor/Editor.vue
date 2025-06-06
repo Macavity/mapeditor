@@ -8,12 +8,12 @@
 
         <div class="flex flex-1 gap-4">
             <!-- Left Sidebar -->
-            <aside class="flex w-80 shrink-0 flex-col gap-4 transition-all duration-200" :class="{ hidden: !store.showProperties }">
-                <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                    <EditorMapProperties v-if="store.map" :map="store.map" />
-                </section>
+            <aside class="flex w-80 shrink-0 flex-col gap-4 transition-all duration-200">
                 <section class="border-sidebar-border/70 dark:border-sidebar-border flex-1 rounded-xl border p-4">
                     <EditorLayers :layers="[]" />
+                </section>
+                <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
+                    <EditorMapProperties v-if="store.map" :map="store.map" />
                 </section>
             </aside>
 

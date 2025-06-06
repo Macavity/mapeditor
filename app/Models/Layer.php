@@ -16,6 +16,7 @@ class Layer extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'tile_map_id',
         'name',
         'type',
         'x',

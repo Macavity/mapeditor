@@ -37,6 +37,7 @@ export const useEditorStore = defineStore('editorStore', {
         activateLayer(layerId: number) {
             this.activeLayer = layerId;
         },
+
         toggleGrid() {
             this.showGrid = !this.showGrid;
         },
@@ -65,9 +66,16 @@ export const useEditorStore = defineStore('editorStore', {
 
         async loadMap(uuid: string) {
             try {
-                const data = await MapService.getMap(uuid);
-                this.map = data;
-                this.layers = data.layers ?? ([] as MapLayer[]);
+                const [mapData, layers] = await Promise.all([MapService.getMap(uuid), MapService.getMapLayers(uuid)]);
+
+                this.map = mapData;
+                this.layers = layers;
+
+                // Ensure the first layer is set as active if none is selected
+                if (this.activeLayer === null && this.layers.length > 0) {
+                    this.activeLayer = this.layers[0].id;
+                }
+
                 this.loaded = true;
             } catch (error) {
                 console.error('Error loading map:', error);

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LayerResource;
 use App\Http\Resources\TileMapResource;
+use App\Models\Layer;
 use App\Models\TileMap;
+use App\Enums\LayerType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class TileMapController extends Controller
 {
@@ -87,5 +91,36 @@ class TileMapController extends Controller
         $tileMap->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Get layers for a specific tile map.
+     */
+    public function layers(TileMap $tileMap): JsonResponse
+    {
+        $layers = $tileMap->layers()->orderBy('z')->get();
+
+        // If no layers exist, create a default background layer
+        if ($layers->isEmpty()) {
+            $backgroundLayer = Layer::create([
+                'tile_map_id' => $tileMap->id,
+                'name' => 'Background',
+                'type' => LayerType::Background,
+                'width' => $tileMap->width,
+                'height' => $tileMap->height,
+                'x' => 0,
+                'y' => 0,
+                'z' => 0,
+                'data' => [],
+                'visible' => true,
+                'opacity' => 1.0,
+            ]);
+
+            $layers = collect([$backgroundLayer]);
+        }
+
+        return LayerResource::collection($layers)
+            ->response()
+            ->setStatusCode(200);
     }
 }
