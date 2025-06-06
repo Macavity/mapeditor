@@ -15,6 +15,14 @@ export const useEditorStore = defineStore('editorStore', {
         activeTool: EditorTool.DRAW,
         map: null as TileMap | null,
         layers: [] as MapLayer[],
+        brushSelection: {
+            width: 32,
+            height: 32,
+            backgroundImage: null as string | null,
+            tileX: 0,
+            tileY: 0,
+            backgroundPosition: '0px 0px',
+        },
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
@@ -81,6 +89,28 @@ export const useEditorStore = defineStore('editorStore', {
                 console.error('Error loading map:', error);
                 throw error;
             }
+        },
+
+        setBrushSelection(tileX: number, tileY: number, tileWidth: number, tileHeight: number, tilesetImageUrl: string) {
+            this.brushSelection = {
+                width: tileWidth,
+                height: tileHeight,
+                backgroundImage: tilesetImageUrl,
+                tileX,
+                tileY,
+                backgroundPosition: `-${tileX * tileWidth}px -${tileY * tileHeight}px`,
+            };
+        },
+
+        clearBrushSelection() {
+            this.brushSelection = {
+                width: 32,
+                height: 32,
+                backgroundImage: null,
+                tileX: 0,
+                tileY: 0,
+                backgroundPosition: '0px 0px',
+            };
         },
     },
 });

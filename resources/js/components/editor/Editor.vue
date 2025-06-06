@@ -18,13 +18,7 @@
             </aside>
 
             <!-- Main Canvas -->
-            <section
-                class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 overflow-auto border"
-                :class="{
-                    'max-w-[calc(100%-40rem)]': store.showProperties,
-                    'max-w-[calc(100%-20rem)]': !store.showProperties,
-                }"
-            >
+            <section class="border-sidebar-border/70 dark:border-sidebar-border relative max-w-[calc(100%-40rem)] flex-1 overflow-auto">
                 <CanvasLayers />
             </section>
 

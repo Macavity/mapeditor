@@ -4,12 +4,6 @@ import { onMounted, ref } from 'vue';
 
 const store = useEditorStore();
 
-const brushSelection = {
-    width: 32,
-    height: 32,
-    backgroundImage: null,
-};
-
 const showBrush = ref(false);
 const brushPosition = ref({ x: 0, y: 0 });
 
@@ -59,7 +53,7 @@ const onMouseMove = (event: MouseEvent) => {
         @mousemove="onMouseMove"
         @mouseenter="onMouseEnter"
         @mouseleave="onMouseLeave"
-        class="relative"
+        class="border-opacity-50 relative border"
         :style="{
             width: store.canvasWidth + 'px',
             height: store.canvasHeight + 'px',
@@ -81,7 +75,8 @@ const onMouseMove = (event: MouseEvent) => {
                 :style="{
                     width: (store.map?.tile_width || 32) + 'px',
                     height: (store.map?.tile_height || 32) + 'px',
-                    background: brushSelection.backgroundImage ? 'url(\'' + brushSelection.backgroundImage + '\') no-repeat' : undefined,
+                    background: store.brushSelection.backgroundImage ? 'url(\'' + store.brushSelection.backgroundImage + '\') no-repeat' : undefined,
+                    backgroundPosition: store.brushSelection.backgroundImage ? store.brushSelection.backgroundPosition : undefined,
                 }"
             ></div>
         </div>

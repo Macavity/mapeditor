@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import AddTileSetModal from '@/components/editor/AddTileSetModal.vue';
+import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
 import { ChevronDown } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const tileSetStore = useTileSetStore();
+const editorStore = useEditorStore();
 const showModal = ref(false);
 const isDropdownOpen = ref(false);
 const activeTilesetContainer = ref<HTMLElement | null>(null);
@@ -25,6 +27,7 @@ function selectTileSet(uuid: string) {
     isDropdownOpen.value = false;
     // Clear selection when switching tilesets
     selectedTile.value = null;
+    editorStore.clearBrushSelection();
 }
 
 function addTileSet(url: string) {
@@ -60,6 +63,11 @@ function handleTilesetClick(event: MouseEvent) {
         tileX,
         tileY,
     };
+
+    // Update the brush selection in the editor store only if imageUrl exists
+    if (tileSetStore.activeTileSet.imageUrl) {
+        editorStore.setBrushSelection(tileX, tileY, tileWidth, tileHeight, tileSetStore.activeTileSet.imageUrl);
+    }
 }
 </script>
 
