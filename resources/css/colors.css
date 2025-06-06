@@ -1,0 +1,19 @@
+:root {
+    /* Semantic Colors */
+    --brand-primary: #2a6e9f;
+    --brand-primary-foreground: hsl(0 0% 100%);
+
+    --brand-secondary: #6cadd5;
+    --brand-secondary-foreground: hsl(0 0% 100%);
+
+    --brand-tertiary: black;
+
+    /* States */
+    --color-hover-light: hsl(217 91% 95%); /* Light blue for hover */
+    --color-hover-dark: hsl(217 91% 15%); /* Dark blue for hover in dark mode */
+}
+
+.dark {
+    --color-hover-light: hsl(217 91% 15%);
+    --color-hover-dark: hsl(217 91% 95%);
+}

@@ -1,3 +1,0 @@
-interface ICreateUserDTO {
-  name: string;
-}
