@@ -72,7 +72,7 @@ function handleTilesetClick(event: MouseEvent) {
 </script>
 
 <template>
-    <div class="flex h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div class="flex h-full max-h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <AddTileSetModal v-if="showModal" :show="showModal" @close="showModal = false" @addTileSet="addTileSet" />
 
         <!-- Header -->
@@ -122,7 +122,7 @@ function handleTilesetClick(event: MouseEvent) {
             </div>
 
             <!-- Tileset Preview -->
-            <div class="flex min-h-[16rem] flex-1 overflow-y-auto border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex max-h-96 min-h-0 flex-1 overflow-auto border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                 <div
                     v-if="tileSetStore.activeTileSet"
                     ref="activeTilesetContainer"

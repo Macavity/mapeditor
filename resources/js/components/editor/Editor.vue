@@ -1,5 +1,5 @@
 <template>
-    <div class="flex h-full flex-col gap-4">
+    <div class="flex h-[calc(100vh-10rem)] flex-col gap-4 overflow-hidden">
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
             <SaveStatus />
@@ -11,8 +11,8 @@
 
         <div class="flex flex-1 gap-4">
             <!-- Left Sidebar -->
-            <aside class="flex w-80 shrink-0 flex-col gap-4 transition-all duration-200">
-                <section class="border-sidebar-border/70 dark:border-sidebar-border flex-1 rounded-xl border p-4">
+            <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4 transition-all duration-200">
+                <section class="border-sidebar-border/70 dark:border-sidebar-border min-h-0 flex-1 overflow-auto rounded-xl border p-4">
                     <EditorLayers />
                 </section>
                 <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
@@ -21,16 +21,18 @@
             </aside>
 
             <!-- Main Canvas -->
-            <section class="border-sidebar-border/70 dark:border-sidebar-border relative max-w-[calc(100%-40rem)] flex-1 overflow-auto">
+            <section class="border-sidebar-border/70 dark:border-sidebar-border relative min-h-0 max-w-[calc(100%-40rem)] flex-1 overflow-auto">
                 <CanvasLayers />
             </section>
 
             <!-- Right Sidebar -->
-            <aside class="flex w-80 shrink-0 flex-col">
+            <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
                 <section v-if="false" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <EditorMiniMap />
                 </section>
-                <TileSetBox />
+                <div class="min-h-0 flex-1">
+                    <TileSetBox />
+                </div>
             </aside>
         </div>
     </div>

@@ -22,7 +22,7 @@ const isDialogOpen = ref(false);
     <Head title="Manage Maps" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+        <div class="flex h-[calc(100vh-8rem)] flex-col gap-4 rounded-xl p-4">
             <div class="flex justify-end">
                 <Dialog v-model:open="isDialogOpen">
                     <DialogTrigger asChild>
