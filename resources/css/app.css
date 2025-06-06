@@ -23,11 +23,11 @@
     --color-popover: var(--popover);
     --color-popover-foreground: var(--popover-foreground);
 
-    --color-primary: var(--brand-blue);
-    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--brand-primary);
+    --color-primary-foreground: var(--brand-primary-foreground);
 
-    --color-secondary: var(--brand-indigo);
-    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--brand-secondary);
+    --color-secondary-foreground: var(--brand-secondary-foreground);
 
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);

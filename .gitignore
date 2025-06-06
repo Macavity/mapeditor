@@ -63,3 +63,4 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+storage/maps/*.js

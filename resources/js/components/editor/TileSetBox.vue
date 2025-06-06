@@ -6,16 +6,19 @@ import { ref } from 'vue';
 
 const tileSetStore = useTileSetStore();
 const showModal = ref(false);
-const dropdownRef = ref<HTMLElement | null>(null);
+const isDropdownOpen = ref(false);
 
 if (tileSetStore.tileSets.length === 0) {
     tileSetStore.loadTileSets();
 }
 
 function toggleDropdown() {
-    if (dropdownRef.value) {
-        dropdownRef.value.classList.toggle('hidden');
-    }
+    isDropdownOpen.value = !isDropdownOpen.value;
+}
+
+function selectTileSet(uuid: string) {
+    tileSetStore.activateTileSet(uuid);
+    isDropdownOpen.value = false;
 }
 
 function addTileSet(url: string) {
@@ -27,7 +30,7 @@ function addTileSet(url: string) {
 </script>
 
 <template>
-    <div class="flex flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div class="flex h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <AddTileSetModal v-if="showModal" :show="showModal" @close="showModal = false" @addTileSet="addTileSet" />
 
         <!-- Header -->
@@ -36,28 +39,28 @@ function addTileSet(url: string) {
         </div>
 
         <!-- Body -->
-        <div class="flex flex-col gap-4 p-4">
+        <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4">
             <!-- Controls -->
             <div class="flex gap-2">
                 <!-- Tileset Dropdown -->
-                <div class="relative">
+                <div class="relative min-w-[200px]">
                     <button
                         type="button"
                         id="tileSetMenuButton"
-                        class="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+                        class="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
                         @click="toggleDropdown"
                     >
                         {{ tileSetStore.activeTileSet?.name || 'None' }}
-                        <ChevronDown class="h-4 w-4" />
+                        <ChevronDown class="h-4 w-4 shrink-0" />
                     </button>
                     <ul
-                        ref="dropdownRef"
-                        class="absolute top-full left-0 z-10 mt-1 hidden w-full rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                        class="absolute top-full left-0 z-10 mt-1 min-w-[200px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                        v-show="isDropdownOpen"
                     >
                         <li v-for="tileSet in tileSetStore.tileSets" :key="tileSet.uuid">
                             <button
-                                @click="tileSetStore.activateTileSet(tileSet.uuid)"
-                                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                                @click="selectTileSet(tileSet.uuid)"
+                                class="w-full truncate px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                             >
                                 {{ tileSet.name }}
                             </button>
@@ -77,7 +80,7 @@ function addTileSet(url: string) {
             </div>
 
             <!-- Tileset Preview -->
-            <div class="h-64 overflow-auto rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex min-h-[16rem] flex-1 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                 <div
                     v-if="tileSetStore.activeTileSet"
                     id="active-tileset-container"
@@ -86,8 +89,9 @@ function addTileSet(url: string) {
                         height: tileSetStore.activeTileSet.imageHeight + 'px',
                         backgroundImage: `url('${tileSetStore.activeTileSet.imageUrl}')`,
                         backgroundRepeat: 'no-repeat',
+                        backgroundSize: 'contain',
                     }"
-                    class="relative"
+                    class="min-w-full grow bg-center"
                 >
                     <div class="pointer-events-none absolute bg-black/30 shadow-[inset_0_0_0_1px_rgba(0,0,0,1)]"></div>
                 </div>
