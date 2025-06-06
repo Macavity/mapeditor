@@ -31,6 +31,13 @@ export const useEditorStore = defineStore('editorStore', {
             backgroundPosition: '0px 0px',
             tilesetUuid: null as string | null,
         },
+        // Save state
+        hasUnsavedChanges: false,
+        lastSaved: null as Date | null,
+        isSaving: false,
+        saveError: null as string | null,
+        autoSaveEnabled: true,
+        autoSaveTimeout: null as number | null,
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
@@ -161,6 +168,116 @@ export const useEditorStore = defineStore('editorStore', {
             } else {
                 // Add new tile
                 this.layers[activeLayerIndex].data.push(tileData);
+            }
+
+            // Mark as having unsaved changes and trigger auto-save
+            this.markAsChanged();
+            this.scheduleAutoSave();
+        },
+
+        markAsChanged() {
+            this.hasUnsavedChanges = true;
+            this.saveError = null;
+        },
+
+        markAsSaved() {
+            this.hasUnsavedChanges = false;
+            this.lastSaved = new Date();
+            this.saveError = null;
+        },
+
+        scheduleAutoSave() {
+            if (!this.autoSaveEnabled || !this.mapMetadata.uuid) return;
+
+            // Clear existing timeout
+            if (this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+            }
+
+            // Schedule auto-save after 2 seconds of inactivity
+            this.autoSaveTimeout = setTimeout(() => {
+                this.autoSave();
+            }, 2000);
+        },
+
+        async autoSave() {
+            if (!this.hasUnsavedChanges || this.isSaving) return;
+
+            try {
+                await this.saveAllLayers();
+            } catch (error) {
+                console.warn('Auto-save failed:', error);
+                // Don't show error to user for auto-save failures
+            }
+        },
+
+        async saveAllLayers() {
+            if (!this.mapMetadata.uuid || this.isSaving) return;
+
+            this.isSaving = true;
+            this.saveError = null;
+
+            try {
+                await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
+                this.markAsSaved();
+            } catch (error) {
+                this.saveError = error instanceof Error ? error.message : 'Failed to save layers';
+                throw error;
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async saveLayer(layerUuid: string) {
+            if (!this.mapMetadata.uuid || this.isSaving) return;
+
+            const layer = this.layers.find((l) => l.uuid === layerUuid);
+            if (!layer) return;
+
+            this.isSaving = true;
+            this.saveError = null;
+
+            try {
+                const updatedLayer = await MapService.saveLayerData(this.mapMetadata.uuid, layerUuid, layer.data);
+
+                // Update the layer in store with response data
+                const layerIndex = this.layers.findIndex((l) => l.uuid === layerUuid);
+                if (layerIndex !== -1) {
+                    this.layers[layerIndex] = updatedLayer;
+                }
+
+                this.markAsSaved();
+            } catch (error) {
+                this.saveError = error instanceof Error ? error.message : 'Failed to save layer';
+                throw error;
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async manualSave() {
+            try {
+                await this.saveAllLayers();
+                return true;
+            } catch (error) {
+                console.error('Manual save failed:', error);
+                return false;
+            }
+        },
+
+        toggleAutoSave() {
+            this.autoSaveEnabled = !this.autoSaveEnabled;
+
+            if (!this.autoSaveEnabled && this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+                this.autoSaveTimeout = null;
+            }
+        },
+
+        clearSaveTimeout() {
+            if (this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+                this.autoSaveTimeout = null;
             }
         },
     },

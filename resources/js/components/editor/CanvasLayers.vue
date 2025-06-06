@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
-import { nextTick, onMounted, ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 
 const store = useEditorStore();
 const tileSetStore = useTileSetStore();
@@ -10,27 +10,18 @@ const showBrush = ref(false);
 const brushPosition = ref({ x: 0, y: 0 });
 const canvasRefs = ref<{ [key: string]: HTMLCanvasElement }>({});
 
-onMounted(() => {
-    for (const layer of store.layers) {
-        console.log('Draw Layer', layer.uuid);
-    }
-
-    // Initial render of all layers
-    nextTick(() => {
-        renderAllLayers();
-    });
-});
-
-// Watch for changes in layer data and re-render
-watch(
-    () => store.layers,
-    () => {
+const tryRenderLayers = () => {
+    if (store.loaded && store.layers.length > 0) {
         nextTick(() => {
             renderAllLayers();
         });
-    },
-    { deep: true },
-);
+    }
+};
+
+onMounted(tryRenderLayers);
+
+// Watch for changes in layer data and re-render
+watch(() => store.layers, tryRenderLayers, { deep: true });
 
 const setCanvasRef = (el: HTMLCanvasElement | null, layerUuid: string) => {
     if (el) {
@@ -38,24 +29,54 @@ const setCanvasRef = (el: HTMLCanvasElement | null, layerUuid: string) => {
     }
 };
 
-const renderAllLayers = () => {
+const renderAllLayers = async () => {
+    // Wait a bit for canvas refs to be set up
+    await nextTick();
+
+    // Check if we have canvas refs for all layers
+    const missingCanvases = store.layers.filter((layer) => !canvasRefs.value[layer.uuid]);
+    if (missingCanvases.length > 0) {
+        console.warn(
+            'Missing canvas refs for layers:',
+            missingCanvases.map((l) => l.uuid),
+        );
+        // Retry after a short delay
+        setTimeout(() => {
+            renderAllLayers();
+        }, 100);
+        return;
+    }
+
     for (const layer of store.layers) {
-        renderLayer(layer.uuid);
+        await renderLayer(layer.uuid);
     }
 };
 
 const renderLayer = async (layerUuid: string) => {
     const canvas = canvasRefs.value[layerUuid];
-    if (!canvas) return;
+    if (!canvas) {
+        console.warn('Canvas not found for layer', layerUuid);
+        return;
+    }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+        console.error('Context not found for layer', layerUuid);
+        return;
+    }
 
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const layer = store.layers.find((l) => l.uuid === layerUuid);
-    if (!layer || !layer.data) return;
+    if (!layer || !layer.data || !Array.isArray(layer.data) || layer.data.length === 0) {
+        return;
+    }
+
+    // Ensure tilesets are loaded first
+    if (tileSetStore.tileSets.length === 0) {
+        await tileSetStore.loadTileSets();
+    }
 
     // Load all unique tilesets used in this layer
     const tilesetUuids = [...new Set(layer.data.map((tile) => tile.brush.tileset))];
@@ -65,7 +86,10 @@ const renderLayer = async (layerUuid: string) => {
     await Promise.all(
         tilesetUuids.map(async (tilesetUuid) => {
             const tileset = tileSetStore.tileSets.find((ts) => ts.uuid === tilesetUuid);
-            if (!tileset || !tileset.imageUrl) return;
+            if (!tileset || !tileset.imageUrl) {
+                console.warn('Tileset not found or no imageUrl:', tilesetUuid);
+                return;
+            }
 
             const img = new Image();
             img.crossOrigin = 'anonymous';
@@ -75,7 +99,10 @@ const renderLayer = async (layerUuid: string) => {
                     tilesetImages.set(tilesetUuid, img);
                     resolve();
                 };
-                img.onerror = () => resolve(); // Continue even if image fails to load
+                img.onerror = (err) => {
+                    console.error('Failed to load tileset image:', tilesetUuid, err);
+                    resolve();
+                };
                 img.src = tileset.imageUrl || '';
             });
         }),
@@ -84,10 +111,16 @@ const renderLayer = async (layerUuid: string) => {
     // Draw each tile
     for (const tile of layer.data) {
         const tilesetImage = tilesetImages.get(tile.brush.tileset);
-        if (!tilesetImage) continue;
+        if (!tilesetImage) {
+            console.warn('No image for tileset:', tile.brush.tileset);
+            continue;
+        }
 
         const tileset = tileSetStore.tileSets.find((ts) => ts.uuid === tile.brush.tileset);
-        if (!tileset) continue;
+        if (!tileset) {
+            console.warn('Tileset not found:', tile.brush.tileset);
+            continue;
+        }
 
         const tileWidth = tileset.tileWidth || 32;
         const tileHeight = tileset.tileHeight || 32;

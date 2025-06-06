@@ -1,6 +1,9 @@
 <template>
     <div class="flex h-full flex-col gap-4">
-        <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
+            <SaveStatus />
+        </div>
 
         <div class="mb-4">
             <EditorToolbar />
@@ -39,13 +42,19 @@ import EditorLayers from '@/components/editor/EditorLayers.vue';
 import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
 import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
+import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
-import { reactive } from 'vue';
+import { onUnmounted, reactive } from 'vue';
 
 const store = useEditorStore();
 
 const map = reactive(store.mapMetadata);
+
+// Cleanup auto-save timeout when component unmounts
+onUnmounted(() => {
+    store.clearSaveTimeout();
+});
 </script>
 
 <style lang="scss">

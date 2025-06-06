@@ -13,6 +13,9 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::apiResource('tile-maps', TileMapController::class);
     Route::get('tile-maps/{tile_map}/layers', [TileMapController::class, 'layers']);
+    Route::put('tile-maps/{tile_map}/layers', [TileMapController::class, 'updateLayers']);
+    Route::put('tile-maps/{tile_map}/layers/{layer}', [TileMapController::class, 'updateLayer']);
+    Route::put('tile-maps/{tile_map}/layers/{layer}/data', [TileMapController::class, 'updateLayerData']);
     
     Route::apiResource('tile-sets', TileSetController::class);
     Route::post('tile-sets/import', [TileSetController::class, 'import']);

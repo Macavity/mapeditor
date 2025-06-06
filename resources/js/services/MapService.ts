@@ -46,4 +46,19 @@ export class MapService {
         const response = await api.get<{ data: MapLayer[] }>(`${this.BASE_URL}/${uuid}/layers`);
         return response.data.data;
     }
+
+    static async updateLayer(mapUuid: string, layerUuid: string, data: Partial<MapLayer>): Promise<MapLayer> {
+        const response = await api.put<{ data: MapLayer }>(`${this.BASE_URL}/${mapUuid}/layers/${layerUuid}`, data);
+        return response.data.data;
+    }
+
+    static async saveLayers(mapUuid: string, layers: MapLayer[]): Promise<MapLayer[]> {
+        const response = await api.put<{ data: MapLayer[] }>(`${this.BASE_URL}/${mapUuid}/layers`, { layers });
+        return response.data.data;
+    }
+
+    static async saveLayerData(mapUuid: string, layerUuid: string, tileData: any[]): Promise<MapLayer> {
+        const response = await api.put<{ data: MapLayer }>(`${this.BASE_URL}/${mapUuid}/layers/${layerUuid}/data`, { data: tileData });
+        return response.data.data;
+    }
 }

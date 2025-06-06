@@ -53,6 +53,14 @@ class Layer extends Model
         'opacity' => 1.0,
     ];
 
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
     protected static function boot()
     {
         parent::boot();
