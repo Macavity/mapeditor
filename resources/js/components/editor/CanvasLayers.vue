@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 
 const store = useEditorStore();
 
@@ -10,63 +10,92 @@ const brushSelection = {
     backgroundImage: null,
 };
 
+const showBrush = ref(false);
+const brushPosition = ref({ x: 0, y: 0 });
+
 onMounted(() => {
     for (const layer of store.layers) {
         console.log('Draw Layer', layer.uuid);
     }
 });
 
-const onMouseMove = () => {
-    // var container = $('#canvas');
-    // var offset = container.offset();
-    //
-    // var selection = container.find('.selection');
-    //
-    // var activeTileset = Tilesets.findOne(Session.get('activeTileset'));
-    // var tileWidth = activeTileset.tilewidth;
-    // var tileHeight = activeTileset.tileheight;
-    //
-    // var x = Math.floor((event.pageX - offset.left) / tileWidth);
-    // var y = Math.floor((event.pageY - offset.top) / tileHeight);
-    //
-    // var currentCursor = Template.instance().cursor;
-    //
-    // // Only move if the position changed to another tile
-    // if (currentCursor[0] !== x || currentCursor[1] !== y) {
-    //   Template.instance().cursor = [x, y];
-    //   selection.css({
-    //     top: y * tileHeight,
-    //     left: x * tileWidth,
-    //   });
-    // }
+const onMouseEnter = () => {
+    showBrush.value = true;
+};
+
+const onMouseLeave = () => {
+    showBrush.value = false;
+};
+
+const onMouseMove = (event: MouseEvent) => {
+    if (!store.map || !showBrush.value) return;
+
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    // Calculate mouse position relative to canvas
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    // Get tile dimensions from the map
+    const tileWidth = store.map.tile_width;
+    const tileHeight = store.map.tile_height;
+
+    // Calculate tile coordinates (snap to grid)
+    const tileX = Math.floor(mouseX / tileWidth);
+    const tileY = Math.floor(mouseY / tileHeight);
+
+    // Convert back to pixel coordinates (snapped to tile grid)
+    const pixelX = tileX * tileWidth;
+    const pixelY = tileY * tileHeight;
+
+    // Update brush position
+    brushPosition.value = { x: pixelX, y: pixelY };
 };
 </script>
 
 <template>
     <div
         @mousemove="onMouseMove"
+        @mouseenter="onMouseEnter"
+        @mouseleave="onMouseLeave"
+        class="relative"
         :style="{
             width: store.canvasWidth + 'px',
             height: store.canvasHeight + 'px',
         }"
     >
-        <div class="selection" style="">
+        <!-- Selection/Brush cursor -->
+        <div
+            v-show="showBrush"
+            class="pointer-events-none absolute opacity-50 transition-opacity duration-150"
+            :style="{
+                left: brushPosition.x + 'px',
+                top: brushPosition.y + 'px',
+                zIndex: 99,
+            }"
+        >
             <div
                 id="brush"
+                class="border border-black bg-blue-200 dark:bg-blue-400"
                 :style="{
-                    width: brushSelection.width + 'px',
-                    height: brushSelection.height + 'px',
-                    background: 'url(\'' + brushSelection.backgroundImage + '\') no-repeat',
+                    width: (store.map?.tile_width || 32) + 'px',
+                    height: (store.map?.tile_height || 32) + 'px',
+                    background: brushSelection.backgroundImage ? 'url(\'' + brushSelection.backgroundImage + '\') no-repeat' : undefined,
                 }"
             ></div>
         </div>
-        <div class="tilemap">
+
+        <!-- Tilemap layers container -->
+        <div class="relative">
             <canvas
                 v-for="layer in store.layers"
                 :key="layer.id"
-                :id="`canvas-layer-${layer.id}`"
-                class="tilemap__layer"
-                :class="{ 'layer-active': layer.id === store.activeLayer }"
+                class="absolute transition-opacity duration-150 ease-in-out"
+                :class="{
+                    'opacity-100': layer.visible,
+                    'opacity-0': !layer.visible,
+                }"
                 :style="{
                     'z-index': layer.z,
                     width: store.canvasWidth + 'px',
@@ -77,25 +106,27 @@ const onMouseMove = () => {
             >
             </canvas>
         </div>
-        <!-- A scalable grid in the background -->
-        <!--    <div-->
-        <!--      id="grid"-->
-        <!--      class="{{#unless showGrid}}hidden{{/unless}}"-->
-        <!--      style="width:{{canvasWidth}}px; height: {{canvasHeight}}px; background-size: {{tileset.tilewidth}}px {{tileset.tileheight}}px;background-image:-->
-        <!--                repeating-linear-gradient(0deg, #000, #000 1px, transparent 1px, transparent {{tileset.tilewidth}}px),-->
-        <!--                repeating-linear-gradient(-90deg, #000, #000 1px, transparent 1px, transparent {{tileset.tileheight}}px);"-->
-        <!--    ></div>-->
+
+        <!-- Grid overlay (when enabled) -->
+        <div
+            v-if="store.showGrid"
+            class="pointer-events-none absolute inset-0 opacity-40"
+            :style="{
+                width: store.canvasWidth + 'px',
+                height: store.canvasHeight + 'px',
+                backgroundSize: (store.map?.tile_width || 32) + 'px ' + (store.map?.tile_height || 32) + 'px',
+                backgroundImage: `
+                    repeating-linear-gradient(0deg, black, black 1px, transparent 1px, transparent ${store.map?.tile_width || 32}px),
+                    repeating-linear-gradient(-90deg, black, black 1px, transparent 1px, transparent ${store.map?.tile_height || 32}px)
+                `,
+            }"
+        ></div>
     </div>
 </template>
 
 <style lang="scss" scoped>
-.tilemap {
-    position: relative;
-
-    &__layer {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-    }
+.selection {
+    z-index: 99;
+    box-shadow: inset 0px 0px 0px 1px theme('colors.black');
 }
 </style>

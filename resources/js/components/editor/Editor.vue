@@ -10,7 +10,7 @@
             <!-- Left Sidebar -->
             <aside class="flex w-80 shrink-0 flex-col gap-4 transition-all duration-200">
                 <section class="border-sidebar-border/70 dark:border-sidebar-border flex-1 rounded-xl border p-4">
-                    <EditorLayers :layers="[]" />
+                    <EditorLayers />
                 </section>
                 <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
                     <EditorMapProperties v-if="store.map" :map="store.map" />
@@ -19,7 +19,7 @@
 
             <!-- Main Canvas -->
             <section
-                class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 overflow-auto rounded-xl border"
+                class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 overflow-auto border"
                 :class="{
                     'max-w-[calc(100%-40rem)]': store.showProperties,
                     'max-w-[calc(100%-20rem)]': !store.showProperties,
@@ -68,12 +68,6 @@ $zCanvas: 0;
 #canvas {
     @apply relative block bg-gray-400;
     z-index: $zCanvas;
-
-    .selection {
-        @apply pointer-events-none absolute opacity-50;
-        z-index: $zSelection;
-        box-shadow: inset 0px 0px 0px 1px theme('colors.black');
-    }
 
     #grid {
         $width: 32px;
