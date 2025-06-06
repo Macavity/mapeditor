@@ -31,10 +31,8 @@ jobs:
 
       - name: NPM install
         run: npm install
-        working-directory: frontend
 
       - name: Lint
-        working-directory: frontend
         run: |
           npm run lint
           npm run typecheck
@@ -63,6 +61,9 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
+
+      - name: Copy Environment File
+        run: cp .env.example .env
 
       - name: Generate key
         run: php artisan key:generate
