@@ -65,19 +65,11 @@ import ImportTileSetDialog from '@/components/ImportTileSetDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useTileSetStore } from '@/stores/tileSetStore';
-import type { PageProps } from '@inertiajs/core';
+import type { PageProps } from '@/types/globals';
 import { router, usePage } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 
-interface Props {
-    flash?: {
-        success?: string;
-        error?: string;
-    };
-    [key: string]: unknown;
-}
-
-const page = usePage<PageProps & { props: Props }>();
+const page = usePage<PageProps>();
 const store = useTileSetStore();
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -95,6 +87,7 @@ const deleteTileSet = async (uuid: string) => {
     try {
         await store.deleteTileSet(uuid);
     } catch (e) {
+        console.error(e);
         error.value = 'Failed to delete tile set';
     } finally {
         deleting.value = null;
@@ -107,6 +100,7 @@ onMounted(async () => {
         try {
             await store.loadTileSets();
         } catch (e) {
+            console.error(e);
             error.value = 'Failed to load tile sets';
         } finally {
             loading.value = false;

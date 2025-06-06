@@ -97,6 +97,7 @@ const handleSubmit = async (e: Event) => {
         await store.importTileSet(formData);
         emit('success');
     } catch (e) {
+        console.error(e);
         error.value = 'Failed to import tileset. Please try again.';
         return;
     } finally {

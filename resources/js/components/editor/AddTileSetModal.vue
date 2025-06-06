@@ -12,11 +12,10 @@ let modal: { show: () => void; hide: () => void };
 const showModal = ref(props.show);
 
 onMounted(() => {
-    modal = new window.bootstrap.Modal(document.getElementById('addTileSetModal'));
-
-    if (showModal.value) {
-        modal.show();
-    }
+    // modal = new window.bootstrap.Modal(document.getElementById('addTileSetModal'));
+    // if (showModal.value) {
+    //     modal.show();
+    // }
 });
 
 const close = () => {
@@ -26,7 +25,7 @@ const close = () => {
 
 const confirm = () => {
     showModal.value = false;
-    modal.hide();
+    // modal.hide();
     emit('addTileSet', url);
 };
 </script>
