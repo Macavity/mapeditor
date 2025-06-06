@@ -1,5 +1,5 @@
 export enum EditorTool {
-  DRAW = 'draw',
-  FILL = 'fill',
-  ERASE = 'erase',
+    DRAW = 'draw',
+    FILL = 'fill',
+    ERASE = 'erase',
 }

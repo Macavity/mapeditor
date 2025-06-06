@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import TileSetList from '@/components/TileSetList.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import TileSetList from '@/components/TileSetList.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
