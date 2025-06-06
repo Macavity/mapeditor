@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 
 const store = useEditorStore();
 const tileSetStore = useTileSetStore();
@@ -18,10 +18,56 @@ const tryRenderLayers = () => {
     }
 };
 
+const renderSpecificLayer = (layerUuid: string) => {
+    if (store.loaded) {
+        nextTick(() => {
+            renderLayer(layerUuid);
+        });
+    }
+};
+
 onMounted(tryRenderLayers);
 
-// Watch for changes in layer data and re-render
-watch(() => store.layers, tryRenderLayers, { deep: true });
+// Watch for changes in layer count (initial load, add/remove layers)
+watch(() => store.layers.length, tryRenderLayers);
+
+// Watch each layer's data individually for efficiency
+watch(
+    () => store.layers,
+    (newLayers, oldLayers) => {
+        if (!store.loaded || !newLayers || !oldLayers) return;
+
+        // Check each layer for data changes
+        newLayers.forEach((newLayer, index) => {
+            const oldLayer = oldLayers[index];
+            if (!oldLayer) return;
+
+            // Check if this layer's data changed (compare array lengths first for performance)
+            if (newLayer.data?.length !== oldLayer.data?.length || JSON.stringify(newLayer.data) !== JSON.stringify(oldLayer.data)) {
+                renderSpecificLayer(newLayer.uuid);
+            }
+
+            // Check if visibility/opacity changed
+            if (newLayer.visible !== oldLayer.visible || newLayer.opacity !== oldLayer.opacity) {
+                renderSpecificLayer(newLayer.uuid);
+            }
+        });
+    },
+    { deep: true },
+);
+
+// Also watch for when the active layer changes to ensure immediate rendering
+watch(
+    () => store.activeLayer,
+    (newActiveLayer) => {
+        if (newActiveLayer && store.loaded) {
+            // Small delay to ensure the layer data update has been processed
+            setTimeout(() => {
+                renderSpecificLayer(newActiveLayer);
+            }, 10);
+        }
+    },
+);
 
 const setCanvasRef = (el: HTMLCanvasElement | null, layerUuid: string) => {
     if (el) {
@@ -195,6 +241,13 @@ const onCanvasClick = (event: MouseEvent) => {
 
     // Place the tile
     store.placeTile(tileX, tileY);
+
+    // Ensure the active layer is re-rendered immediately
+    if (store.activeLayer) {
+        nextTick(() => {
+            renderLayer(store.activeLayer!);
+        });
+    }
 };
 </script>
 
