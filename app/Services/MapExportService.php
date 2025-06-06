@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\TileMap;
+use App\Repositories\MapRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,6 +16,9 @@ class MapExportService
      */
     public function prepareExportData(TileMap $map): array
     {
+        $mapRepository = app(MapRepository::class);
+        $usedTilesets = $mapRepository->getUsedTilesets($map);
+
         return [
             'exported_at' => Carbon::now()->toISOString(),
             'export_version' => '1.0',
@@ -33,6 +37,24 @@ class MapExportService
                     'email' => $map->creator->email,
                 ] : null,
             ],
+            'tilesets' => $usedTilesets->map(function ($tileset) {
+                return [
+                    'uuid' => $tileset->uuid,
+                    'name' => $tileset->name,
+                    'image_width' => $tileset->image_width,
+                    'image_height' => $tileset->image_height,
+                    'tile_width' => $tileset->tile_width,
+                    'tile_height' => $tileset->tile_height,
+                    'image_url' => $tileset->image_url,
+                    'image_path' => $tileset->image_path,
+                    'tile_count' => $tileset->tile_count,
+                    'first_gid' => $tileset->first_gid,
+                    'margin' => $tileset->margin,
+                    'spacing' => $tileset->spacing,
+                    'created_at' => $tileset->created_at->toISOString(),
+                    'updated_at' => $tileset->updated_at->toISOString(),
+                ];
+            })->values()->toArray(),
             'layers' => $map->layers->sortBy('z')->map(function ($layer) {
                 return [
                     'uuid' => $layer->uuid,

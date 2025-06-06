@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Models\TileMap;
+use App\Models\TileSet;
 use Illuminate\Database\Eloquent\Collection;
 
 class MapRepository
@@ -143,5 +144,34 @@ class MapRepository
         return $query->orderBy('updated_at', 'desc')
                     ->limit($limit)
                     ->get();
+    }
+
+    /**
+     * Get all tilesets used in a map.
+     */
+    public function getUsedTilesets(TileMap $map): Collection
+    {
+        $tilesetUuids = collect();
+
+        // Extract tileset UUIDs from all layers
+        foreach ($map->layers as $layer) {
+            if (is_array($layer->data)) {
+                foreach ($layer->data as $tile) {
+                    if (isset($tile['brush']['tileset'])) {
+                        $tilesetUuids->push($tile['brush']['tileset']);
+                    }
+                }
+            }
+        }
+
+        // Get unique tileset UUIDs
+        $uniqueTilesetUuids = $tilesetUuids->unique();
+
+        if ($uniqueTilesetUuids->isEmpty()) {
+            return collect();
+        }
+
+        // Load the tileset models
+        return TileSet::whereIn('uuid', $uniqueTilesetUuids->toArray())->get();
     }
 } 

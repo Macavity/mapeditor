@@ -68,10 +68,13 @@ class ExportMapCommand extends Command
             }
 
             $fullPath = $exportService->getFullPath($exportPath);
+            $usedTilesets = $mapRepository->getUsedTilesets($map);
+            
             $this->info("Map exported successfully!");
             $this->line("Location: {$fullPath}");
             $this->line("Map: {$map->name} ({$map->uuid})");
             $this->line("Layers: " . $map->layers->count());
+            $this->line("Tilesets: " . $usedTilesets->count());
             $this->line("Size: {$map->width}x{$map->height} tiles");
 
             return Command::SUCCESS;

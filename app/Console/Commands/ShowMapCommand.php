@@ -76,6 +76,30 @@ class ShowMapCommand extends Command
                 $this->table($headers, $rows);
             }
 
+            // Tileset Information
+            $usedTilesets = $mapRepository->getUsedTilesets($map);
+            $this->line('');
+            $this->info("Tilesets Used ({$usedTilesets->count()}):");
+            
+            if ($usedTilesets->isEmpty()) {
+                $this->line('  No tilesets used in this map.');
+            } else {
+                $tilesetHeaders = ['Name', 'UUID', 'Image Size', 'Tile Size', 'Tiles'];
+                $tilesetRows = [];
+
+                foreach ($usedTilesets as $tileset) {
+                    $tilesetRows[] = [
+                        $displayService->truncate($tileset->name, 30),
+                        $displayService->formatUuid($tileset->uuid),
+                        "{$tileset->image_width}x{$tileset->image_height}",
+                        "{$tileset->tile_width}x{$tileset->tile_height}",
+                        $tileset->tile_count,
+                    ];
+                }
+
+                $this->table($tilesetHeaders, $tilesetRows);
+            }
+
             // Export Command
             $this->line('');
             $this->comment("To export this map:");
