@@ -66,7 +66,7 @@ function handleTilesetClick(event: MouseEvent) {
 
     // Update the brush selection in the editor store only if imageUrl exists
     if (tileSetStore.activeTileSet.imageUrl) {
-        editorStore.setBrushSelection(tileX, tileY, tileWidth, tileHeight, tileSetStore.activeTileSet.imageUrl);
+        editorStore.setBrushSelection(tileX, tileY, tileWidth, tileHeight, tileSetStore.activeTileSet.imageUrl, tileSetStore.activeTileSet.uuid);
     }
 }
 </script>

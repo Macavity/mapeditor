@@ -5,6 +5,16 @@ export enum MapLayerType {
     FieldTypes,
 }
 
+export type Tile = {
+    x: number;
+    y: number;
+    brush: {
+        tileset: string;
+        tileX: number;
+        tileY: number;
+    };
+};
+
 export type MapLayer = {
     id: number;
     uuid: string;
@@ -15,7 +25,7 @@ export type MapLayer = {
     x: number;
     y: number;
     z: number;
-    data: [];
+    data: Tile[];
     visible: boolean;
     opacity: number;
 };

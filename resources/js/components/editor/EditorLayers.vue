@@ -7,10 +7,6 @@ const store = useEditorStore();
 
 const isSky = (layer: MapLayer) => layer.type === MapLayerType.Sky;
 const isBackground = (layer: MapLayer) => layer.type === MapLayerType.Background;
-
-const toggleLayerVisibility = (layerId: number) => {
-    store.toggleLayerVisibility(layerId);
-};
 </script>
 
 <template>
@@ -29,20 +25,20 @@ const toggleLayerVisibility = (layerId: number) => {
                 <li
                     v-for="layer in store.layers"
                     :key="layer.id"
-                    @click="store.activateLayer(layer.id)"
+                    @click="store.activateLayer(layer.uuid)"
                     class="flex cursor-pointer items-center gap-2 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                     :class="{
-                        'bg-gray-100 dark:bg-gray-700': layer.id === store.activeLayer,
+                        'bg-gray-100 dark:bg-gray-700': layer.uuid === store.activeLayer,
                     }"
                 >
                     <!-- Active indicator -->
                     <div class="flex w-5 justify-center">
-                        <ChevronRight v-if="layer.id === store.activeLayer" class="text-primary h-4 w-4" />
+                        <ChevronRight v-if="layer.uuid === store.activeLayer" class="text-primary h-4 w-4" />
                     </div>
 
                     <!-- Visibility toggle -->
                     <button
-                        @click.stop="toggleLayerVisibility(layer.id)"
+                        @click.stop="store.toggleLayerVisibility(layer.uuid)"
                         class="flex w-5 justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     >
                         <Eye v-if="layer.visible" class="h-4 w-4" />

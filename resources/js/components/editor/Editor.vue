@@ -13,7 +13,7 @@
                     <EditorLayers />
                 </section>
                 <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
-                    <EditorMapProperties v-if="store.map" :map="store.map" />
+                    <EditorMapProperties v-if="store.mapMetadata" />
                 </section>
             </aside>
 
@@ -41,15 +41,11 @@ import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
-import { TileMap } from '@/types/TileMap';
 import { reactive } from 'vue';
 
-const props = defineProps<{
-    map: TileMap;
-}>();
 const store = useEditorStore();
 
-const map = reactive(props.map);
+const map = reactive(store.mapMetadata);
 </script>
 
 <style lang="scss">
