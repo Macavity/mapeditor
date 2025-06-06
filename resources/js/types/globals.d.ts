@@ -21,7 +21,7 @@ export interface PageProps {
 
 declare global {
     const route: typeof routeFn;
-    var global: typeof globalThis & {
+    const global: typeof globalThis & {
         route?: typeof routeFn;
     };
 }

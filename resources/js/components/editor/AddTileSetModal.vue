@@ -8,7 +8,7 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'addTileSet']);
 
 const url = '';
-let modal: { show: () => void; hide: () => void };
+//let modal: { show: () => void; hide: () => void };
 const showModal = ref(props.show);
 
 onMounted(() => {
