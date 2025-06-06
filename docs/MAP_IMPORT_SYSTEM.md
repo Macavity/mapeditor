@@ -221,8 +221,8 @@ The import system provides comprehensive error handling:
 ### Exporting and Re-importing
 
 ```bash
-# Export a map
-php artisan map:export abc123def456 --format=json --path=backup/
+# Export a map (supports partial UUIDs)
+php artisan map:export abc123 --format=json --path=backup/
 
 # Later, import it back
 php artisan map:import backup/MyMap_2024-01-15_14-30-00.json --preserve-uuid

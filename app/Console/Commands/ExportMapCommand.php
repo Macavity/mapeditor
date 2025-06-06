@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Repositories\MapRepository;
 use App\Services\MapExportService;
+use App\DataTransferObjects\Export\ExportMapFormatV1;
 use Illuminate\Console\Command;
 
 class ExportMapCommand extends Command
@@ -15,7 +16,7 @@ class ExportMapCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'map:export {uuid : The UUID of the map to export} {--format=json : Export format (json)} {--path= : Custom export path}';
+    protected $signature = 'map:export {uuid : The UUID of the map to export (can be partial)} {--format=json : Export format (json)} {--path= : Custom export path}';
 
     /**
      * The console command description.
@@ -43,15 +44,19 @@ class ExportMapCommand extends Command
             return Command::FAILURE;
         }
 
-        $this->info("Exporting map: {$uuid}");
+        $this->info("Looking for map with UUID starting with: {$uuid}");
 
         try {
-            $map = $mapRepository->findByExactUuid($uuid);
+            $map = $mapRepository->findByUuid($uuid);
 
             if (!$map) {
-                $this->error("Map not found: {$uuid}");
+                $this->error("Map not found with UUID starting with: {$uuid}");
+                $this->line('');
+                $this->comment('Use "php artisan map:list" to see available maps.');
                 return Command::FAILURE;
             }
+
+            $this->info("Found map: {$map->name} ({$map->uuid})");
 
             // Prepare export data
             $exportData = $exportService->prepareExportData($map);
@@ -68,14 +73,11 @@ class ExportMapCommand extends Command
             }
 
             $fullPath = $exportService->getFullPath($exportPath);
-            $usedTilesets = $mapRepository->getUsedTilesets($map);
             
             $this->info("Map exported successfully!");
             $this->line("Location: {$fullPath}");
-            $this->line("Map: {$map->name} ({$map->uuid})");
-            $this->line("Layers: " . $map->layers->count());
-            $this->line("Tilesets: " . $usedTilesets->count());
-            $this->line("Size: {$map->width}x{$map->height} tiles");
+            $this->line("");
+            $this->displayExportSummary($exportData);
 
             return Command::SUCCESS;
 
@@ -85,5 +87,35 @@ class ExportMapCommand extends Command
         }
     }
 
+    /**
+     * Display export summary information.
+     */
+    private function displayExportSummary(ExportMapFormatV1 $exportData): void
+    {
+        $map = $exportData->map;
+        
+        $this->line("Map: {$map->name} ({$map->uuid})");
+        $this->line("Export Version: {$exportData->export_version}");
+        $this->line("Size: {$map->width}x{$map->height} tiles ({$map->getTotalTiles()} total)");
+        $this->line("Tile Size: {$map->tile_width}x{$map->tile_height} pixels");
+        $this->line("Layers: " . count($exportData->layers));
+        $this->line("Tilesets: " . count($exportData->tilesets));
+        
+        if ($map->hasCreator()) {
+            $this->line("Creator: {$map->creator->name} ({$map->creator->email})");
+        }
 
+        // Display layer summary
+        if (!empty($exportData->layers)) {
+            $this->line("");
+            $this->line("Layer Details:");
+            foreach ($exportData->layers as $index => $layer) {
+                $fillPercentage = number_format($layer->getFillPercentage(), 1);
+                $visibility = $layer->isHidden() ? '(hidden)' : '';
+                $opacity = $layer->isTransparent() ? " (opacity: {$layer->opacity})" : '';
+                
+                $this->line("  [{$index}] {$layer->name} ({$layer->type}) - {$layer->getTileCount()} tiles ({$fillPercentage}% filled){$visibility}{$opacity}");
+            }
+        }
+    }
 }

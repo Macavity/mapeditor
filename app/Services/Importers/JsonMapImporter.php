@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Importers;
 
+use App\DataTransferObjects\Export\ExportMapFormatV1;
+use App\Constants\ExportVersions;
 use Illuminate\Support\Facades\Storage;
 
 class JsonMapImporter implements ImporterInterface
@@ -59,7 +61,7 @@ class JsonMapImporter implements ImporterInterface
             return false;
         }
 
-        // Try to peek at the file content to verify it's valid JSON
+        // Try to peek at the file content to verify it's valid V1 JSON format
         try {
             if (Storage::exists($filePath)) {
                 $content = Storage::get($filePath);
@@ -73,10 +75,19 @@ class JsonMapImporter implements ImporterInterface
                 return false;
             }
 
-            // Just check if it's valid JSON - don't parse the whole thing
-            $sample = substr($content, 0, 1000); // Check first 1KB
-            json_decode($sample);
-            return json_last_error() === JSON_ERROR_NONE;
+            // Check if it's valid JSON and has V1 format structure
+            $sample = substr($content, 0, 2000); // Check first 2KB for better format detection
+            $decoded = json_decode($sample, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return false;
+            }
+
+            // Check for V1 format markers
+            return is_array($decoded) && 
+                   isset($decoded['export_version']) && 
+                   ExportVersions::isSupported($decoded['export_version']) &&
+                   isset($decoded['map']);
         } catch (\Exception $e) {
             return false;
         }
@@ -103,7 +114,7 @@ class JsonMapImporter implements ImporterInterface
      */
     public function getDescription(): string
     {
-        return 'Imports tile maps from JSON files exported by the map editor';
+        return 'Imports tile maps from V1 JSON format files exported by the map editor';
     }
 
     /**
@@ -111,86 +122,39 @@ class JsonMapImporter implements ImporterInterface
      */
     private function normalizeMapData(array $data): array
     {
-        // Handle different JSON structures that might be exported
+        // Only support V1 versioned export format
+        if (!isset($data['export_version'])) {
+            throw new \InvalidArgumentException("Missing export_version field. Only V1 format is supported.");
+        }
+
+        if (!isset($data['map']) || !isset($data['layers'])) {
+            throw new \InvalidArgumentException("Invalid V1 format. Missing required 'map' or 'layers' field.");
+        }
+
+        return $this->normalizeV1Format($data);
+    }
+
+    /**
+     * Normalize the V1 export format using DTO validation.
+     */
+    private function normalizeV1Format(array $data): array
+    {
+        $version = $data['export_version'];
         
-        // If this looks like our standard export format
-        if (isset($data['map']) && isset($data['layers'])) {
-            return $this->normalizeStandardFormat($data);
+        // Validate version is supported
+        if (!ExportVersions::isSupported($version)) {
+            $supportedVersions = implode(', ', ExportVersions::getSupportedVersions());
+            throw new \InvalidArgumentException("Unsupported export version: {$version}. Supported versions: {$supportedVersions}");
         }
 
-        // If this looks like a direct map object (legacy or different export)
-        if (isset($data['name']) && isset($data['width']) && isset($data['height'])) {
-            return $this->normalizeLegacyFormat($data);
+        // Use DTO for validation and normalization
+        try {
+            $dto = ExportMapFormatV1::fromArray($data);
+            return $dto->toArray();
+        } catch (\Exception $e) {
+            throw new \InvalidArgumentException("Invalid V1 format structure: " . $e->getMessage());
         }
-
-        throw new \InvalidArgumentException("Unrecognized JSON map format");
     }
 
-    /**
-     * Normalize the standard export format (current format).
-     */
-    private function normalizeStandardFormat(array $data): array
-    {
-        $normalized = [
-            'map' => $data['map'],
-            'layers' => $data['layers'] ?? [],
-            'tilesets' => $data['tilesets'] ?? [],
-        ];
 
-        // Ensure required map fields have defaults
-        $normalized['map'] = array_merge([
-            'tile_width' => 32,
-            'tile_height' => 32,
-        ], $normalized['map']);
-
-        // Normalize layers
-        $normalized['layers'] = array_map(function ($layer) {
-            return array_merge([
-                'type' => 'floor',
-                'x' => 0,
-                'y' => 0,
-                'z' => 0,
-                'visible' => true,
-                'opacity' => 1.0,
-                'data' => [],
-            ], $layer);
-        }, $normalized['layers']);
-
-        return $normalized;
-    }
-
-    /**
-     * Normalize legacy or different format.
-     */
-    private function normalizeLegacyFormat(array $data): array
-    {
-        $mapData = [
-            'name' => $data['name'],
-            'width' => $data['width'],
-            'height' => $data['height'],
-            'tile_width' => $data['tile_width'] ?? 32,
-            'tile_height' => $data['tile_height'] ?? 32,
-        ];
-
-        // Preserve UUID if present
-        if (isset($data['uuid'])) {
-            $mapData['uuid'] = $data['uuid'];
-        }
-
-        $layers = [];
-        if (isset($data['layers']) && is_array($data['layers'])) {
-            $layers = $data['layers'];
-        }
-
-        $tilesets = [];
-        if (isset($data['tilesets']) && is_array($data['tilesets'])) {
-            $tilesets = $data['tilesets'];
-        }
-
-        return [
-            'map' => $mapData,
-            'layers' => $layers,
-            'tilesets' => $tilesets,
-        ];
-    }
 } 
