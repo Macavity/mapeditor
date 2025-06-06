@@ -66,7 +66,7 @@ const onCanvasClick = (event: MouseEvent) => {
         <!-- Tilemap layers container -->
         <div class="relative">
             <TileCanvas
-                v-for="layer in store.layers"
+                v-for="layer in store.layersSortedByZ"
                 :key="layer.uuid"
                 :ref="(el) => setTileCanvasRef(el as InstanceType<typeof TileCanvas>, layer.uuid)"
                 :layer="layer"

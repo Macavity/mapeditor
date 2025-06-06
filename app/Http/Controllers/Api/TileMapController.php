@@ -111,7 +111,7 @@ class TileMapController extends Controller
                 'height' => $tileMap->height,
                 'x' => 0,
                 'y' => 0,
-                'z' => 0,
+                'z' => 0, // Background layers always start at z=0
                 'data' => [],
                 'visible' => true,
                 'opacity' => 1.0,
@@ -239,7 +239,6 @@ class TileMapController extends Controller
             'name' => 'sometimes|string|max:255',
             'x' => 'sometimes|integer',
             'y' => 'sometimes|integer',
-            'z' => 'sometimes|integer|min:0',
             'visible' => 'sometimes|boolean',
             'opacity' => 'sometimes|numeric|min:0|max:1',
         ]);
@@ -252,26 +251,28 @@ class TileMapController extends Controller
             ], 422);
         }
 
-        // Get the highest z-index for Sky layers to place the new layer on top
-        $maxZ = $tileMap->layers()->where('type', LayerType::Sky)->max('z') ?? -1;
+        return DB::transaction(function () use ($validated, $tileMap, $skyLayerCount) {
+            // Sky layers should always be on top of all other layers
+            $maxZ = $tileMap->layers()->max('z') ?? -1;
 
-        $layer = Layer::create([
-            'tile_map_id' => $tileMap->id,
-            'name' => $validated['name'] ?? 'Sky Layer ' . ($skyLayerCount + 1),
-            'type' => LayerType::Sky,
-            'width' => $tileMap->width,
-            'height' => $tileMap->height,
-            'x' => $validated['x'] ?? 0,
-            'y' => $validated['y'] ?? 0,
-            'z' => $validated['z'] ?? $maxZ + 1,
-            'data' => [],
-            'visible' => $validated['visible'] ?? true,
-            'opacity' => $validated['opacity'] ?? 1.0,
-        ]);
+            $layer = Layer::create([
+                'tile_map_id' => $tileMap->id,
+                'name' => $validated['name'] ?? 'Sky Layer ' . ($skyLayerCount + 1),
+                'type' => LayerType::Sky,
+                'width' => $tileMap->width,
+                'height' => $tileMap->height,
+                'x' => $validated['x'] ?? 0,
+                'y' => $validated['y'] ?? 0,
+                'z' => $maxZ + 1,
+                'data' => [],
+                'visible' => $validated['visible'] ?? true,
+                'opacity' => $validated['opacity'] ?? 1.0,
+            ]);
 
-        return (new LayerResource($layer))
-            ->response()
-            ->setStatusCode(201);
+            return (new LayerResource($layer))
+                ->response()
+                ->setStatusCode(201);
+        });
     }
 
     /**
@@ -283,7 +284,6 @@ class TileMapController extends Controller
             'name' => 'sometimes|string|max:255',
             'x' => 'sometimes|integer',
             'y' => 'sometimes|integer',
-            'z' => 'sometimes|integer|min:0',
             'visible' => 'sometimes|boolean',
             'opacity' => 'sometimes|numeric|min:0|max:1',
         ]);
@@ -296,26 +296,38 @@ class TileMapController extends Controller
             ], 422);
         }
 
-        // Get the highest z-index for Floor layers to place the new layer on top
-        $maxZ = $tileMap->layers()->where('type', LayerType::Floor)->max('z') ?? -1;
+        return DB::transaction(function () use ($validated, $tileMap, $floorLayerCount) {
+            // Floor layers go above background and other floor layers, but below sky layers
+            // Find the highest z-index among background and floor layers
+            $maxFloorZ = $tileMap->layers()
+                ->whereIn('type', [LayerType::Background, LayerType::Floor])
+                ->max('z') ?? -1;
+            
+            $newFloorZ = $maxFloorZ + 1;
 
-        $layer = Layer::create([
-            'tile_map_id' => $tileMap->id,
-            'name' => $validated['name'] ?? 'Floor Layer ' . ($floorLayerCount + 1),
-            'type' => LayerType::Floor,
-            'width' => $tileMap->width,
-            'height' => $tileMap->height,
-            'x' => $validated['x'] ?? 0,
-            'y' => $validated['y'] ?? 0,
-            'z' => $validated['z'] ?? $maxZ + 1,
-            'data' => [],
-            'visible' => $validated['visible'] ?? true,
-            'opacity' => $validated['opacity'] ?? 1.0,
-        ]);
+            // Increment z-index of all sky layers by 1 to maintain ordering
+            $tileMap->layers()
+                ->where('type', LayerType::Sky)
+                ->increment('z', 1);
 
-        return (new LayerResource($layer))
-            ->response()
-            ->setStatusCode(201);
+            $layer = Layer::create([
+                'tile_map_id' => $tileMap->id,
+                'name' => $validated['name'] ?? 'Floor Layer ' . ($floorLayerCount + 1),
+                'type' => LayerType::Floor,
+                'width' => $tileMap->width,
+                'height' => $tileMap->height,
+                'x' => $validated['x'] ?? 0,
+                'y' => $validated['y'] ?? 0,
+                'z' => $newFloorZ,
+                'data' => [],
+                'visible' => $validated['visible'] ?? true,
+                'opacity' => $validated['opacity'] ?? 1.0,
+            ]);
+
+            return (new LayerResource($layer))
+                ->response()
+                ->setStatusCode(201);
+        });
     }
 
     /**
@@ -365,8 +377,18 @@ class TileMapController extends Controller
             }
         }
 
-        $layer->delete();
+        return DB::transaction(function () use ($tileMap, $layer) {
+            $deletedZ = $layer->z;
+            
+            // Delete the layer
+            $layer->delete();
 
-        return response()->json(null, 204);
+            // Reorder z-indices: decrement all layers with z > deletedZ
+            $tileMap->layers()
+                ->where('z', '>', $deletedZ)
+                ->decrement('z', 1);
+
+            return response()->json(null, 204);
+        });
     }
 }

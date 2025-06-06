@@ -63,6 +63,13 @@ export const useEditorStore = defineStore('editorStore', {
         canvasHeight: (state) => {
             return state.mapMetadata.height * state.mapMetadata.tileHeight;
         },
+        layersSortedByZ: (state) => {
+            return [...state.layers].sort((a, b) => a.z - b.z);
+        },
+        layersDisplayOrder: (state) => {
+            // For UI display: highest z-index at top of list (reverse order)
+            return [...state.layers].sort((a, b) => b.z - a.z);
+        },
     },
     actions: {
         activateLayer(layerId: string) {
@@ -307,7 +314,9 @@ export const useEditorStore = defineStore('editorStore', {
 
             try {
                 const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
-                this.layers.push(newLayer);
+
+                // Refresh all layers to get updated z-indices
+                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
 
                 // Update layer counts
                 this.layerCounts.sky++;
@@ -328,8 +337,9 @@ export const useEditorStore = defineStore('editorStore', {
 
             try {
                 const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
-                console.log('newLayer', newLayer);
-                this.layers.push(newLayer);
+
+                // Refresh all layers to get updated z-indices (sky layers get shifted up)
+                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
 
                 // Update layer counts
                 this.layerCounts.floor++;
@@ -376,8 +386,8 @@ export const useEditorStore = defineStore('editorStore', {
             try {
                 await MapService.deleteLayer(this.mapMetadata.uuid, layerUuid);
 
-                // Remove layer from store
-                this.layers = this.layers.filter((l) => l.uuid !== layerUuid);
+                // Refresh all layers to get updated z-indices after deletion
+                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
 
                 // Update layer counts based on deleted layer type
                 if (layer.type === 'sky') {

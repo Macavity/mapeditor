@@ -140,7 +140,7 @@ const cancelDelete = () => {
 
             <ul class="space-y-1">
                 <li
-                    v-for="layer in store.layers"
+                    v-for="layer in store.layersDisplayOrder"
                     :key="layer.uuid"
                     @click="store.activateLayer(layer.uuid)"
                     class="flex cursor-pointer items-center gap-2 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
