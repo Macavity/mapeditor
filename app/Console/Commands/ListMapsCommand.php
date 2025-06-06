@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\TileMap;
+use App\Repositories\MapRepository;
+use App\Services\MapDisplayService;
 use Illuminate\Console\Command;
 
 class ListMapsCommand extends Command
@@ -28,6 +29,9 @@ class ListMapsCommand extends Command
      */
     public function handle(): int
     {
+        $mapRepository = app(MapRepository::class);
+        $displayService = app(MapDisplayService::class);
+        
         $limit = (int) $this->option('limit');
         $creatorFilter = $this->option('creator');
 
@@ -35,19 +39,7 @@ class ListMapsCommand extends Command
         $this->line('');
 
         try {
-            $query = TileMap::with(['creator', 'layers']);
-
-            // Apply creator filter if provided
-            if ($creatorFilter) {
-                $query->whereHas('creator', function ($q) use ($creatorFilter) {
-                    $q->where('name', 'like', "%{$creatorFilter}%")
-                      ->orWhere('email', 'like', "%{$creatorFilter}%");
-                });
-            }
-
-            $maps = $query->orderBy('updated_at', 'desc')
-                         ->limit($limit)
-                         ->get();
+            $maps = $mapRepository->findAll($limit, $creatorFilter);
 
             if ($maps->isEmpty()) {
                 $this->warn('No maps found.');
@@ -59,21 +51,8 @@ class ListMapsCommand extends Command
             $rows = [];
 
             foreach ($maps as $map) {
-                $layerCounts = $map->layers->groupBy('type')->map->count();
-                $layerInfo = collect([
-                    $layerCounts->get('background', 0) . 'bg',
-                    $layerCounts->get('floor', 0) . 'fl',
-                    $layerCounts->get('sky', 0) . 'sky',
-                ])->filter(fn($count) => !str_starts_with($count, '0'))->join(', ');
-
-                $rows[] = [
-                    substr($map->uuid, 0, 8) . '...',
-                    $this->truncate($map->name, 25),
-                    "{$map->width}x{$map->height}",
-                    $layerInfo ?: 'none',
-                    $this->truncate($map->creator?->name ?? 'Unknown', 15),
-                    $map->updated_at->format('Y-m-d H:i'),
-                ];
+                $layerStats = $mapRepository->getLayerStats($map);
+                $rows[] = $displayService->prepareMapListRow($map, $layerStats);
             }
 
             $this->table($headers, $rows);
@@ -92,13 +71,5 @@ class ListMapsCommand extends Command
         }
     }
 
-    /**
-     * Truncate a string to specified length.
-     */
-    private function truncate(string $string, int $length): string
-    {
-        return strlen($string) > $length 
-            ? substr($string, 0, $length - 3) . '...' 
-            : $string;
-    }
+
 }

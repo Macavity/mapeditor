@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\TileMap;
+use App\Repositories\MapRepository;
+use App\Services\MapDisplayService;
 use Illuminate\Console\Command;
 
 class ShowMapCommand extends Command
@@ -28,13 +29,13 @@ class ShowMapCommand extends Command
      */
     public function handle(): int
     {
+        $mapRepository = app(MapRepository::class);
+        $displayService = app(MapDisplayService::class);
+        
         $uuidInput = $this->argument('uuid');
 
         try {
-            // Try to find map by full or partial UUID
-            $map = TileMap::with(['creator', 'layers'])
-                ->where('uuid', 'like', $uuidInput . '%')
-                ->first();
+            $map = $mapRepository->findByUuid($uuidInput);
 
             if (!$map) {
                 $this->error("Map not found with UUID starting with: {$uuidInput}");
@@ -49,10 +50,10 @@ class ShowMapCommand extends Command
             
             $this->line("<comment>UUID:</comment> {$map->uuid}");
             $this->line("<comment>Name:</comment> {$map->name}");
-            $this->line("<comment>Dimensions:</comment> {$map->width} x {$map->height} tiles");
-            $this->line("<comment>Tile Size:</comment> {$map->tile_width} x {$map->tile_height} pixels");
-            $this->line("<comment>Created:</comment> {$map->created_at->format('Y-m-d H:i:s')}");
-            $this->line("<comment>Updated:</comment> {$map->updated_at->format('Y-m-d H:i:s')}");
+            $this->line("<comment>Dimensions:</comment> " . $displayService->formatDimensions($map) . " tiles");
+            $this->line("<comment>Tile Size:</comment> " . $displayService->formatTileSize($map));
+            $this->line("<comment>Created:</comment> " . $displayService->formatDate($map->created_at, 'Y-m-d H:i:s'));
+            $this->line("<comment>Updated:</comment> " . $displayService->formatDate($map->updated_at, 'Y-m-d H:i:s'));
             
             if ($map->creator) {
                 $this->line("<comment>Creator:</comment> {$map->creator->name} ({$map->creator->email})");
@@ -69,17 +70,7 @@ class ShowMapCommand extends Command
                 $rows = [];
 
                 foreach ($map->layers->sortBy('z') as $layer) {
-                    $tileCount = is_array($layer->data) ? count($layer->data) : 0;
-                    
-                    $rows[] = [
-                        $layer->name,
-                        ucfirst($layer->type->value),
-                        $layer->z,
-                        "{$layer->width}x{$layer->height}",
-                        $tileCount,
-                        $layer->visible ? 'Yes' : 'No',
-                        number_format($layer->opacity, 2),
-                    ];
+                    $rows[] = $displayService->prepareLayerDetailRow($layer);
                 }
 
                 $this->table($headers, $rows);
