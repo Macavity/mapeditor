@@ -1,8 +1,8 @@
 export enum MapLayerType {
-    Background,
-    Floor,
-    Sky,
-    FieldTypes,
+    Background = 'background',
+    Floor = 'floor',
+    Sky = 'sky',
+    FieldTypes = 'field_type',
 }
 
 export type Tile = {
@@ -16,7 +16,6 @@ export type Tile = {
 };
 
 export type MapLayer = {
-    id: number;
     uuid: string;
     name: string;
     type: MapLayerType;

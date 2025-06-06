@@ -61,4 +61,58 @@ export class MapService {
         const response = await api.put<{ data: MapLayer }>(`${this.BASE_URL}/${mapUuid}/layers/${layerUuid}/data`, { data: tileData });
         return response.data.data;
     }
+
+    static async createSkyLayer(
+        mapUuid: string,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/sky`, options || {});
+        return response.data;
+    }
+
+    static async createFloorLayer(
+        mapUuid: string,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/floor`, options || {});
+        return response.data;
+    }
+
+    static async getLayerCounts(mapUuid: string): Promise<{
+        counts: {
+            background: number;
+            floor: number;
+            sky: number;
+            field_type: number;
+        };
+        limits: {
+            floor: number;
+            sky: number;
+        };
+        canCreate: {
+            floor: boolean;
+            sky: boolean;
+        };
+    }> {
+        const response = await api.get(`${this.BASE_URL}/${mapUuid}/layer-counts`);
+        return response.data;
+    }
+
+    static async deleteLayer(mapUuid: string, layerUuid: string): Promise<void> {
+        await api.delete(`${this.BASE_URL}/${mapUuid}/layers/${layerUuid}`);
+    }
 }

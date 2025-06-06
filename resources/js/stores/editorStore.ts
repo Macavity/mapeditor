@@ -22,6 +22,20 @@ export const useEditorStore = defineStore('editorStore', {
             tileHeight: 32,
         },
         layers: [] as MapLayer[],
+        layerCounts: {
+            background: 0,
+            floor: 0,
+            sky: 0,
+            field_type: 0,
+        },
+        layerLimits: {
+            floor: 40,
+            sky: 40,
+        },
+        canCreateLayer: {
+            floor: true,
+            sky: true,
+        },
         brushSelection: {
             width: 32,
             height: 32,
@@ -83,7 +97,11 @@ export const useEditorStore = defineStore('editorStore', {
 
         async loadMap(uuid: string) {
             try {
-                const [mapData, layers] = await Promise.all([MapService.getMap(uuid), MapService.getMapLayers(uuid)]);
+                const [mapData, layers, layerCountsData] = await Promise.all([
+                    MapService.getMap(uuid),
+                    MapService.getMapLayers(uuid),
+                    MapService.getLayerCounts(uuid),
+                ]);
 
                 this.mapMetadata = {
                     uuid: mapData.uuid,
@@ -95,6 +113,9 @@ export const useEditorStore = defineStore('editorStore', {
                     tileHeight: mapData.tile_height,
                 };
                 this.layers = layers;
+                this.layerCounts = layerCountsData.counts;
+                this.layerLimits = layerCountsData.limits;
+                this.canCreateLayer = layerCountsData.canCreate;
 
                 // Ensure the first layer is set as active if none is selected
                 if (!this.activeLayer && this.layers.length > 0) {
@@ -278,6 +299,111 @@ export const useEditorStore = defineStore('editorStore', {
             if (this.autoSaveTimeout) {
                 clearTimeout(this.autoSaveTimeout);
                 this.autoSaveTimeout = null;
+            }
+        },
+
+        async createSkyLayer(options?: { name?: string }) {
+            if (!this.mapMetadata.uuid || !this.canCreateLayer.sky) return;
+
+            try {
+                const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
+                this.layers.push(newLayer);
+
+                // Update layer counts
+                this.layerCounts.sky++;
+                this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
+
+                // Activate the new layer
+                this.activeLayer = newLayer.uuid;
+
+                return newLayer;
+            } catch (error) {
+                console.error('Error creating sky layer:', error);
+                throw error;
+            }
+        },
+
+        async createFloorLayer(options?: { name?: string }) {
+            if (!this.mapMetadata.uuid || !this.canCreateLayer.floor) return;
+
+            try {
+                const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
+                console.log('newLayer', newLayer);
+                this.layers.push(newLayer);
+
+                // Update layer counts
+                this.layerCounts.floor++;
+                this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
+
+                // Activate the new layer
+                this.activeLayer = newLayer.uuid;
+
+                return newLayer;
+            } catch (error) {
+                console.error('Error creating floor layer:', error);
+                throw error;
+            }
+        },
+
+        async refreshLayerCounts() {
+            if (!this.mapMetadata.uuid) return;
+
+            try {
+                const layerCountsData = await MapService.getLayerCounts(this.mapMetadata.uuid);
+                this.layerCounts = layerCountsData.counts;
+                this.layerLimits = layerCountsData.limits;
+                this.canCreateLayer = layerCountsData.canCreate;
+            } catch (error) {
+                console.error('Error refreshing layer counts:', error);
+            }
+        },
+
+        getTileCount(layerUuid: string): number {
+            const layer = this.layers.find((l) => l.uuid === layerUuid);
+            return layer?.data?.length ?? 0;
+        },
+
+        async deleteLayer(layerUuid: string): Promise<{ success: boolean; error?: string }> {
+            if (!this.mapMetadata.uuid) {
+                return { success: false, error: 'No map loaded' };
+            }
+
+            const layer = this.layers.find((l) => l.uuid === layerUuid);
+            if (!layer) {
+                return { success: false, error: 'Layer not found' };
+            }
+
+            try {
+                await MapService.deleteLayer(this.mapMetadata.uuid, layerUuid);
+
+                // Remove layer from store
+                this.layers = this.layers.filter((l) => l.uuid !== layerUuid);
+
+                // Update layer counts based on deleted layer type
+                if (layer.type === 'sky') {
+                    this.layerCounts.sky--;
+                    this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
+                } else if (layer.type === 'floor') {
+                    this.layerCounts.floor--;
+                    this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
+                } else if (layer.type === 'background') {
+                    this.layerCounts.background--;
+                }
+
+                // If deleted layer was active, switch to another layer
+                if (this.activeLayer === layerUuid && this.layers.length > 0) {
+                    this.activeLayer = this.layers[0].uuid;
+                } else if (this.layers.length === 0) {
+                    this.activeLayer = null;
+                }
+
+                return { success: true };
+            } catch (error) {
+                console.error('Error deleting layer:', error);
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to delete layer',
+                };
             }
         },
     },

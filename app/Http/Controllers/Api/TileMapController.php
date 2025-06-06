@@ -229,4 +229,144 @@ class TileMapController extends Controller
             ->response()
             ->setStatusCode(200);
     }
+
+    /**
+     * Create a new Sky layer for the tile map.
+     */
+    public function createSkyLayer(Request $request, TileMap $tileMap): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'x' => 'sometimes|integer',
+            'y' => 'sometimes|integer',
+            'z' => 'sometimes|integer|min:0',
+            'visible' => 'sometimes|boolean',
+            'opacity' => 'sometimes|numeric|min:0|max:1',
+        ]);
+
+        // Check if the tile map already has 40 Sky layers
+        $skyLayerCount = $tileMap->layers()->where('type', LayerType::Sky)->count();
+        if ($skyLayerCount >= 40) {
+            return response()->json([
+                'error' => 'Maximum number of Sky layers (40) reached for this tile map'
+            ], 422);
+        }
+
+        // Get the highest z-index for Sky layers to place the new layer on top
+        $maxZ = $tileMap->layers()->where('type', LayerType::Sky)->max('z') ?? -1;
+
+        $layer = Layer::create([
+            'tile_map_id' => $tileMap->id,
+            'name' => $validated['name'] ?? 'Sky Layer ' . ($skyLayerCount + 1),
+            'type' => LayerType::Sky,
+            'width' => $tileMap->width,
+            'height' => $tileMap->height,
+            'x' => $validated['x'] ?? 0,
+            'y' => $validated['y'] ?? 0,
+            'z' => $validated['z'] ?? $maxZ + 1,
+            'data' => [],
+            'visible' => $validated['visible'] ?? true,
+            'opacity' => $validated['opacity'] ?? 1.0,
+        ]);
+
+        return (new LayerResource($layer))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    /**
+     * Create a new Floor layer for the tile map.
+     */
+    public function createFloorLayer(Request $request, TileMap $tileMap): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'x' => 'sometimes|integer',
+            'y' => 'sometimes|integer',
+            'z' => 'sometimes|integer|min:0',
+            'visible' => 'sometimes|boolean',
+            'opacity' => 'sometimes|numeric|min:0|max:1',
+        ]);
+
+        // Check if the tile map already has 40 Floor layers
+        $floorLayerCount = $tileMap->layers()->where('type', LayerType::Floor)->count();
+        if ($floorLayerCount >= 40) {
+            return response()->json([
+                'error' => 'Maximum number of Floor layers (40) reached for this tile map'
+            ], 422);
+        }
+
+        // Get the highest z-index for Floor layers to place the new layer on top
+        $maxZ = $tileMap->layers()->where('type', LayerType::Floor)->max('z') ?? -1;
+
+        $layer = Layer::create([
+            'tile_map_id' => $tileMap->id,
+            'name' => $validated['name'] ?? 'Floor Layer ' . ($floorLayerCount + 1),
+            'type' => LayerType::Floor,
+            'width' => $tileMap->width,
+            'height' => $tileMap->height,
+            'x' => $validated['x'] ?? 0,
+            'y' => $validated['y'] ?? 0,
+            'z' => $validated['z'] ?? $maxZ + 1,
+            'data' => [],
+            'visible' => $validated['visible'] ?? true,
+            'opacity' => $validated['opacity'] ?? 1.0,
+        ]);
+
+        return (new LayerResource($layer))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    /**
+     * Get layer count by type for a specific tile map.
+     */
+    public function getLayerCounts(TileMap $tileMap): JsonResponse
+    {
+        $counts = [
+            'background' => $tileMap->layers()->where('type', LayerType::Background)->count(),
+            'floor' => $tileMap->layers()->where('type', LayerType::Floor)->count(),
+            'sky' => $tileMap->layers()->where('type', LayerType::Sky)->count(),
+            'field_type' => $tileMap->layers()->where('type', LayerType::FieldType)->count(),
+        ];
+
+        $limits = [
+            'floor' => 40,
+            'sky' => 40,
+        ];
+
+        return response()->json([
+            'counts' => $counts,
+            'limits' => $limits,
+            'canCreate' => [
+                'floor' => $counts['floor'] < 40,
+                'sky' => $counts['sky'] < 40,
+            ]
+        ]);
+    }
+
+    /**
+     * Delete a layer from the tile map.
+     */
+    public function deleteLayer(TileMap $tileMap, Layer $layer): JsonResponse
+    {
+        // Ensure the layer belongs to the tile map
+        if ($layer->tile_map_id !== $tileMap->id) {
+            return response()->json(['error' => 'Layer does not belong to this tile map'], 404);
+        }
+
+        // Prevent deletion of background layers if it's the only one
+        if ($layer->type === LayerType::Background) {
+            $backgroundCount = $tileMap->layers()->where('type', LayerType::Background)->count();
+            if ($backgroundCount <= 1) {
+                return response()->json([
+                    'error' => 'Cannot delete the last background layer'
+                ], 422);
+            }
+        }
+
+        $layer->delete();
+
+        return response()->json(null, 204);
+    }
 }
