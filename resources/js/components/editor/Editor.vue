@@ -1,6 +1,9 @@
 <template>
     <div class="flex h-full flex-col gap-4">
-        <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
+            <SaveStatus />
+        </div>
 
         <div class="mb-4">
             <EditorToolbar />
@@ -13,18 +16,12 @@
                     <EditorLayers />
                 </section>
                 <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
-                    <EditorMapProperties v-if="store.map" :map="store.map" />
+                    <EditorMapProperties v-if="store.mapMetadata" />
                 </section>
             </aside>
 
             <!-- Main Canvas -->
-            <section
-                class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 overflow-auto border"
-                :class="{
-                    'max-w-[calc(100%-40rem)]': store.showProperties,
-                    'max-w-[calc(100%-20rem)]': !store.showProperties,
-                }"
-            >
+            <section class="border-sidebar-border/70 dark:border-sidebar-border relative max-w-[calc(100%-40rem)] flex-1 overflow-auto">
                 <CanvasLayers />
             </section>
 
@@ -45,17 +42,19 @@ import EditorLayers from '@/components/editor/EditorLayers.vue';
 import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
 import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
+import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
-import { TileMap } from '@/types/TileMap';
-import { reactive } from 'vue';
+import { onUnmounted, reactive } from 'vue';
 
-const props = defineProps<{
-    map: TileMap;
-}>();
 const store = useEditorStore();
 
-const map = reactive(props.map);
+const map = reactive(store.mapMetadata);
+
+// Cleanup auto-save timeout when component unmounts
+onUnmounted(() => {
+    store.clearSaveTimeout();
+});
 </script>
 
 <style lang="scss">

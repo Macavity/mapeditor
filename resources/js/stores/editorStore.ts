@@ -1,7 +1,6 @@
 import { MapService } from '@/services/MapService';
 import { EditorTool } from '@/types/EditorTool';
 import { MapLayer } from '@/types/MapLayer';
-import { TileMap } from '@/types/TileMap';
 import { defineStore } from 'pinia';
 
 export const useEditorStore = defineStore('editorStore', {
@@ -11,30 +10,69 @@ export const useEditorStore = defineStore('editorStore', {
         showGrid: false,
         showProperties: false,
         showLeftSideBar: false,
-        activeLayer: null as number | null,
+        activeLayer: null as string | null,
         activeTool: EditorTool.DRAW,
-        map: null as TileMap | null,
+        mapMetadata: {
+            uuid: null as string | null,
+            name: null as string | null,
+            creatorName: null as string | null,
+            width: 0,
+            height: 0,
+            tileWidth: 32,
+            tileHeight: 32,
+        },
         layers: [] as MapLayer[],
+        layerCounts: {
+            background: 0,
+            floor: 0,
+            sky: 0,
+            field_type: 0,
+        },
+        layerLimits: {
+            floor: 40,
+            sky: 40,
+        },
+        canCreateLayer: {
+            floor: true,
+            sky: true,
+        },
+        brushSelection: {
+            width: 32,
+            height: 32,
+            backgroundImage: null as string | null,
+            tileX: 0,
+            tileY: 0,
+            backgroundPosition: '0px 0px',
+            tilesetUuid: null as string | null,
+        },
+        // Save state
+        hasUnsavedChanges: false,
+        lastSaved: null as Date | null,
+        isSaving: false,
+        saveError: null as string | null,
+        autoSaveEnabled: true,
+        autoSaveTimeout: null as number | null,
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
         isFillToolActive: (state) => state.activeTool === EditorTool.FILL,
         isEraseToolActive: (state) => state.activeTool === EditorTool.ERASE,
         canvasWidth: (state) => {
-            if (!state.map) {
-                return 0;
-            }
-            return state.map.width * state.map.tile_width;
+            return state.mapMetadata.width * state.mapMetadata.tileWidth;
         },
         canvasHeight: (state) => {
-            if (!state.map) {
-                return 0;
-            }
-            return state.map.height * state.map.tile_height;
+            return state.mapMetadata.height * state.mapMetadata.tileHeight;
+        },
+        layersSortedByZ: (state) => {
+            return [...state.layers].sort((a, b) => a.z - b.z);
+        },
+        layersDisplayOrder: (state) => {
+            // For UI display: highest z-index at top of list (reverse order)
+            return [...state.layers].sort((a, b) => b.z - a.z);
         },
     },
     actions: {
-        activateLayer(layerId: number) {
+        activateLayer(layerId: string) {
             this.activeLayer = layerId;
         },
 
@@ -50,10 +88,10 @@ export const useEditorStore = defineStore('editorStore', {
             this.activeTool = tool;
         },
 
-        toggleLayerVisibility(layerId: number) {
+        toggleLayerVisibility(layerId: string) {
             console.log('toggleLayerVisibility', layerId);
             this.layers = this.layers.map((layer) => {
-                if (layer.id !== layerId) {
+                if (layer.uuid !== layerId) {
                     return layer;
                 }
 
@@ -66,20 +104,316 @@ export const useEditorStore = defineStore('editorStore', {
 
         async loadMap(uuid: string) {
             try {
-                const [mapData, layers] = await Promise.all([MapService.getMap(uuid), MapService.getMapLayers(uuid)]);
+                const [mapData, layers, layerCountsData] = await Promise.all([
+                    MapService.getMap(uuid),
+                    MapService.getMapLayers(uuid),
+                    MapService.getLayerCounts(uuid),
+                ]);
 
-                this.map = mapData;
+                this.mapMetadata = {
+                    uuid: mapData.uuid,
+                    name: mapData.name,
+                    creatorName: mapData.creator?.name ?? 'Unknown',
+                    width: mapData.width,
+                    height: mapData.height,
+                    tileWidth: mapData.tile_width,
+                    tileHeight: mapData.tile_height,
+                };
                 this.layers = layers;
+                this.layerCounts = layerCountsData.counts;
+                this.layerLimits = layerCountsData.limits;
+                this.canCreateLayer = layerCountsData.canCreate;
 
                 // Ensure the first layer is set as active if none is selected
-                if (this.activeLayer === null && this.layers.length > 0) {
-                    this.activeLayer = this.layers[0].id;
+                if (!this.activeLayer && this.layers.length > 0) {
+                    this.activeLayer = this.layers[0].uuid;
                 }
 
                 this.loaded = true;
             } catch (error) {
                 console.error('Error loading map:', error);
                 throw error;
+            }
+        },
+
+        setBrushSelection(tileX: number, tileY: number, tileWidth: number, tileHeight: number, tilesetImageUrl: string, tilesetUuid: string) {
+            this.brushSelection = {
+                width: tileWidth,
+                height: tileHeight,
+                backgroundImage: tilesetImageUrl,
+                tileX,
+                tileY,
+                backgroundPosition: `-${tileX * tileWidth}px -${tileY * tileHeight}px`,
+                tilesetUuid,
+            };
+        },
+
+        clearBrushSelection() {
+            this.brushSelection = {
+                width: 32,
+                height: 32,
+                backgroundImage: null,
+                tileX: 0,
+                tileY: 0,
+                backgroundPosition: '0px 0px',
+                tilesetUuid: null,
+            };
+        },
+
+        placeTile(mapX: number, mapY: number) {
+            // Only place tile if we have an active layer and brush selection
+            if (!this.activeLayer || !this.brushSelection.tilesetUuid || !this.brushSelection.backgroundImage) {
+                return;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return;
+            }
+
+            // Create or update the tile data
+            const tileData = {
+                x: mapX,
+                y: mapY,
+                brush: {
+                    tileset: this.brushSelection.tilesetUuid,
+                    tileX: this.brushSelection.tileX,
+                    tileY: this.brushSelection.tileY,
+                },
+            };
+
+            // Initialize data array if it doesn't exist
+            if (!this.layers[activeLayerIndex].data) {
+                this.layers[activeLayerIndex].data = [];
+            }
+
+            // Find existing tile at this position and replace it, or add new tile
+            const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === mapX && tile.y === mapY);
+
+            if (existingTileIndex !== -1) {
+                // Replace existing tile
+                this.layers[activeLayerIndex].data[existingTileIndex] = tileData;
+            } else {
+                // Add new tile
+                this.layers[activeLayerIndex].data.push(tileData);
+            }
+
+            // Mark as having unsaved changes and trigger auto-save
+            this.markAsChanged();
+            this.scheduleAutoSave();
+        },
+
+        markAsChanged() {
+            this.hasUnsavedChanges = true;
+            this.saveError = null;
+        },
+
+        markAsSaved() {
+            this.hasUnsavedChanges = false;
+            this.lastSaved = new Date();
+            this.saveError = null;
+        },
+
+        scheduleAutoSave() {
+            if (!this.autoSaveEnabled || !this.mapMetadata.uuid) return;
+
+            // Clear existing timeout
+            if (this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+            }
+
+            // Schedule auto-save after 2 seconds of inactivity
+            this.autoSaveTimeout = setTimeout(() => {
+                this.autoSave();
+            }, 2000);
+        },
+
+        async autoSave() {
+            if (!this.hasUnsavedChanges || this.isSaving) return;
+
+            try {
+                await this.saveAllLayers();
+            } catch (error) {
+                console.warn('Auto-save failed:', error);
+                // Don't show error to user for auto-save failures
+            }
+        },
+
+        async saveAllLayers() {
+            if (!this.mapMetadata.uuid || this.isSaving) return;
+
+            this.isSaving = true;
+            this.saveError = null;
+
+            try {
+                await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
+                this.markAsSaved();
+            } catch (error) {
+                this.saveError = error instanceof Error ? error.message : 'Failed to save layers';
+                throw error;
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async saveLayer(layerUuid: string) {
+            if (!this.mapMetadata.uuid || this.isSaving) return;
+
+            const layer = this.layers.find((l) => l.uuid === layerUuid);
+            if (!layer) return;
+
+            this.isSaving = true;
+            this.saveError = null;
+
+            try {
+                const updatedLayer = await MapService.saveLayerData(this.mapMetadata.uuid, layerUuid, layer.data);
+
+                // Update the layer in store with response data
+                const layerIndex = this.layers.findIndex((l) => l.uuid === layerUuid);
+                if (layerIndex !== -1) {
+                    this.layers[layerIndex] = updatedLayer;
+                }
+
+                this.markAsSaved();
+            } catch (error) {
+                this.saveError = error instanceof Error ? error.message : 'Failed to save layer';
+                throw error;
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async manualSave() {
+            try {
+                await this.saveAllLayers();
+                return true;
+            } catch (error) {
+                console.error('Manual save failed:', error);
+                return false;
+            }
+        },
+
+        toggleAutoSave() {
+            this.autoSaveEnabled = !this.autoSaveEnabled;
+
+            if (!this.autoSaveEnabled && this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+                this.autoSaveTimeout = null;
+            }
+        },
+
+        clearSaveTimeout() {
+            if (this.autoSaveTimeout) {
+                clearTimeout(this.autoSaveTimeout);
+                this.autoSaveTimeout = null;
+            }
+        },
+
+        async createSkyLayer(options?: { name?: string }) {
+            if (!this.mapMetadata.uuid || !this.canCreateLayer.sky) return;
+
+            try {
+                const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
+
+                // Refresh all layers to get updated z-indices
+                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
+
+                // Update layer counts
+                this.layerCounts.sky++;
+                this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
+
+                // Activate the new layer
+                this.activeLayer = newLayer.uuid;
+
+                return newLayer;
+            } catch (error) {
+                console.error('Error creating sky layer:', error);
+                throw error;
+            }
+        },
+
+        async createFloorLayer(options?: { name?: string }) {
+            if (!this.mapMetadata.uuid || !this.canCreateLayer.floor) return;
+
+            try {
+                const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
+
+                // Refresh all layers to get updated z-indices (sky layers get shifted up)
+                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
+
+                // Update layer counts
+                this.layerCounts.floor++;
+                this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
+
+                // Activate the new layer
+                this.activeLayer = newLayer.uuid;
+
+                return newLayer;
+            } catch (error) {
+                console.error('Error creating floor layer:', error);
+                throw error;
+            }
+        },
+
+        async refreshLayerCounts() {
+            if (!this.mapMetadata.uuid) return;
+
+            try {
+                const layerCountsData = await MapService.getLayerCounts(this.mapMetadata.uuid);
+                this.layerCounts = layerCountsData.counts;
+                this.layerLimits = layerCountsData.limits;
+                this.canCreateLayer = layerCountsData.canCreate;
+            } catch (error) {
+                console.error('Error refreshing layer counts:', error);
+            }
+        },
+
+        getTileCount(layerUuid: string): number {
+            const layer = this.layers.find((l) => l.uuid === layerUuid);
+            return layer?.data?.length ?? 0;
+        },
+
+        async deleteLayer(layerUuid: string): Promise<{ success: boolean; error?: string }> {
+            if (!this.mapMetadata.uuid) {
+                return { success: false, error: 'No map loaded' };
+            }
+
+            const layer = this.layers.find((l) => l.uuid === layerUuid);
+            if (!layer) {
+                return { success: false, error: 'Layer not found' };
+            }
+
+            try {
+                await MapService.deleteLayer(this.mapMetadata.uuid, layerUuid);
+
+                // Refresh all layers to get updated z-indices after deletion
+                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
+
+                // Update layer counts based on deleted layer type
+                if (layer.type === 'sky') {
+                    this.layerCounts.sky--;
+                    this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
+                } else if (layer.type === 'floor') {
+                    this.layerCounts.floor--;
+                    this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
+                } else if (layer.type === 'background') {
+                    this.layerCounts.background--;
+                }
+
+                // If deleted layer was active, switch to another layer
+                if (this.activeLayer === layerUuid && this.layers.length > 0) {
+                    this.activeLayer = this.layers[0].uuid;
+                } else if (this.layers.length === 0) {
+                    this.activeLayer = null;
+                }
+
+                return { success: true };
+            } catch (error) {
+                console.error('Error deleting layer:', error);
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to delete layer',
+                };
             }
         },
     },

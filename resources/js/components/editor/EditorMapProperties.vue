@@ -35,39 +35,35 @@
 </template>
 
 <script setup lang="ts">
-import type { TileMap } from '@/types/TileMap';
-// Commented out until needed
-// import { Minus, Plus } from 'lucide-vue-next';
+import { useEditorStore } from '@/stores/editorStore';
 
-const props = defineProps<{
-    map: TileMap;
-}>();
+const store = useEditorStore();
 
 const properties = [
     {
         field: 'Name',
-        value: props.map.name,
+        value: store.mapMetadata.name,
     },
     {
         field: 'Author',
-        value: props.map.creator?.name ?? 'Unknown',
+        value: store.mapMetadata.creatorName ?? 'Unknown',
         protected: true,
     },
     {
         field: 'Width',
-        value: props.map.width,
+        value: store.mapMetadata.width,
     },
     {
         field: 'Height',
-        value: props.map.height,
+        value: store.mapMetadata.height,
     },
     {
         field: 'Tile Height',
-        value: props.map.tile_height,
+        value: store.mapMetadata.tileHeight,
     },
     {
         field: 'Tile Width',
-        value: props.map.tile_width,
+        value: store.mapMetadata.tileWidth,
     },
 ] as Array<{ field: string; value: string | number; protected?: boolean }>;
 </script>

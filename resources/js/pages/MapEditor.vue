@@ -3,7 +3,6 @@ import Editor from '@/components/editor/Editor.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { type BreadcrumbItem } from '@/types';
-import type { TileMap } from '@/types/TileMap';
 import { Head, Link } from '@inertiajs/vue3';
 import { AlertTriangle, ArrowLeft } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
@@ -13,7 +12,6 @@ const props = defineProps<{
 }>();
 
 const store = useEditorStore();
-const map = ref<TileMap | null>(null);
 const error = ref<string | null>(null);
 const isLoading = ref(true);
 
@@ -31,7 +29,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 const loadMap = async () => {
     try {
         await store.loadMap(props.uuid);
-        map.value = store.map;
     } catch (err) {
         error.value = err instanceof Error ? err.message : 'An unexpected error occurred';
     } finally {
@@ -67,8 +64,8 @@ onMounted(() => {
             </div>
 
             <!-- Editor State -->
-            <div v-else-if="map" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border p-4">
-                <Editor :map="map" />
+            <div v-else-if="store.mapMetadata" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border p-4">
+                <Editor />
             </div>
         </div>
     </AppLayout>
