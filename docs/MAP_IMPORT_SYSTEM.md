@@ -15,6 +15,9 @@ php artisan map:import path/to/map.tmx --format=tmx
 
 # Import with a specific creator
 php artisan map:import path/to/map.json --creator=user@example.com
+
+# Auto-create missing tilesets (use with caution - image files may not exist)
+php artisan map:import path/to/map.json --auto-create-tilesets
 ```
 
 ### Advanced Options
@@ -198,6 +201,36 @@ Importers must return data in this normalized structure:
 ]
 ```
 
+## Tileset Handling
+
+When importing maps, tilesets referenced in the file may or may not exist in your database:
+
+### **Default Behavior (Safe)**
+
+- Import **fails** if any tilesets are missing
+- Clear error message lists missing tilesets
+- Prevents broken maps with missing assets
+
+### **Auto-Create Mode**
+
+```bash
+php artisan map:import path/to/map.json --auto-create-tilesets
+```
+
+- Creates missing tileset records automatically
+- ⚠️ **Warning**: Image files may not exist, causing rendering issues
+- Useful for development or when you'll add images later
+
+### **Dry-Run Preview**
+
+```bash
+php artisan map:import path/to/map.json --dry-run
+```
+
+- Shows which tilesets exist (✓) vs missing (⚠)
+- Warns about potential import failures
+- Suggests using `--auto-create-tilesets` if needed
+
 ## Error Handling
 
 The import system provides comprehensive error handling:
@@ -206,6 +239,7 @@ The import system provides comprehensive error handling:
 - **Invalid format**: Lists supported formats
 - **Malformed data**: Specific validation errors
 - **UUID conflicts**: Options to overwrite or generate new UUIDs
+- **Missing tilesets**: Lists missing tilesets with auto-create option
 - **Database errors**: Transaction rollback on failure
 
 ## Best Practices
@@ -236,8 +270,13 @@ for file in exports/maps/*.json; do
     php artisan map:import "$file" --dry-run
 done
 
-# Import them all
+# Preview them first to check for tileset issues
 for file in exports/maps/*.json; do
-    php artisan map:import "$file" --creator=admin@example.com
+    php artisan map:import "$file" --dry-run
+done
+
+# Import them all with auto-create tilesets
+for file in exports/maps/*.json; do
+    php artisan map:import "$file" --creator=admin@example.com --auto-create-tilesets
 done
 ```

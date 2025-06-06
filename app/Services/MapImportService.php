@@ -73,7 +73,7 @@ class MapImportService
     /**
      * Import a map from file.
      */
-    public function importFromFile(string $filePath, string $format, ?User $creator = null, array $options = []): TileMap
+    public function importFromFile(string $filePath, string $format, ?User $creator = null, array $options = []): array
     {
         if (!$this->isValidFormat($format)) {
             throw new \InvalidArgumentException("Unsupported import format: {$format}");
@@ -100,7 +100,7 @@ class MapImportService
     /**
      * Import a map from raw data string.
      */
-    public function importFromString(string $data, string $format, ?User $creator = null, array $options = []): TileMap
+    public function importFromString(string $data, string $format, ?User $creator = null, array $options = []): array
     {
         if (!$this->isValidFormat($format)) {
             throw new \InvalidArgumentException("Unsupported import format: {$format}");
@@ -155,7 +155,7 @@ class MapImportService
     /**
      * Create a TileMap and related entities from parsed data.
      */
-    private function createMapFromData(array $mapData, ?User $creator = null, array $options = []): TileMap
+    private function createMapFromData(array $mapData, ?User $creator = null, array $options = []): array
     {
         $mapInfo = $mapData['map'];
         
@@ -171,7 +171,7 @@ class MapImportService
         }
 
         // Create or import tilesets first
-        $this->importTilesets($mapData['tilesets'] ?? []);
+        $tilesetResults = $this->importTilesets($mapData['tilesets'] ?? [], $options);
 
         // Create the map
         $map = new TileMap();
@@ -197,14 +197,20 @@ class MapImportService
             $this->createLayer($map, $layerData, $options);
         }
 
-        return $map->fresh(['creator', 'layers']);
+        return [
+            'map' => $map->fresh(['creator', 'layers']),
+            'tilesets' => $tilesetResults,
+        ];
     }
 
     /**
      * Import or verify tilesets.
      */
-    private function importTilesets(array $tilesets): void
+    private function importTilesets(array $tilesets, array $options = []): array
     {
+        $missingTilesets = [];
+        $createdTilesets = [];
+
         foreach ($tilesets as $tilesetData) {
             if (!isset($tilesetData['uuid'])) {
                 continue;
@@ -214,23 +220,61 @@ class MapImportService
             $existingTileset = TileSet::where('uuid', $tilesetData['uuid'])->first();
             
             if (!$existingTileset) {
-                // Create new tileset (you might want to make this optional or configurable)
-                $tileset = new TileSet();
-                $tileset->uuid = $tilesetData['uuid'];
-                $tileset->name = $tilesetData['name'] ?? 'Imported Tileset';
-                $tileset->image_width = (int) ($tilesetData['image_width'] ?? 0);
-                $tileset->image_height = (int) ($tilesetData['image_height'] ?? 0);
-                $tileset->tile_width = (int) ($tilesetData['tile_width'] ?? 32);
-                $tileset->tile_height = (int) ($tilesetData['tile_height'] ?? 32);
-                $tileset->image_url = $tilesetData['image_url'] ?? null;
-                $tileset->image_path = $tilesetData['image_path'] ?? null;
-                $tileset->tile_count = (int) ($tilesetData['tile_count'] ?? 0);
-                $tileset->first_gid = (int) ($tilesetData['first_gid'] ?? 1);
-                $tileset->margin = (int) ($tilesetData['margin'] ?? 0);
-                $tileset->spacing = (int) ($tilesetData['spacing'] ?? 0);
-                $tileset->save();
+                $missingTilesets[] = $tilesetData;
+                
+                // Only auto-create if explicitly allowed
+                if ($options['auto_create_tilesets'] ?? false) {
+                    $createdTilesets[] = $this->createMissingTileset($tilesetData);
+                }
             }
         }
+
+        // If we have missing tilesets and auto-creation is disabled, throw an error
+        if (!empty($missingTilesets) && !($options['auto_create_tilesets'] ?? false)) {
+            $missingNames = array_map(fn($ts) => $ts['name'] ?? $ts['uuid'], $missingTilesets);
+            throw new \RuntimeException(
+                "Missing tilesets: " . implode(', ', $missingNames) . 
+                ". Use --auto-create-tilesets to create them automatically, but note that image files may be missing."
+            );
+        }
+
+        return [
+            'missing' => $missingTilesets,
+            'created' => $createdTilesets,
+        ];
+    }
+
+    /**
+     * Create a missing tileset from import data.
+     */
+    private function createMissingTileset(array $tilesetData): TileSet
+    {
+        $tileset = new TileSet();
+        $tileset->uuid = $tilesetData['uuid'];
+        $tileset->name = $tilesetData['name'] ?? 'Imported Tileset';
+        $tileset->image_width = (int) ($tilesetData['image_width'] ?? 0);
+        $tileset->image_height = (int) ($tilesetData['image_height'] ?? 0);
+        $tileset->tile_width = (int) ($tilesetData['tile_width'] ?? 32);
+        $tileset->tile_height = (int) ($tilesetData['tile_height'] ?? 32);
+        $tileset->image_url = $tilesetData['image_url'] ?? null;
+        $tileset->image_path = $tilesetData['image_path'] ?? null;
+        
+        // Calculate tile count if we have complete data
+        if ($tileset->image_width > 0 && $tileset->image_height > 0 && 
+            $tileset->tile_width > 0 && $tileset->tile_height > 0) {
+            $tilesPerRow = intval($tileset->image_width / $tileset->tile_width);
+            $tilesPerCol = intval($tileset->image_height / $tileset->tile_height);
+            $tileset->tile_count = $tilesPerRow * $tilesPerCol;
+        } else {
+            $tileset->tile_count = 0;
+        }
+        
+        $tileset->first_gid = 1; // Default value
+        $tileset->margin = (int) ($tilesetData['margin'] ?? 0);
+        $tileset->spacing = (int) ($tilesetData['spacing'] ?? 0);
+        $tileset->save();
+
+        return $tileset;
     }
 
     /**

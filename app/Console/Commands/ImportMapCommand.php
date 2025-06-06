@@ -22,6 +22,7 @@ class ImportMapCommand extends Command
                             {--creator= : Email of the user to set as creator}
                             {--preserve-uuid : Preserve original UUIDs from the import file}
                             {--overwrite : Overwrite existing map if UUID conflicts occur}
+                            {--auto-create-tilesets : Automatically create missing tilesets (may not have image files)}
                             {--dry-run : Show what would be imported without actually importing}';
 
     /**
@@ -43,6 +44,7 @@ class ImportMapCommand extends Command
         $creatorEmail = $this->option('creator');
         $preserveUuid = $this->option('preserve-uuid');
         $overwrite = $this->option('overwrite');
+        $autoCreateTilesets = $this->option('auto-create-tilesets');
         $dryRun = $this->option('dry-run');
 
         $this->info("Starting map import...");
@@ -87,6 +89,7 @@ class ImportMapCommand extends Command
         $options = [
             'preserve_uuid' => $preserveUuid,
             'overwrite' => $overwrite,
+            'auto_create_tilesets' => $autoCreateTilesets,
         ];
 
         try {
@@ -95,10 +98,12 @@ class ImportMapCommand extends Command
             }
 
             // Perform the actual import
-            $map = $importService->importFromFile($filePath, $format, $creator, $options);
+            $result = $importService->importFromFile($filePath, $format, $creator, $options);
+            $map = $result['map'];
+            $tilesetResults = $result['tilesets'];
 
             $this->info("Map imported successfully!");
-            $this->displayMapInfo($map);
+            $this->displayImportResult($map, $tilesetResults);
 
             return Command::SUCCESS;
 
@@ -181,7 +186,32 @@ class ImportMapCommand extends Command
         $this->line("");
         $this->info("Tilesets: " . count($mapData['tilesets'] ?? []));
         foreach (($mapData['tilesets'] ?? []) as $index => $tileset) {
-            $this->line("  [{$index}] " . ($tileset['name'] ?? 'Unnamed') . " (UUID: " . ($tileset['uuid'] ?? 'none') . ")");
+            $name = $tileset['name'] ?? 'Unnamed';
+            $uuid = $tileset['uuid'] ?? 'none';
+            
+            // Check if tileset exists in database
+            $exists = $uuid !== 'none' && \App\Models\TileSet::where('uuid', $uuid)->exists();
+            $status = $exists ? '✓ exists' : '⚠ missing';
+            
+            $this->line("  [{$index}] {$name} (UUID: {$uuid}) - {$status}");
+        }
+        
+        if ($options['auto_create_tilesets']) {
+            $this->line("");
+            $this->comment("Auto-create tilesets is enabled - missing tilesets will be created.");
+        } else {
+            $missingCount = 0;
+            foreach (($mapData['tilesets'] ?? []) as $tileset) {
+                $uuid = $tileset['uuid'] ?? null;
+                if ($uuid && !\App\Models\TileSet::where('uuid', $uuid)->exists()) {
+                    $missingCount++;
+                }
+            }
+            if ($missingCount > 0) {
+                $this->line("");
+                $this->warn("Warning: {$missingCount} tileset(s) are missing and will cause import to fail.");
+                $this->comment("Use --auto-create-tilesets to create them automatically.");
+            }
         }
 
         if ($creator) {
@@ -191,9 +221,9 @@ class ImportMapCommand extends Command
     }
 
     /**
-     * Display information about the imported map.
+     * Display information about the imported map and tilesets.
      */
-    private function displayMapInfo($map): void
+    private function displayImportResult($map, array $tilesetResults): void
     {
         $this->line("");
         $this->line("Map Details:");
@@ -208,5 +238,26 @@ class ImportMapCommand extends Command
         }
 
         $this->line("  Created: " . $map->created_at->format('Y-m-d H:i:s'));
+
+        // Display tileset information
+        if (!empty($tilesetResults['created'])) {
+            $this->line("");
+            $this->info("Created Tilesets:");
+            foreach ($tilesetResults['created'] as $tileset) {
+                $this->line("  • {$tileset->name} ({$tileset->uuid})");
+                if (!$tileset->image_url && !$tileset->image_path) {
+                    $this->warn("    ⚠ Warning: No image file specified for this tileset");
+                }
+            }
+        }
+
+        if (!empty($tilesetResults['missing'])) {
+            $this->line("");
+            $this->comment("Note: Some tilesets from the export were not created (use --auto-create-tilesets to create them):");
+            foreach ($tilesetResults['missing'] as $tileset) {
+                $name = $tileset['name'] ?? 'Unnamed';
+                $this->line("  • {$name} ({$tileset['uuid']})");
+            }
+        }
     }
 } 
