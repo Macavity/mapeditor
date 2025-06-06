@@ -46,6 +46,7 @@ php artisan map:import exports/maps/MyMap_2024-01-15_14-30-00.json \
 
 - **JSON**: Native format exported by the map editor
 - **TMX**: Tiled Map Editor format (basic support)
+- **JS**: Legacy JavaScript map files (field_bg, field_layer1, etc.)
 
 ## Architecture
 
@@ -230,6 +231,45 @@ php artisan map:import path/to/map.json --dry-run
 - Shows which tilesets exist (✓) vs missing (⚠)
 - Warns about potential import failures
 - Suggests using `--auto-create-tilesets` if needed
+
+## Legacy JavaScript Format
+
+The system supports importing legacy JavaScript map files with the following characteristics:
+
+### **Format Structure**
+
+```javascript
+var name = 'Map Name';
+var width = 20;
+var height = 20;
+var main_bg = 'tileset/123.png';
+
+field_bg[0][0] = 'tileset/456.png';
+field_layer1[5][10] = 'tileset/789.png';
+```
+
+### **Layer Mapping**
+
+- `field_bg` → **background** layer (uses `main_bg` for empty tiles)
+- `field_layer1` → **floor** layer
+- `field_layer2` → **floor** layer
+- `field_layer4` → **sky** layer
+- `field_layer5` → **sky** layer
+
+### **Tileset Handling**
+
+- Tile paths like `castle_exterior_mc/761.png` are parsed
+- `castle_exterior_mc` becomes tileset name → "Castle Exterior Mc"
+- `761` becomes tile ID (keeps original numbering)
+- Deterministic UUIDs generated from tileset names
+- Missing tilesets auto-created with estimated dimensions
+
+### **Usage Example**
+
+```bash
+# Import legacy JavaScript map
+php artisan map:import storage/app/private/dalaran.js --auto-create-tilesets
+```
 
 ## Error Handling
 

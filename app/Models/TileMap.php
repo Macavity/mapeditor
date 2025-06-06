@@ -22,6 +22,7 @@ class TileMap extends Model
         'name',
         'tile_width',
         'tile_height',
+        'external_creator',
     ];
 
     protected $hidden = [

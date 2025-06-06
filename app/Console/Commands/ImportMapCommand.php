@@ -127,19 +127,24 @@ class ImportMapCommand extends Command
         $this->info("This will show what would be imported without making changes.");
 
         try {
-            // Get the importer for this format
-            $importer = $importService->getSupportedFormats();
-            if (!in_array($format, $importer)) {
-                throw new \InvalidArgumentException("Format not supported: {$format}");
+            // Validate format is supported
+            if (!$importService->isValidFormat($format)) {
+                $supportedFormats = implode(', ', $importService->getSupportedFormats());
+                throw new \InvalidArgumentException("Format not supported: {$format}. Supported formats: {$supportedFormats}");
             }
 
-            // Parse the file to get the data structure
-            $importerClass = "App\\Services\\Importers\\" . ucfirst($format) . "MapImporter";
-            if (!class_exists($importerClass)) {
-                throw new \InvalidArgumentException("Importer class not found: {$importerClass}");
+            // Use the service's importers to parse the file
+            // We'll access the private importers array through reflection for dry-run
+            $reflection = new \ReflectionClass($importService);
+            $importersProperty = $reflection->getProperty('importers');
+            $importersProperty->setAccessible(true);
+            $importers = $importersProperty->getValue($importService);
+
+            if (!isset($importers[$format])) {
+                throw new \InvalidArgumentException("No importer found for format: {$format}");
             }
 
-            $importer = new $importerClass();
+            $importer = $importers[$format];
             $mapData = $importer->parse($filePath);
 
             // Display what would be imported
@@ -168,6 +173,10 @@ class ImportMapCommand extends Command
         $this->line("  Size: " . ($mapInfo['width'] ?? 0) . "x" . ($mapInfo['height'] ?? 0) . " tiles");
         $this->line("  Tile Size: " . ($mapInfo['tile_width'] ?? 32) . "x" . ($mapInfo['tile_height'] ?? 32) . " pixels");
         
+        if (isset($mapInfo['external_creator'])) {
+            $this->line("  External Creator: " . $mapInfo['external_creator']);
+        }
+        
         if (isset($mapInfo['uuid'])) {
             $this->line("  UUID: " . $mapInfo['uuid']);
             if ($options['preserve_uuid']) {
@@ -189,8 +198,14 @@ class ImportMapCommand extends Command
             $name = $tileset['name'] ?? 'Unnamed';
             $uuid = $tileset['uuid'] ?? 'none';
             
-            // Check if tileset exists in database
-            $exists = $uuid !== 'none' && \App\Models\TileSet::where('uuid', $uuid)->exists();
+            // Check if tileset exists - first check importer's _existing flag, then database
+            $exists = false;
+            if (isset($tileset['_existing']) && $tileset['_existing']) {
+                $exists = true;
+            } elseif ($uuid !== 'none') {
+                $exists = \App\Models\TileSet::where('uuid', $uuid)->exists();
+            }
+            
             $status = $exists ? '✓ exists' : '⚠ missing';
             
             $this->line("  [{$index}] {$name} (UUID: {$uuid}) - {$status}");
@@ -202,8 +217,18 @@ class ImportMapCommand extends Command
         } else {
             $missingCount = 0;
             foreach (($mapData['tilesets'] ?? []) as $tileset) {
-                $uuid = $tileset['uuid'] ?? null;
-                if ($uuid && !\App\Models\TileSet::where('uuid', $uuid)->exists()) {
+                // Count missing tilesets (not marked as existing by importer and not in database)
+                $exists = false;
+                if (isset($tileset['_existing']) && $tileset['_existing']) {
+                    $exists = true;
+                } else {
+                    $uuid = $tileset['uuid'] ?? null;
+                    if ($uuid) {
+                        $exists = \App\Models\TileSet::where('uuid', $uuid)->exists();
+                    }
+                }
+                
+                if (!$exists) {
                     $missingCount++;
                 }
             }
@@ -232,6 +257,10 @@ class ImportMapCommand extends Command
         $this->line("  Size: {$map->width}x{$map->height} tiles");
         $this->line("  Tile Size: {$map->tile_width}x{$map->tile_height} pixels");
         $this->line("  Layers: " . $map->layers->count());
+        
+        if ($map->external_creator) {
+            $this->line("  External Creator: {$map->external_creator}");
+        }
         
         if ($map->creator) {
             $this->line("  Creator: {$map->creator->name} ({$map->creator->email})");

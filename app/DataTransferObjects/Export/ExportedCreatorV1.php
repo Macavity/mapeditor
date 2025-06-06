@@ -10,7 +10,7 @@ readonly class ExportedCreatorV1
 {
     public function __construct(
         public string $name,
-        public string $email,
+        public ?string $email,
     ) {}
 
     /**
@@ -31,7 +31,7 @@ readonly class ExportedCreatorV1
     {
         return new self(
             name: $data['name'],
-            email: $data['email'],
+            email: $data['email'] ?? null,
         );
     }
 

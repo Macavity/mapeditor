@@ -12,6 +12,7 @@ use App\Enums\LayerType;
 use App\Services\Importers\ImporterInterface;
 use App\Services\Importers\JsonMapImporter;
 use App\Services\Importers\TmxMapImporter;
+use App\Services\Importers\LaxLegacyImporter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +24,7 @@ class MapImportService
     {
         $this->registerImporter('json', new JsonMapImporter());
         $this->registerImporter('tmx', new TmxMapImporter());
+        $this->registerImporter('js', new LaxLegacyImporter());
     }
 
     /**
@@ -181,6 +183,10 @@ class MapImportService
         $map->tile_width = (int) $mapInfo['tile_width'];
         $map->tile_height = (int) $mapInfo['tile_height'];
         
+        if (isset($mapInfo['external_creator'])) {
+            $map->external_creator = $mapInfo['external_creator'];
+        }
+        
         if ($creator) {
             $map->creator_id = $creator->id;
         }
@@ -210,13 +216,20 @@ class MapImportService
     {
         $missingTilesets = [];
         $createdTilesets = [];
+        $existingTilesets = [];
 
         foreach ($tilesets as $tilesetData) {
             if (!isset($tilesetData['uuid'])) {
                 continue;
             }
 
-            // Check if tileset already exists
+            // Check if this tileset is marked as existing by the importer
+            if (isset($tilesetData['_existing']) && $tilesetData['_existing']) {
+                $existingTilesets[] = $tilesetData;
+                continue;
+            }
+
+            // Check if tileset already exists in database
             $existingTileset = TileSet::where('uuid', $tilesetData['uuid'])->first();
             
             if (!$existingTileset) {
@@ -226,6 +239,8 @@ class MapImportService
                 if ($options['auto_create_tilesets'] ?? false) {
                     $createdTilesets[] = $this->createMissingTileset($tilesetData);
                 }
+            } else {
+                $existingTilesets[] = $tilesetData;
             }
         }
 
@@ -241,6 +256,7 @@ class MapImportService
         return [
             'missing' => $missingTilesets,
             'created' => $createdTilesets,
+            'existing' => $existingTilesets,
         ];
     }
 

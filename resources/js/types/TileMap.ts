@@ -7,6 +7,7 @@ export interface TileMap {
     tile_height: number;
     created_at: string;
     updated_at: string;
+    external_creator?: string;
     creator?: {
         id: number;
         name: string;

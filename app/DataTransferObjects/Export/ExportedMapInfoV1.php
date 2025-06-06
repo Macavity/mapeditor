@@ -24,6 +24,17 @@ readonly class ExportedMapInfoV1
      */
     public static function fromModel(TileMap $map): self
     {
+        // Prioritize database creator, fall back to external creator
+        $creator = null;
+        if ($map->creator) {
+            $creator = ExportedCreatorV1::fromModel($map->creator);
+        } elseif ($map->external_creator) {
+            $creator = new ExportedCreatorV1(
+                name: $map->external_creator,
+                email: null
+            );
+        }
+
         return new self(
             uuid: $map->uuid,
             name: $map->name,
@@ -31,7 +42,7 @@ readonly class ExportedMapInfoV1
             height: $map->height,
             tile_width: $map->tile_width,
             tile_height: $map->tile_height,
-            creator: $map->creator ? ExportedCreatorV1::fromModel($map->creator) : null,
+            creator: $creator,
         );
     }
 
