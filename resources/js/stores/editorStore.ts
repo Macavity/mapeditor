@@ -22,20 +22,6 @@ export const useEditorStore = defineStore('editorStore', {
             tileHeight: 32,
         },
         layers: [] as MapLayer[],
-        layerCounts: {
-            background: 0,
-            floor: 0,
-            sky: 0,
-            field_type: 0,
-        },
-        layerLimits: {
-            floor: 40,
-            sky: 40,
-        },
-        canCreateLayer: {
-            floor: true,
-            sky: true,
-        },
         brushSelection: {
             width: 32,
             height: 32,
@@ -104,11 +90,7 @@ export const useEditorStore = defineStore('editorStore', {
 
         async loadMap(uuid: string) {
             try {
-                const [mapData, layers, layerCountsData] = await Promise.all([
-                    MapService.getMap(uuid),
-                    MapService.getMapLayers(uuid),
-                    MapService.getLayerCounts(uuid),
-                ]);
+                const [mapData, layers] = await Promise.all([MapService.getMap(uuid), MapService.getMapLayers(uuid)]);
 
                 this.mapMetadata = {
                     uuid: mapData.uuid,
@@ -120,9 +102,6 @@ export const useEditorStore = defineStore('editorStore', {
                     tileHeight: mapData.tile_height,
                 };
                 this.layers = layers;
-                this.layerCounts = layerCountsData.counts;
-                this.layerLimits = layerCountsData.limits;
-                this.canCreateLayer = layerCountsData.canCreate;
 
                 // Ensure the first layer is set as active if none is selected
                 if (!this.activeLayer && this.layers.length > 0) {
@@ -310,17 +289,13 @@ export const useEditorStore = defineStore('editorStore', {
         },
 
         async createSkyLayer(options?: { name?: string }) {
-            if (!this.mapMetadata.uuid || !this.canCreateLayer.sky) return;
+            if (!this.mapMetadata.uuid) return;
 
             try {
                 const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
 
                 // Refresh all layers to get updated z-indices
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Update layer counts
-                this.layerCounts.sky++;
-                this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
 
                 // Activate the new layer
                 this.activeLayer = newLayer.uuid;
@@ -333,17 +308,13 @@ export const useEditorStore = defineStore('editorStore', {
         },
 
         async createFloorLayer(options?: { name?: string }) {
-            if (!this.mapMetadata.uuid || !this.canCreateLayer.floor) return;
+            if (!this.mapMetadata.uuid) return;
 
             try {
                 const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
 
                 // Refresh all layers to get updated z-indices (sky layers get shifted up)
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Update layer counts
-                this.layerCounts.floor++;
-                this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
 
                 // Activate the new layer
                 this.activeLayer = newLayer.uuid;
@@ -352,19 +323,6 @@ export const useEditorStore = defineStore('editorStore', {
             } catch (error) {
                 console.error('Error creating floor layer:', error);
                 throw error;
-            }
-        },
-
-        async refreshLayerCounts() {
-            if (!this.mapMetadata.uuid) return;
-
-            try {
-                const layerCountsData = await MapService.getLayerCounts(this.mapMetadata.uuid);
-                this.layerCounts = layerCountsData.counts;
-                this.layerLimits = layerCountsData.limits;
-                this.canCreateLayer = layerCountsData.canCreate;
-            } catch (error) {
-                console.error('Error refreshing layer counts:', error);
             }
         },
 
@@ -388,17 +346,6 @@ export const useEditorStore = defineStore('editorStore', {
 
                 // Refresh all layers to get updated z-indices after deletion
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Update layer counts based on deleted layer type
-                if (layer.type === 'sky') {
-                    this.layerCounts.sky--;
-                    this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
-                } else if (layer.type === 'floor') {
-                    this.layerCounts.floor--;
-                    this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
-                } else if (layer.type === 'background') {
-                    this.layerCounts.background--;
-                }
 
                 // If deleted layer was active, switch to another layer
                 if (this.activeLayer === layerUuid && this.layers.length > 0) {

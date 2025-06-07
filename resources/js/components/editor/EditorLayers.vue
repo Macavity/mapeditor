@@ -15,7 +15,7 @@ const isBackground = (layer: MapLayer) => layer.type === MapLayerType.Background
 const isFloor = (layer: MapLayer) => layer.type === MapLayerType.Floor;
 
 const createSkyLayer = async () => {
-    if (!store.canCreateLayer.sky || isCreatingLayer.value) return;
+    if (isCreatingLayer.value) return;
 
     isCreatingLayer.value = true;
     try {
@@ -29,7 +29,7 @@ const createSkyLayer = async () => {
 };
 
 const createFloorLayer = async () => {
-    if (!store.canCreateLayer.floor || isCreatingLayer.value) return;
+    if (isCreatingLayer.value) return;
 
     isCreatingLayer.value = true;
     try {
@@ -101,7 +101,7 @@ const cancelDelete = () => {
                 <div class="flex gap-1">
                     <button
                         @click="createSkyLayer"
-                        :disabled="!store.canCreateLayer.sky || isCreatingLayer"
+                        :disabled="isCreatingLayer"
                         class="flex items-center gap-1 rounded-md bg-blue-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                         title="Add Sky Layer"
                     >
@@ -110,7 +110,7 @@ const cancelDelete = () => {
                     </button>
                     <button
                         @click="createFloorLayer"
-                        :disabled="!store.canCreateLayer.floor || isCreatingLayer"
+                        :disabled="isCreatingLayer"
                         class="flex items-center gap-1 rounded-md bg-green-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                         title="Add Floor Layer"
                     >
@@ -118,12 +118,6 @@ const cancelDelete = () => {
                         Floor
                     </button>
                 </div>
-            </div>
-
-            <!-- Layer counts -->
-            <div class="mt-2 flex gap-4 text-xs text-gray-600 dark:text-gray-400">
-                <span>Sky: {{ store.layerCounts.sky }}/{{ store.layerLimits.sky }}</span>
-                <span>Floor: {{ store.layerCounts.floor }}/{{ store.layerLimits.floor }}</span>
             </div>
         </div>
 

@@ -258,13 +258,7 @@ class TileMapController extends Controller
             'opacity' => 'sometimes|numeric|min:0|max:1',
         ]);
 
-        // Check if the tile map already has 40 Sky layers
         $skyLayerCount = $tileMap->layers()->where('type', LayerType::Sky)->count();
-        if ($skyLayerCount >= 40) {
-            return response()->json([
-                'error' => 'Maximum number of Sky layers (40) reached for this tile map'
-            ], 422);
-        }
 
         return DB::transaction(function () use ($validated, $tileMap, $skyLayerCount) {
             // Sky layers should always be on top of all other layers
@@ -303,13 +297,7 @@ class TileMapController extends Controller
             'opacity' => 'sometimes|numeric|min:0|max:1',
         ]);
 
-        // Check if the tile map already has 40 Floor layers
         $floorLayerCount = $tileMap->layers()->where('type', LayerType::Floor)->count();
-        if ($floorLayerCount >= 40) {
-            return response()->json([
-                'error' => 'Maximum number of Floor layers (40) reached for this tile map'
-            ], 422);
-        }
 
         return DB::transaction(function () use ($validated, $tileMap, $floorLayerCount) {
             // Floor layers go above background and other floor layers, but below sky layers
@@ -357,18 +345,8 @@ class TileMapController extends Controller
             'field_type' => $tileMap->layers()->where('type', LayerType::FieldType)->count(),
         ];
 
-        $limits = [
-            'floor' => 40,
-            'sky' => 40,
-        ];
-
         return response()->json([
             'counts' => $counts,
-            'limits' => $limits,
-            'canCreate' => [
-                'floor' => $counts['floor'] < 40,
-                'sky' => $counts['sky'] < 40,
-            ]
         ]);
     }
 
