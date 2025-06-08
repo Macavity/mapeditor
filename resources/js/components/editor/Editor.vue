@@ -47,16 +47,11 @@ import EditorToolbar from '@/components/editor/EditorToolbar.vue';
 import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
-import { onUnmounted, reactive } from 'vue';
+import { reactive } from 'vue';
 
 const store = useEditorStore();
 
 const map = reactive(store.mapMetadata);
-
-// Cleanup auto-save timeout when component unmounts
-onUnmounted(() => {
-    store.clearSaveTimeout();
-});
 </script>
 
 <style lang="scss">

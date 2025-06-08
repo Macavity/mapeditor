@@ -8,7 +8,8 @@
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
-        "typecheck": "vue-tsc --noEmit --composite false"
+        "typecheck": "vue-tsc --noEmit --composite false",
+        "validate": "npm run lint && npm run typecheck"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
