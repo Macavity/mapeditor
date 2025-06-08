@@ -106,12 +106,15 @@ class MapDisplayService
      */
     public function prepareMapListRow(TileMap $map, array $layerStats): array
     {
+        // Prioritize database creator, fall back to external creator, then 'Unknown'
+        $creatorName = $map->creator?->name ?? $map->external_creator ?? 'Unknown';
+        
         return [
             $this->formatUuid($map->uuid),
             $this->truncate($map->name, 25),
             $this->formatDimensions($map),
             $this->formatLayerCounts($layerStats),
-            $this->truncate($map->creator?->name ?? 'Unknown', 15),
+            $this->truncate($creatorName, 15),
             $this->formatDate($map->updated_at),
         ];
     }

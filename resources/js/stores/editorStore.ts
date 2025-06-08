@@ -22,20 +22,6 @@ export const useEditorStore = defineStore('editorStore', {
             tileHeight: 32,
         },
         layers: [] as MapLayer[],
-        layerCounts: {
-            background: 0,
-            floor: 0,
-            sky: 0,
-            field_type: 0,
-        },
-        layerLimits: {
-            floor: 40,
-            sky: 40,
-        },
-        canCreateLayer: {
-            floor: true,
-            sky: true,
-        },
         brushSelection: {
             width: 32,
             height: 32,
@@ -45,13 +31,7 @@ export const useEditorStore = defineStore('editorStore', {
             backgroundPosition: '0px 0px',
             tilesetUuid: null as string | null,
         },
-        // Save state
         hasUnsavedChanges: false,
-        lastSaved: null as Date | null,
-        isSaving: false,
-        saveError: null as string | null,
-        autoSaveEnabled: true,
-        autoSaveTimeout: null as number | null,
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
@@ -104,11 +84,7 @@ export const useEditorStore = defineStore('editorStore', {
 
         async loadMap(uuid: string) {
             try {
-                const [mapData, layers, layerCountsData] = await Promise.all([
-                    MapService.getMap(uuid),
-                    MapService.getMapLayers(uuid),
-                    MapService.getLayerCounts(uuid),
-                ]);
+                const [mapData, layers] = await Promise.all([MapService.getMap(uuid), MapService.getMapLayers(uuid)]);
 
                 this.mapMetadata = {
                     uuid: mapData.uuid,
@@ -120,9 +96,6 @@ export const useEditorStore = defineStore('editorStore', {
                     tileHeight: mapData.tile_height,
                 };
                 this.layers = layers;
-                this.layerCounts = layerCountsData.counts;
-                this.layerLimits = layerCountsData.limits;
-                this.canCreateLayer = layerCountsData.canCreate;
 
                 // Ensure the first layer is set as active if none is selected
                 if (!this.activeLayer && this.layers.length > 0) {
@@ -130,6 +103,7 @@ export const useEditorStore = defineStore('editorStore', {
                 }
 
                 this.loaded = true;
+                this.hasUnsavedChanges = false;
             } catch (error) {
                 console.error('Error loading map:', error);
                 throw error;
@@ -182,7 +156,6 @@ export const useEditorStore = defineStore('editorStore', {
                 },
             };
 
-            // Initialize data array if it doesn't exist
             if (!this.layers[activeLayerIndex].data) {
                 this.layers[activeLayerIndex].data = [];
             }
@@ -198,129 +171,24 @@ export const useEditorStore = defineStore('editorStore', {
                 this.layers[activeLayerIndex].data.push(tileData);
             }
 
-            // Mark as having unsaved changes and trigger auto-save
-            this.markAsChanged();
-            this.scheduleAutoSave();
-        },
-
-        markAsChanged() {
             this.hasUnsavedChanges = true;
-            this.saveError = null;
-        },
-
-        markAsSaved() {
-            this.hasUnsavedChanges = false;
-            this.lastSaved = new Date();
-            this.saveError = null;
-        },
-
-        scheduleAutoSave() {
-            if (!this.autoSaveEnabled || !this.mapMetadata.uuid) return;
-
-            // Clear existing timeout
-            if (this.autoSaveTimeout) {
-                clearTimeout(this.autoSaveTimeout);
-            }
-
-            // Schedule auto-save after 2 seconds of inactivity
-            this.autoSaveTimeout = setTimeout(() => {
-                this.autoSave();
-            }, 2000);
-        },
-
-        async autoSave() {
-            if (!this.hasUnsavedChanges || this.isSaving) return;
-
-            try {
-                await this.saveAllLayers();
-            } catch (error) {
-                console.warn('Auto-save failed:', error);
-                // Don't show error to user for auto-save failures
-            }
         },
 
         async saveAllLayers() {
-            if (!this.mapMetadata.uuid || this.isSaving) return;
+            if (!this.mapMetadata.uuid) return;
 
-            this.isSaving = true;
-            this.saveError = null;
-
-            try {
-                await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
-                this.markAsSaved();
-            } catch (error) {
-                this.saveError = error instanceof Error ? error.message : 'Failed to save layers';
-                throw error;
-            } finally {
-                this.isSaving = false;
-            }
-        },
-
-        async saveLayer(layerUuid: string) {
-            if (!this.mapMetadata.uuid || this.isSaving) return;
-
-            const layer = this.layers.find((l) => l.uuid === layerUuid);
-            if (!layer) return;
-
-            this.isSaving = true;
-            this.saveError = null;
-
-            try {
-                const updatedLayer = await MapService.saveLayerData(this.mapMetadata.uuid, layerUuid, layer.data);
-
-                // Update the layer in store with response data
-                const layerIndex = this.layers.findIndex((l) => l.uuid === layerUuid);
-                if (layerIndex !== -1) {
-                    this.layers[layerIndex] = updatedLayer;
-                }
-
-                this.markAsSaved();
-            } catch (error) {
-                this.saveError = error instanceof Error ? error.message : 'Failed to save layer';
-                throw error;
-            } finally {
-                this.isSaving = false;
-            }
-        },
-
-        async manualSave() {
-            try {
-                await this.saveAllLayers();
-                return true;
-            } catch (error) {
-                console.error('Manual save failed:', error);
-                return false;
-            }
-        },
-
-        toggleAutoSave() {
-            this.autoSaveEnabled = !this.autoSaveEnabled;
-
-            if (!this.autoSaveEnabled && this.autoSaveTimeout) {
-                clearTimeout(this.autoSaveTimeout);
-                this.autoSaveTimeout = null;
-            }
-        },
-
-        clearSaveTimeout() {
-            if (this.autoSaveTimeout) {
-                clearTimeout(this.autoSaveTimeout);
-                this.autoSaveTimeout = null;
-            }
+            await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
+            this.hasUnsavedChanges = false;
         },
 
         async createSkyLayer(options?: { name?: string }) {
-            if (!this.mapMetadata.uuid || !this.canCreateLayer.sky) return;
+            if (!this.mapMetadata.uuid) return;
 
             try {
                 const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
 
                 // Refresh all layers to get updated z-indices
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Update layer counts
-                this.layerCounts.sky++;
-                this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
 
                 // Activate the new layer
                 this.activeLayer = newLayer.uuid;
@@ -333,17 +201,13 @@ export const useEditorStore = defineStore('editorStore', {
         },
 
         async createFloorLayer(options?: { name?: string }) {
-            if (!this.mapMetadata.uuid || !this.canCreateLayer.floor) return;
+            if (!this.mapMetadata.uuid) return;
 
             try {
                 const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
 
                 // Refresh all layers to get updated z-indices (sky layers get shifted up)
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Update layer counts
-                this.layerCounts.floor++;
-                this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
 
                 // Activate the new layer
                 this.activeLayer = newLayer.uuid;
@@ -352,19 +216,6 @@ export const useEditorStore = defineStore('editorStore', {
             } catch (error) {
                 console.error('Error creating floor layer:', error);
                 throw error;
-            }
-        },
-
-        async refreshLayerCounts() {
-            if (!this.mapMetadata.uuid) return;
-
-            try {
-                const layerCountsData = await MapService.getLayerCounts(this.mapMetadata.uuid);
-                this.layerCounts = layerCountsData.counts;
-                this.layerLimits = layerCountsData.limits;
-                this.canCreateLayer = layerCountsData.canCreate;
-            } catch (error) {
-                console.error('Error refreshing layer counts:', error);
             }
         },
 
@@ -388,17 +239,6 @@ export const useEditorStore = defineStore('editorStore', {
 
                 // Refresh all layers to get updated z-indices after deletion
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Update layer counts based on deleted layer type
-                if (layer.type === 'sky') {
-                    this.layerCounts.sky--;
-                    this.canCreateLayer.sky = this.layerCounts.sky < this.layerLimits.sky;
-                } else if (layer.type === 'floor') {
-                    this.layerCounts.floor--;
-                    this.canCreateLayer.floor = this.layerCounts.floor < this.layerLimits.floor;
-                } else if (layer.type === 'background') {
-                    this.layerCounts.background--;
-                }
 
                 // If deleted layer was active, switch to another layer
                 if (this.activeLayer === layerUuid && this.layers.length > 0) {

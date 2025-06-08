@@ -21,6 +21,7 @@ export function useAuth() {
 
             return { success: true, user: user.value };
         } catch (error: any) {
+            console.error(error);
             return {
                 success: false,
                 message: error.response?.data?.message || 'Login failed',
@@ -35,30 +36,24 @@ export function useAuth() {
             router.visit('/login');
         } catch (error) {
             // Even if logout fails, clear local state
+            console.error('Logout failed', error);
             user.value = null;
             router.visit('/login');
         }
     };
 
     const getUser = async () => {
-        try {
-            const response = await api.get('/user');
-            user.value = response.data;
-            return response.data;
-        } catch (error) {
-            user.value = null;
-            return null;
-        }
+        const response = await api.get('/user');
+        user.value = response.data;
+        return response.data;
     };
 
     const initializeAuth = async () => {
         try {
-            // First get CSRF token
             await initializeCSRF();
-            // Then try to get the current user
             await getUser();
         } catch (error) {
-            // User is not authenticated
+            console.error(error);
             user.value = null;
         }
     };
