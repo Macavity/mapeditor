@@ -3,7 +3,7 @@ import { useCanvasInteraction } from '@/composables/useCanvasInteraction';
 import { useFloodFill } from '@/composables/useFloodFill';
 import { useEditorStore } from '@/stores/editorStore';
 import type { CursorState } from '@/types/CursorState';
-import { computed, inject, ref } from 'vue';
+import { inject, ref } from 'vue';
 
 const store = useEditorStore();
 const { calculateTilePosition } = useCanvasInteraction();
@@ -53,31 +53,26 @@ function updatePreview(event: MouseEvent) {
 defineExpose({
     updatePreview,
 });
-
-// Style for each preview tile
-const brushStyle = computed(() => ({
-    width: mapTileWidth.value + 'px',
-    height: mapTileHeight.value + 'px',
-    background: store.brushSelection.backgroundImage ? `url('${store.brushSelection.backgroundImage}') no-repeat` : undefined,
-    backgroundPosition: store.brushSelection.backgroundImage ? store.brushSelection.backgroundPosition : undefined,
-}));
 </script>
 
 <template>
     <!-- Preview tiles for bucket fill -->
-    <div v-if="showCursor && canShowPreview && connectedTiles.length > 0" class="pointer-events-none absolute">
+    <div v-if="showCursor && canShowPreview && connectedTiles.length > 0" class="pointer-events-none absolute inset-0 z-40 border-2 border-blue-400">
         <div
             v-for="tile in connectedTiles"
             :key="`${tile.x}-${tile.y}`"
-            class="absolute opacity-40 transition-opacity duration-150"
+            class="absolute opacity-60 transition-opacity duration-150"
             :style="{
                 left: tile.x * mapTileWidth + 'px',
                 top: tile.y * mapTileHeight + 'px',
-                ...brushStyle,
+                width: mapTileWidth + 'px',
+                height: mapTileHeight + 'px',
+                background: store.brushSelection.backgroundImage
+                    ? `url('${store.brushSelection.backgroundImage}') no-repeat`
+                    : 'rgba(59, 130, 246, 0.3)',
+                backgroundPosition: store.brushSelection.backgroundImage ? store.brushSelection.backgroundPosition : undefined,
+                backgroundSize: store.brushSelection.backgroundImage ? 'auto' : '100% 100%',
             }"
-        >
-            <!-- Optional: Add a subtle border to make preview more visible -->
-            <div class="h-full w-full border border-blue-400 bg-blue-200/30 dark:bg-blue-400/30" :style="brushStyle"></div>
-        </div>
+        ></div>
     </div>
 </template>

@@ -40,6 +40,12 @@ if (cursorState) {
 
 // Expose methods for parent component to call
 function updateFillPreview(event: MouseEvent) {
+    console.log('ToolCursor updateFillPreview called', {
+        activeTool: store.activeTool,
+        hasRef: !!activeCursorRef.value,
+        hasUpdateMethod: !!activeCursorRef.value?.updatePreview,
+    });
+
     if (store.activeTool === EditorTool.FILL && activeCursorRef.value?.updatePreview) {
         activeCursorRef.value.updatePreview(event);
     }
