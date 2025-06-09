@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import AddTileSetModal from '@/components/editor/AddTileSetModal.vue';
+import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
 import { ChevronDown } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const tileSetStore = useTileSetStore();
+const editorStore = useEditorStore();
 const showModal = ref(false);
 const isDropdownOpen = ref(false);
+const activeTilesetContainer = ref<HTMLElement | null>(null);
+
+// Selected tile state
+const selectedTile = ref<{ x: number; y: number; tileX: number; tileY: number } | null>(null);
 
 if (tileSetStore.tileSets.length === 0) {
     tileSetStore.loadTileSets();
@@ -19,6 +25,9 @@ function toggleDropdown() {
 function selectTileSet(uuid: string) {
     tileSetStore.activateTileSet(uuid);
     isDropdownOpen.value = false;
+    // Clear selection when switching tilesets
+    selectedTile.value = null;
+    editorStore.clearBrushSelection();
 }
 
 function addTileSet(url: string) {
@@ -27,10 +36,43 @@ function addTileSet(url: string) {
     // TileSetFactory.create();
     // tileSetStore.addTileSet();
 }
+
+function handleTilesetClick(event: MouseEvent) {
+    if (!tileSetStore.activeTileSet || !activeTilesetContainer.value) {
+        return;
+    }
+
+    const rect = activeTilesetContainer.value.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Calculate which tile was clicked based on tile dimensions
+    const tileWidth = tileSetStore.activeTileSet.tileWidth || 32;
+    const tileHeight = tileSetStore.activeTileSet.tileHeight || 32;
+
+    const tileX = Math.floor(x / tileWidth);
+    const tileY = Math.floor(y / tileHeight);
+
+    // Calculate the actual pixel position for the overlay
+    const overlayX = tileX * tileWidth;
+    const overlayY = tileY * tileHeight;
+
+    selectedTile.value = {
+        x: overlayX,
+        y: overlayY,
+        tileX,
+        tileY,
+    };
+
+    // Update the brush selection in the editor store only if imageUrl exists
+    if (tileSetStore.activeTileSet.imageUrl) {
+        editorStore.setBrushSelection(tileX, tileY, tileWidth, tileHeight, tileSetStore.activeTileSet.imageUrl, tileSetStore.activeTileSet.uuid);
+    }
+}
 </script>
 
 <template>
-    <div class="flex h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div class="flex h-full max-h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <AddTileSetModal v-if="showModal" :show="showModal" @close="showModal = false" @addTileSet="addTileSet" />
 
         <!-- Header -->
@@ -80,10 +122,10 @@ function addTileSet(url: string) {
             </div>
 
             <!-- Tileset Preview -->
-            <div class="flex min-h-[16rem] flex-1 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex max-h-96 min-h-0 flex-1 overflow-auto border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                 <div
                     v-if="tileSetStore.activeTileSet"
-                    id="active-tileset-container"
+                    ref="activeTilesetContainer"
                     :style="{
                         width: tileSetStore.activeTileSet.imageWidth + 'px',
                         height: tileSetStore.activeTileSet.imageHeight + 'px',
@@ -91,9 +133,20 @@ function addTileSet(url: string) {
                         backgroundRepeat: 'no-repeat',
                         backgroundSize: 'contain',
                     }"
-                    class="min-w-full grow bg-center"
+                    class="relative min-w-full grow cursor-pointer bg-left"
+                    @click="handleTilesetClick"
                 >
-                    <div class="pointer-events-none absolute bg-black/30 shadow-[inset_0_0_0_1px_rgba(0,0,0,1)]"></div>
+                    <!-- Selection overlay -->
+                    <div
+                        v-if="selectedTile"
+                        class="pointer-events-none absolute bg-black/30 shadow-[inset_0_0_0_1px_rgba(0,0,0,1)]"
+                        :style="{
+                            left: selectedTile.x + 'px',
+                            top: selectedTile.y + 'px',
+                            width: (tileSetStore.activeTileSet.tileWidth || 32) + 'px',
+                            height: (tileSetStore.activeTileSet.tileHeight || 32) + 'px',
+                        }"
+                    ></div>
                 </div>
             </div>
         </div>

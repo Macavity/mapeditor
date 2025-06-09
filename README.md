@@ -1,10 +1,10 @@
 # TileMap Editor
 
-The editor gives you the ability to import json files that were saved in [Tiled](https://github.com/bjorn/tiled).
+The editor gives you the ability to have your very own tile map editor which can be easily hosted locally or on any basic web server.
 
-Keep in mind that this editor is still in a very early stage and not working yet.
+Keep in mind that this editor is still a work in progress.
 
-![Screenshot](http://i.imgur.com/qwZRKFz.jpg?raw)
+![Screenshot](./docs/screenshot.png)
 
 ## How to use
 

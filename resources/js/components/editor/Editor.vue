@@ -1,6 +1,9 @@
 <template>
-    <div class="flex h-full flex-col gap-4">
-        <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
+    <div class="flex h-[calc(100vh-10rem)] flex-col gap-4 overflow-hidden">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
+            <SaveStatus />
+        </div>
 
         <div class="mb-4">
             <EditorToolbar />
@@ -8,32 +11,28 @@
 
         <div class="flex flex-1 gap-4">
             <!-- Left Sidebar -->
-            <aside class="flex w-80 shrink-0 flex-col gap-4 transition-all duration-200">
-                <section class="border-sidebar-border/70 dark:border-sidebar-border flex-1 rounded-xl border p-4">
+            <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4 transition-all duration-200">
+                <section class="border-sidebar-border/70 dark:border-sidebar-border min-h-0 flex-1 overflow-auto rounded-xl border p-4">
                     <EditorLayers />
                 </section>
                 <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
-                    <EditorMapProperties v-if="store.map" :map="store.map" />
+                    <EditorMapProperties v-if="store.mapMetadata" />
                 </section>
             </aside>
 
             <!-- Main Canvas -->
-            <section
-                class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 overflow-auto border"
-                :class="{
-                    'max-w-[calc(100%-40rem)]': store.showProperties,
-                    'max-w-[calc(100%-20rem)]': !store.showProperties,
-                }"
-            >
+            <section class="border-sidebar-border/70 dark:border-sidebar-border relative min-h-0 max-w-[calc(100%-40rem)] flex-1 overflow-auto">
                 <CanvasLayers />
             </section>
 
             <!-- Right Sidebar -->
-            <aside class="flex w-80 shrink-0 flex-col">
+            <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
                 <section v-if="false" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
                     <EditorMiniMap />
                 </section>
-                <TileSetBox />
+                <div class="min-h-0 flex-1">
+                    <TileSetBox />
+                </div>
             </aside>
         </div>
     </div>
@@ -45,17 +44,14 @@ import EditorLayers from '@/components/editor/EditorLayers.vue';
 import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
 import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
+import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
-import { TileMap } from '@/types/TileMap';
 import { reactive } from 'vue';
 
-const props = defineProps<{
-    map: TileMap;
-}>();
 const store = useEditorStore();
 
-const map = reactive(props.map);
+const map = reactive(store.mapMetadata);
 </script>
 
 <style lang="scss">
