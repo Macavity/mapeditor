@@ -12,6 +12,7 @@ import ToolCursor from './ToolCursor.vue';
 const store = useEditorStore();
 const { handleCanvasClick } = useCanvasInteraction();
 const tileCanvasRefs = ref<{ [key: string]: InstanceType<typeof TileCanvas> }>({});
+const toolCursorRef = ref<InstanceType<typeof ToolCursor> | null>(null);
 
 // Feedback state for empty tile clicks
 const showEmptyTileMessage = ref(false);
@@ -69,20 +70,28 @@ const onCanvasClick = (event: MouseEvent) => {
         if (result.action === 'erase' && result.tileExists === false) {
             showEmptyTileFeedback();
         }
+
+        // Note: For fill action, result.tileExists indicates if any tiles were actually filled
+        // No special feedback needed for fill as the visual result is immediate
     }
 };
 
 // Centralized mouse event handlers
 const handleMouseMove = (event: MouseEvent) => {
     // Only handle mouse move for tools that need cursor tracking
-    if (store.activeTool === EditorTool.DRAW || store.activeTool === EditorTool.ERASE) {
+    if (store.activeTool === EditorTool.DRAW || store.activeTool === EditorTool.ERASE || store.activeTool === EditorTool.FILL) {
         updatePosition(event);
+
+        // Update fill preview when fill tool is active
+        if (store.activeTool === EditorTool.FILL && toolCursorRef.value) {
+            toolCursorRef.value.updateFillPreview(event);
+        }
     }
 };
 
 const handleMouseEnter = () => {
     // Only show cursor for tools that need it
-    if (store.activeTool === EditorTool.DRAW || store.activeTool === EditorTool.ERASE) {
+    if (store.activeTool === EditorTool.DRAW || store.activeTool === EditorTool.ERASE || store.activeTool === EditorTool.FILL) {
         show();
     }
 };
@@ -106,7 +115,7 @@ const handleMouseLeave = () => {
         }"
     >
         <!-- Restored tool cursor component with shared state -->
-        <ToolCursor />
+        <ToolCursor ref="toolCursorRef" />
 
         <!-- Tilemap layers container -->
         <div class="relative">

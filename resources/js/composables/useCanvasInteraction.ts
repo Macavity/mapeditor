@@ -43,7 +43,16 @@ export function useCanvasInteraction() {
         return !!(editorStore.activeLayer && editorStore.isEraseToolActive);
     }
 
-    function handleCanvasClick(event: MouseEvent): { success: boolean; action: 'draw' | 'erase' | 'none'; tileExists?: boolean } {
+    function canFillTiles(): boolean {
+        return !!(
+            editorStore.activeLayer &&
+            editorStore.brushSelection.tilesetUuid &&
+            editorStore.brushSelection.backgroundImage &&
+            editorStore.isFillToolActive
+        );
+    }
+
+    function handleCanvasClick(event: MouseEvent): { success: boolean; action: 'draw' | 'erase' | 'fill' | 'none'; tileExists?: boolean } {
         const position = calculateTilePosition(event);
         if (!position) {
             return { success: false, action: 'none' };
@@ -61,6 +70,13 @@ export function useCanvasInteraction() {
                 saveManager.markAsChanged();
             }
             return { success: true, action: 'erase', tileExists };
+        } else if (editorStore.activeTool === EditorTool.FILL && canFillTiles()) {
+            // Fill connected tiles
+            const filled = editorStore.fillTiles(position.tileX, position.tileY);
+            if (filled) {
+                saveManager.markAsChanged();
+            }
+            return { success: true, action: 'fill', tileExists: filled };
         } else {
             return { success: false, action: 'none' };
         }
@@ -82,6 +98,7 @@ export function useCanvasInteraction() {
         calculateTilePosition,
         canPlaceTiles,
         canEraseTiles,
+        canFillTiles,
         handleCanvasClick,
         getTileAtPosition,
     };
