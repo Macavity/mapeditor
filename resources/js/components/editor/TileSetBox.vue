@@ -15,17 +15,8 @@ const isDropdownOpen = ref(false);
 const activeTilesetContainer = ref<HTMLElement | null>(null);
 
 // Use the tile selection composable
-const {
-    currentSelection,
-    selectedTile,
-    dragSelection,
-    isDragging,
-    calculateTileCoordinates,
-    startDragSelection,
-    continueDragSelection,
-    completeDragSelection,
-    clearSelection,
-} = useTileSelection();
+const { currentSelection, isDragging, calculateTileCoordinates, startDragSelection, continueDragSelection, completeDragSelection, clearSelection } =
+    useTileSelection();
 
 if (tileSetStore.tileSets.length === 0) {
     tileSetStore.loadTileSets();

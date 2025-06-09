@@ -109,10 +109,6 @@ export function useTileSelection() {
         currentSelection,
         isDragging,
 
-        // Computed properties for backward compatibility
-        selectedTile: currentSelection,
-        dragSelection: currentSelection,
-
         // Methods
         calculateTileCoordinates,
         startDragSelection,
