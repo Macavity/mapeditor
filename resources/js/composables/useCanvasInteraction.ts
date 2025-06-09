@@ -1,7 +1,10 @@
+import { useSaveManager } from '@/composables/useSaveManager';
 import { useEditorStore } from '@/stores/editorStore';
+import { EditorTool } from '@/types/EditorTool';
 
 export function useCanvasInteraction() {
     const editorStore = useEditorStore();
+    const saveManager = useSaveManager();
 
     function calculateTilePosition(event: MouseEvent): { tileX: number; tileY: number } | null {
         const target = event.currentTarget as HTMLElement;
@@ -36,24 +39,50 @@ export function useCanvasInteraction() {
         );
     }
 
-    function handleCanvasClick(event: MouseEvent): boolean {
-        if (!canPlaceTiles()) {
-            return false;
-        }
+    function canEraseTiles(): boolean {
+        return !!(editorStore.activeLayer && editorStore.isEraseToolActive);
+    }
 
+    function handleCanvasClick(event: MouseEvent): { success: boolean; action: 'draw' | 'erase' | 'none'; tileExists?: boolean } {
         const position = calculateTilePosition(event);
         if (!position) {
-            return false;
+            return { success: false, action: 'none' };
         }
 
-        editorStore.placeTiles(position.tileX, position.tileY);
+        if (editorStore.activeTool === EditorTool.DRAW && canPlaceTiles()) {
+            // Place tiles (single or multi-tile)
+            editorStore.placeTiles(position.tileX, position.tileY);
+            saveManager.markAsChanged();
+            return { success: true, action: 'draw' };
+        } else if (editorStore.activeTool === EditorTool.ERASE && canEraseTiles()) {
+            // Erase tile
+            const tileExists = editorStore.eraseTile(position.tileX, position.tileY);
+            if (tileExists) {
+                saveManager.markAsChanged();
+            }
+            return { success: true, action: 'erase', tileExists };
+        } else {
+            return { success: false, action: 'none' };
+        }
+    }
 
-        return true;
+    function getTileAtPosition(event: MouseEvent): { tileX: number; tileY: number; hasTitle: boolean } | null {
+        const position = calculateTilePosition(event);
+        if (!position) return null;
+
+        const tile = editorStore.getTileAt(position.tileX, position.tileY);
+        return {
+            tileX: position.tileX,
+            tileY: position.tileY,
+            hasTitle: !!tile,
+        };
     }
 
     return {
         calculateTilePosition,
         canPlaceTiles,
+        canEraseTiles,
         handleCanvasClick,
+        getTileAtPosition,
     };
 }

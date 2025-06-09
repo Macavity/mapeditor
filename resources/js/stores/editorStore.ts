@@ -202,6 +202,44 @@ export const useEditorStore = defineStore('editorStore', {
             this.hasUnsavedChanges = true;
         },
 
+        eraseTile(mapX: number, mapY: number): boolean {
+            // Only erase if we have an active layer
+            if (!this.activeLayer) {
+                return false;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return false;
+            }
+
+            if (!this.layers[activeLayerIndex].data) {
+                return false; // No tiles to erase
+            }
+
+            // Find existing tile at this position
+            const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === mapX && tile.y === mapY);
+
+            if (existingTileIndex !== -1) {
+                // Remove the tile
+                this.layers[activeLayerIndex].data.splice(existingTileIndex, 1);
+                this.hasUnsavedChanges = true;
+                return true; // Tile was erased
+            }
+
+            return false; // No tile to erase
+        },
+
+        getTileAt(mapX: number, mapY: number, layerUuid?: string): any | null {
+            const targetLayerUuid = layerUuid || this.activeLayer;
+            if (!targetLayerUuid) return null;
+
+            const layer = this.layers.find((l) => l.uuid === targetLayerUuid);
+            if (!layer?.data) return null;
+
+            return layer.data.find((tile) => tile.x === mapX && tile.y === mapY) || null;
+        },
+
         async saveAllLayers() {
             if (!this.mapMetadata.uuid) return;
 
