@@ -1,4 +1,5 @@
 import { MapService } from '@/services/MapService';
+import type { BrushSelection, BrushSelectionConfig } from '@/types/BrushSelection';
 import { EditorTool } from '@/types/EditorTool';
 import { MapLayer } from '@/types/MapLayer';
 import { defineStore } from 'pinia';
@@ -25,12 +26,12 @@ export const useEditorStore = defineStore('editorStore', {
         brushSelection: {
             width: 32,
             height: 32,
-            backgroundImage: null as string | null,
+            backgroundImage: null,
             tileX: 0,
             tileY: 0,
             backgroundPosition: '0px 0px',
-            tilesetUuid: null as string | null,
-        },
+            tilesetUuid: null,
+        } as BrushSelection,
         hasUnsavedChanges: false,
     }),
     getters: {
@@ -49,6 +50,12 @@ export const useEditorStore = defineStore('editorStore', {
         layersDisplayOrder: (state) => {
             // For UI display: highest z-index at top of list (reverse order)
             return [...state.layers].sort((a, b) => b.z - a.z);
+        },
+        brushTilesWide: (state) => {
+            return Math.ceil(state.brushSelection.width / state.mapMetadata.tileWidth);
+        },
+        brushTilesHigh: (state) => {
+            return Math.ceil(state.brushSelection.height / state.mapMetadata.tileHeight);
         },
     },
     actions: {
@@ -110,22 +117,26 @@ export const useEditorStore = defineStore('editorStore', {
             }
         },
 
-        setBrushSelection(tileX: number, tileY: number, tileWidth: number, tileHeight: number, tilesetImageUrl: string, tilesetUuid: string) {
+        setBrushSelection(config: BrushSelectionConfig) {
+            // Calculate background position using map metadata tile dimensions
+            const backgroundPositionX = -config.tileX * this.mapMetadata.tileWidth;
+            const backgroundPositionY = -config.tileY * this.mapMetadata.tileHeight;
+
             this.brushSelection = {
-                width: tileWidth,
-                height: tileHeight,
-                backgroundImage: tilesetImageUrl,
-                tileX,
-                tileY,
-                backgroundPosition: `-${tileX * tileWidth}px -${tileY * tileHeight}px`,
-                tilesetUuid,
+                width: config.brushWidth,
+                height: config.brushHeight,
+                backgroundImage: config.tilesetImageUrl,
+                tileX: config.tileX,
+                tileY: config.tileY,
+                backgroundPosition: `${backgroundPositionX}px ${backgroundPositionY}px`,
+                tilesetUuid: config.tilesetUuid,
             };
         },
 
         clearBrushSelection() {
             this.brushSelection = {
-                width: 32,
-                height: 32,
+                width: this.mapMetadata.tileWidth,
+                height: this.mapMetadata.tileHeight,
                 backgroundImage: null,
                 tileX: 0,
                 tileY: 0,
@@ -134,8 +145,8 @@ export const useEditorStore = defineStore('editorStore', {
             };
         },
 
-        placeTile(mapX: number, mapY: number) {
-            // Only place tile if we have an active layer and brush selection
+        placeTiles(mapX: number, mapY: number) {
+            // Only place tiles if we have an active layer and brush selection
             if (!this.activeLayer || !this.brushSelection.tilesetUuid || !this.brushSelection.backgroundImage) {
                 return;
             }
@@ -145,33 +156,88 @@ export const useEditorStore = defineStore('editorStore', {
                 return;
             }
 
-            // Create or update the tile data
-            const tileData = {
-                x: mapX,
-                y: mapY,
-                brush: {
-                    tileset: this.brushSelection.tilesetUuid,
-                    tileX: this.brushSelection.tileX,
-                    tileY: this.brushSelection.tileY,
-                },
-            };
-
             if (!this.layers[activeLayerIndex].data) {
                 this.layers[activeLayerIndex].data = [];
             }
 
-            // Find existing tile at this position and replace it, or add new tile
-            const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === mapX && tile.y === mapY);
+            // Place each tile in the brush selection using computed dimensions
+            for (let offsetY = 0; offsetY < this.brushTilesHigh; offsetY++) {
+                for (let offsetX = 0; offsetX < this.brushTilesWide; offsetX++) {
+                    const targetMapX = mapX + offsetX;
+                    const targetMapY = mapY + offsetY;
 
-            if (existingTileIndex !== -1) {
-                // Replace existing tile
-                this.layers[activeLayerIndex].data[existingTileIndex] = tileData;
-            } else {
-                // Add new tile
-                this.layers[activeLayerIndex].data.push(tileData);
+                    // Check bounds
+                    if (targetMapX >= this.mapMetadata.width || targetMapY >= this.mapMetadata.height) {
+                        continue;
+                    }
+
+                    // Calculate the source tile coordinates in the tileset
+                    const sourceTileX = this.brushSelection.tileX + offsetX;
+                    const sourceTileY = this.brushSelection.tileY + offsetY;
+
+                    // Create tile data
+                    const tileData = {
+                        x: targetMapX,
+                        y: targetMapY,
+                        brush: {
+                            tileset: this.brushSelection.tilesetUuid,
+                            tileX: sourceTileX,
+                            tileY: sourceTileY,
+                        },
+                    };
+
+                    // Find existing tile at this position and replace it, or add new tile
+                    const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === targetMapX && tile.y === targetMapY);
+
+                    if (existingTileIndex !== -1) {
+                        // Replace existing tile
+                        this.layers[activeLayerIndex].data[existingTileIndex] = tileData;
+                    } else {
+                        // Add new tile
+                        this.layers[activeLayerIndex].data.push(tileData);
+                    }
+                }
             }
 
             this.hasUnsavedChanges = true;
+        },
+
+        eraseTile(mapX: number, mapY: number): boolean {
+            // Only erase if we have an active layer
+            if (!this.activeLayer) {
+                return false;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return false;
+            }
+
+            if (!this.layers[activeLayerIndex].data) {
+                return false; // No tiles to erase
+            }
+
+            // Find existing tile at this position
+            const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === mapX && tile.y === mapY);
+
+            if (existingTileIndex !== -1) {
+                // Remove the tile
+                this.layers[activeLayerIndex].data.splice(existingTileIndex, 1);
+                this.hasUnsavedChanges = true;
+                return true; // Tile was erased
+            }
+
+            return false; // No tile to erase
+        },
+
+        getTileAt(mapX: number, mapY: number, layerUuid?: string): any | null {
+            const targetLayerUuid = layerUuid || this.activeLayer;
+            if (!targetLayerUuid) return null;
+
+            const layer = this.layers.find((l) => l.uuid === targetLayerUuid);
+            if (!layer?.data) return null;
+
+            return layer.data.find((tile) => tile.x === mapX && tile.y === mapY) || null;
         },
 
         async saveAllLayers() {
