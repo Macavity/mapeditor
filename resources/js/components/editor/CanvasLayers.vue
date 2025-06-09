@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCanvasInteraction } from '@/composables/useCanvasInteraction';
 import { useEditorStore } from '@/stores/editorStore';
 import { nextTick, ref } from 'vue';
 import BrushCursor from './BrushCursor.vue';
@@ -6,6 +7,7 @@ import GridOverlay from './GridOverlay.vue';
 import TileCanvas from './TileCanvas.vue';
 
 const store = useEditorStore();
+const { handleCanvasClick } = useCanvasInteraction();
 const brushCursorRef = ref<InstanceType<typeof BrushCursor> | null>(null);
 const tileCanvasRefs = ref<{ [key: string]: InstanceType<typeof TileCanvas> }>({});
 
@@ -16,34 +18,15 @@ const setTileCanvasRef = (el: InstanceType<typeof TileCanvas> | null, layerUuid:
 };
 
 const onCanvasClick = (event: MouseEvent) => {
-    // Only place tile if we have a brush selection
-    if (!store.brushSelection.tilesetUuid || !store.brushSelection.backgroundImage) {
-        return;
-    }
+    const placed = handleCanvasClick(event);
 
-    const target = event.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-
-    // Calculate mouse position relative to canvas
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-
-    // Get tile dimensions from the map
-    const tileWidth = store.mapMetadata.tileWidth;
-    const tileHeight = store.mapMetadata.tileHeight;
-
-    // Calculate tile coordinates (snap to grid)
-    const tileX = Math.floor(mouseX / tileWidth);
-    const tileY = Math.floor(mouseY / tileHeight);
-
-    // Place the tile
-    store.placeTile(tileX, tileY);
-
-    // Ensure the active layer is re-rendered immediately
-    if (store.activeLayer && tileCanvasRefs.value[store.activeLayer]) {
-        nextTick(() => {
-            tileCanvasRefs.value[store.activeLayer!].renderLayer();
-        });
+    if (placed) {
+        // Ensure the active layer is re-rendered immediately
+        if (store.activeLayer && tileCanvasRefs.value[store.activeLayer]) {
+            nextTick(() => {
+                tileCanvasRefs.value[store.activeLayer!].renderLayer();
+            });
+        }
     }
 };
 </script>
