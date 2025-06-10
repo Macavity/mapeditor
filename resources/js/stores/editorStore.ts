@@ -248,14 +248,21 @@ export const useEditorStore = defineStore('editorStore', {
             // Get the starting tile to match against
             const startTile = this.getTileAt(mapX, mapY);
 
+            // For multi-tile patterns, we need to check if the current tile matches what would be placed
+            // Calculate which tile from the pattern would be placed at the start position
+            const patternOffsetX = mapX % this.brushTilesWide;
+            const patternOffsetY = mapY % this.brushTilesHigh;
+            const expectedTileX = this.brushSelection.tileX + patternOffsetX;
+            const expectedTileY = this.brushSelection.tileY + patternOffsetY;
+
             // Check if fill would have any effect
             if (
                 startTile &&
                 startTile.brush.tileset === this.brushSelection.tilesetUuid &&
-                startTile.brush.tileX === this.brushSelection.tileX &&
-                startTile.brush.tileY === this.brushSelection.tileY
+                startTile.brush.tileX === expectedTileX &&
+                startTile.brush.tileY === expectedTileY
             ) {
-                return false; // No change needed
+                return false; // No change needed - tile already matches what would be placed
             }
 
             // Use flood fill algorithm to find all connected tiles
@@ -297,15 +304,22 @@ export const useEditorStore = defineStore('editorStore', {
                 }
             }
 
-            // Fill all identified tiles
+            // Fill all identified tiles with the appropriate tile from the pattern
             for (const tile of tilesToFill) {
+                // Calculate which tile from the pattern should be used at this position
+                const tilePatternOffsetX = tile.x % this.brushTilesWide;
+                const tilePatternOffsetY = tile.y % this.brushTilesHigh;
+
+                const sourceTileX = this.brushSelection.tileX + tilePatternOffsetX;
+                const sourceTileY = this.brushSelection.tileY + tilePatternOffsetY;
+
                 const tileData = {
                     x: tile.x,
                     y: tile.y,
                     brush: {
                         tileset: this.brushSelection.tilesetUuid,
-                        tileX: this.brushSelection.tileX,
-                        tileY: this.brushSelection.tileY,
+                        tileX: sourceTileX,
+                        tileY: sourceTileY,
                     },
                 };
 

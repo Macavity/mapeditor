@@ -71,22 +71,42 @@ export function useFloodFill() {
 
         const targetTile = editorStore.getTileAt(tileX, tileY);
 
+        // Calculate which tile from the pattern would be placed at this position
+        const patternOffsetX = tileX % editorStore.brushTilesWide;
+        const patternOffsetY = tileY % editorStore.brushTilesHigh;
+        const expectedTileX = editorStore.brushSelection.tileX + patternOffsetX;
+        const expectedTileY = editorStore.brushSelection.tileY + patternOffsetY;
+
         // If no tile exists, we can fill with brush
         if (!targetTile) {
             return true;
         }
 
-        // Check if the target tile is different from the brush
+        // Check if the target tile is different from what would be placed from the pattern
         return !(
             targetTile.brush.tileset === editorStore.brushSelection.tilesetUuid &&
-            targetTile.brush.tileX === editorStore.brushSelection.tileX &&
-            targetTile.brush.tileY === editorStore.brushSelection.tileY
+            targetTile.brush.tileX === expectedTileX &&
+            targetTile.brush.tileY === expectedTileY
         );
+    }
+
+    // Get the tile that should be placed at a specific position based on the pattern
+    function getTileForPosition(tileX: number, tileY: number): { tileX: number; tileY: number } | null {
+        if (!editorStore.brushSelection.tilesetUuid) return null;
+
+        const patternOffsetX = tileX % editorStore.brushTilesWide;
+        const patternOffsetY = tileY % editorStore.brushTilesHigh;
+
+        return {
+            tileX: editorStore.brushSelection.tileX + patternOffsetX,
+            tileY: editorStore.brushSelection.tileY + patternOffsetY,
+        };
     }
 
     return {
         getConnectedTiles,
         canFill,
         tilesMatch,
+        getTileForPosition,
     };
 }

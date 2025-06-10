@@ -7,7 +7,7 @@ import { inject, ref } from 'vue';
 
 const store = useEditorStore();
 const { calculateTilePosition } = useCanvasInteraction();
-const { getConnectedTiles, canFill } = useFloodFill();
+const { getConnectedTiles, canFill, getTileForPosition } = useFloodFill();
 
 // Inject shared cursor state from CanvasLayers (via ToolCursor)
 const cursorState = inject<CursorState>('cursorState');
@@ -49,6 +49,30 @@ function updatePreview(event: MouseEvent) {
     }
 }
 
+// Calculate the correct tile style for each position in the pattern
+function getTileStyle(tileX: number, tileY: number) {
+    const tileInfo = getTileForPosition(tileX, tileY);
+    if (!tileInfo || !store.brushSelection.backgroundImage) {
+        return {
+            width: mapTileWidth.value + 'px',
+            height: mapTileHeight.value + 'px',
+            background: 'rgba(59, 130, 246, 0.3)',
+        };
+    }
+
+    // Calculate background position for this specific tile in the pattern
+    const backgroundPositionX = -tileInfo.tileX * store.mapMetadata.tileWidth;
+    const backgroundPositionY = -tileInfo.tileY * store.mapMetadata.tileHeight;
+
+    return {
+        width: mapTileWidth.value + 'px',
+        height: mapTileHeight.value + 'px',
+        background: `url('${store.brushSelection.backgroundImage}') no-repeat`,
+        backgroundPosition: `${backgroundPositionX}px ${backgroundPositionY}px`,
+        backgroundSize: 'auto',
+    };
+}
+
 // Expose the update function for parent component to call
 defineExpose({
     updatePreview,
@@ -65,13 +89,7 @@ defineExpose({
             :style="{
                 left: tile.x * mapTileWidth + 'px',
                 top: tile.y * mapTileHeight + 'px',
-                width: mapTileWidth + 'px',
-                height: mapTileHeight + 'px',
-                background: store.brushSelection.backgroundImage
-                    ? `url('${store.brushSelection.backgroundImage}') no-repeat`
-                    : 'rgba(59, 130, 246, 0.3)',
-                backgroundPosition: store.brushSelection.backgroundImage ? store.brushSelection.backgroundPosition : undefined,
-                backgroundSize: store.brushSelection.backgroundImage ? 'auto' : '100% 100%',
+                ...getTileStyle(tile.x, tile.y),
             }"
         ></div>
     </div>
