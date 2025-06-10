@@ -248,24 +248,7 @@ export const useEditorStore = defineStore('editorStore', {
             // Get the starting tile to match against
             const startTile = this.getTileAt(mapX, mapY);
 
-            // For multi-tile patterns, we need to check if the current tile matches what would be placed
-            // Calculate which tile from the pattern would be placed at the start position
-            const patternOffsetX = mapX % this.brushTilesWide;
-            const patternOffsetY = mapY % this.brushTilesHigh;
-            const expectedTileX = this.brushSelection.tileX + patternOffsetX;
-            const expectedTileY = this.brushSelection.tileY + patternOffsetY;
-
-            // Check if fill would have any effect
-            if (
-                startTile &&
-                startTile.brush.tileset === this.brushSelection.tilesetUuid &&
-                startTile.brush.tileX === expectedTileX &&
-                startTile.brush.tileY === expectedTileY
-            ) {
-                return false; // No change needed - tile already matches what would be placed
-            }
-
-            // Use flood fill algorithm to find all connected tiles
+            // Use flood fill algorithm to find all connected tiles first
             const visited = new Set<string>();
             const tilesToFill: { x: number; y: number }[] = [];
             const queue: { x: number; y: number }[] = [{ x: mapX, y: mapY }];
@@ -304,11 +287,71 @@ export const useEditorStore = defineStore('editorStore', {
                 }
             }
 
+            if (tilesToFill.length === 0) {
+                return false;
+            }
+
+            // Calculate bounding box for multi-tile pattern alignment
+            let boundingBox: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
+            if (this.brushTilesWide >= 2) {
+                let minX = tilesToFill[0].x;
+                let minY = tilesToFill[0].y;
+                let maxX = tilesToFill[0].x;
+                let maxY = tilesToFill[0].y;
+
+                for (const tile of tilesToFill) {
+                    minX = Math.min(minX, tile.x);
+                    minY = Math.min(minY, tile.y);
+                    maxX = Math.max(maxX, tile.x);
+                    maxY = Math.max(maxY, tile.y);
+                }
+
+                boundingBox = { minX, minY, maxX, maxY };
+            }
+
+            // Check if fill would have any effect by testing the clicked position
+            let expectedTileX: number;
+            let expectedTileY: number;
+
+            if (boundingBox && this.brushTilesWide >= 2) {
+                // For multi-tile patterns, align to bounding box
+                const patternOffsetX = (mapX - boundingBox.minX) % this.brushTilesWide;
+                const patternOffsetY = (mapY - boundingBox.minY) % this.brushTilesHigh;
+                expectedTileX = this.brushSelection.tileX + patternOffsetX;
+                expectedTileY = this.brushSelection.tileY + patternOffsetY;
+            } else {
+                // For single tiles, use original logic
+                const patternOffsetX = mapX % this.brushTilesWide;
+                const patternOffsetY = mapY % this.brushTilesHigh;
+                expectedTileX = this.brushSelection.tileX + patternOffsetX;
+                expectedTileY = this.brushSelection.tileY + patternOffsetY;
+            }
+
+            // Check if fill would have any effect
+            if (
+                startTile &&
+                startTile.brush.tileset === this.brushSelection.tilesetUuid &&
+                startTile.brush.tileX === expectedTileX &&
+                startTile.brush.tileY === expectedTileY
+            ) {
+                return false; // No change needed - tile already matches what would be placed
+            }
+
             // Fill all identified tiles with the appropriate tile from the pattern
             for (const tile of tilesToFill) {
                 // Calculate which tile from the pattern should be used at this position
-                const tilePatternOffsetX = tile.x % this.brushTilesWide;
-                const tilePatternOffsetY = tile.y % this.brushTilesHigh;
+                let tilePatternOffsetX: number;
+                let tilePatternOffsetY: number;
+
+                if (boundingBox && this.brushTilesWide >= 2) {
+                    // For multi-tile patterns, align to bounding box
+                    tilePatternOffsetX = (tile.x - boundingBox.minX) % this.brushTilesWide;
+                    tilePatternOffsetY = (tile.y - boundingBox.minY) % this.brushTilesHigh;
+                } else {
+                    // For single tiles, use original logic
+                    tilePatternOffsetX = tile.x % this.brushTilesWide;
+                    tilePatternOffsetY = tile.y % this.brushTilesHigh;
+                }
 
                 const sourceTileX = this.brushSelection.tileX + tilePatternOffsetX;
                 const sourceTileY = this.brushSelection.tileY + tilePatternOffsetY;
@@ -335,12 +378,8 @@ export const useEditorStore = defineStore('editorStore', {
                 }
             }
 
-            if (tilesToFill.length > 0) {
-                this.hasUnsavedChanges = true;
-                return true;
-            }
-
-            return false;
+            this.hasUnsavedChanges = true;
+            return true;
         },
 
         // Helper method for tile comparison used by fillTiles

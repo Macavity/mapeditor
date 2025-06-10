@@ -51,7 +51,7 @@ function updatePreview(event: MouseEvent) {
 
 // Calculate the correct tile style for each position in the pattern
 function getTileStyle(tileX: number, tileY: number) {
-    const tileInfo = getTileForPosition(tileX, tileY);
+    const tileInfo = getTileForPosition(tileX, tileY, connectedTiles.value);
     if (!tileInfo || !store.brushSelection.backgroundImage) {
         return {
             width: mapTileWidth.value + 'px',

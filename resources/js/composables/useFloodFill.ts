@@ -63,6 +63,25 @@ export function useFloodFill() {
         return result;
     }
 
+    // Get the bounding box of a set of tiles
+    function getTilesBoundingBox(tiles: { x: number; y: number }[]): { minX: number; minY: number; maxX: number; maxY: number } | null {
+        if (tiles.length === 0) return null;
+
+        let minX = tiles[0].x;
+        let minY = tiles[0].y;
+        let maxX = tiles[0].x;
+        let maxY = tiles[0].y;
+
+        for (const tile of tiles) {
+            minX = Math.min(minX, tile.x);
+            minY = Math.min(minY, tile.y);
+            maxX = Math.max(maxX, tile.x);
+            maxY = Math.max(maxY, tile.y);
+        }
+
+        return { minX, minY, maxX, maxY };
+    }
+
     // Check if fill would have any effect (target tile is different from brush)
     function canFill(tileX: number, tileY: number): boolean {
         if (!editorStore.activeLayer || !editorStore.brushSelection.tilesetUuid || !editorStore.brushSelection.backgroundImage) {
@@ -71,29 +90,70 @@ export function useFloodFill() {
 
         const targetTile = editorStore.getTileAt(tileX, tileY);
 
-        // Calculate which tile from the pattern would be placed at this position
-        const patternOffsetX = tileX % editorStore.brushTilesWide;
-        const patternOffsetY = tileY % editorStore.brushTilesHigh;
-        const expectedTileX = editorStore.brushSelection.tileX + patternOffsetX;
-        const expectedTileY = editorStore.brushSelection.tileY + patternOffsetY;
+        // For multi-tile patterns spanning at least 2 columns, we need to consider the connected tiles
+        // to determine the proper alignment
+        if (editorStore.brushTilesWide >= 2) {
+            const connectedTiles = getConnectedTiles(tileX, tileY);
+            const boundingBox = getTilesBoundingBox(connectedTiles);
 
-        // If no tile exists, we can fill with brush
-        if (!targetTile) {
-            return true;
+            if (boundingBox) {
+                // Calculate pattern offset relative to the bounding box
+                const patternOffsetX = (tileX - boundingBox.minX) % editorStore.brushTilesWide;
+                const patternOffsetY = (tileY - boundingBox.minY) % editorStore.brushTilesHigh;
+                const expectedTileX = editorStore.brushSelection.tileX + patternOffsetX;
+                const expectedTileY = editorStore.brushSelection.tileY + patternOffsetY;
+
+                if (!targetTile) {
+                    return true;
+                }
+
+                return !(
+                    targetTile.brush.tileset === editorStore.brushSelection.tilesetUuid &&
+                    targetTile.brush.tileX === expectedTileX &&
+                    targetTile.brush.tileY === expectedTileY
+                );
+            }
+        } else {
+            // For single tiles, use the original logic
+            const patternOffsetX = tileX % editorStore.brushTilesWide;
+            const patternOffsetY = tileY % editorStore.brushTilesHigh;
+            const expectedTileX = editorStore.brushSelection.tileX + patternOffsetX;
+            const expectedTileY = editorStore.brushSelection.tileY + patternOffsetY;
+
+            if (!targetTile) {
+                return true;
+            }
+
+            return !(
+                targetTile.brush.tileset === editorStore.brushSelection.tilesetUuid &&
+                targetTile.brush.tileX === expectedTileX &&
+                targetTile.brush.tileY === expectedTileY
+            );
         }
 
-        // Check if the target tile is different from what would be placed from the pattern
-        return !(
-            targetTile.brush.tileset === editorStore.brushSelection.tilesetUuid &&
-            targetTile.brush.tileX === expectedTileX &&
-            targetTile.brush.tileY === expectedTileY
-        );
+        return true;
     }
 
     // Get the tile that should be placed at a specific position based on the pattern
-    function getTileForPosition(tileX: number, tileY: number): { tileX: number; tileY: number } | null {
+    // For multi-tile patterns (>= 2 columns), align to the connected tiles bounding box
+    function getTileForPosition(tileX: number, tileY: number, connectedTiles?: { x: number; y: number }[]): { tileX: number; tileY: number } | null {
         if (!editorStore.brushSelection.tilesetUuid) return null;
 
+        // For multi-tile patterns spanning at least 2 columns, align to connected tiles
+        if (editorStore.brushTilesWide >= 2 && connectedTiles) {
+            const boundingBox = getTilesBoundingBox(connectedTiles);
+            if (boundingBox) {
+                const patternOffsetX = (tileX - boundingBox.minX) % editorStore.brushTilesWide;
+                const patternOffsetY = (tileY - boundingBox.minY) % editorStore.brushTilesHigh;
+
+                return {
+                    tileX: editorStore.brushSelection.tileX + patternOffsetX,
+                    tileY: editorStore.brushSelection.tileY + patternOffsetY,
+                };
+            }
+        }
+
+        // Fallback to original behavior for single tiles or when no connected tiles provided
         const patternOffsetX = tileX % editorStore.brushTilesWide;
         const patternOffsetY = tileY % editorStore.brushTilesHigh;
 
@@ -105,6 +165,7 @@ export function useFloodFill() {
 
     return {
         getConnectedTiles,
+        getTilesBoundingBox,
         canFill,
         tilesMatch,
         getTileForPosition,
