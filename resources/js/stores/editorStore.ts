@@ -21,6 +21,7 @@ export const useEditorStore = defineStore('editorStore', {
             height: 0,
             tileWidth: 32,
             tileHeight: 32,
+            tilesetUsage: {} as Record<string, number>,
         },
         layers: [] as MapLayer[],
         brushSelection: {
@@ -101,6 +102,7 @@ export const useEditorStore = defineStore('editorStore', {
                     height: mapData.height,
                     tileWidth: mapData.tile_width,
                     tileHeight: mapData.tile_height,
+                    tilesetUsage: mapData.tileset_usage || {},
                 };
                 this.layers = layers;
 

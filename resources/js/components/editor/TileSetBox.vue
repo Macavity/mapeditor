@@ -6,7 +6,7 @@ import { useTileSetStore } from '@/stores/tileSetStore';
 import type { BrushSelectionConfig, TileSelection } from '@/types/BrushSelection';
 import { isSingleTileSelection } from '@/types/BrushSelection';
 import { ChevronDown } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 const tileSetStore = useTileSetStore();
 const editorStore = useEditorStore();
@@ -17,6 +17,20 @@ const activeTilesetContainer = ref<HTMLElement | null>(null);
 // Use the tile selection composable
 const { currentSelection, isDragging, calculateTileCoordinates, startDragSelection, continueDragSelection, completeDragSelection, clearSelection } =
     useTileSelection();
+
+const mostUsedTileSetUuid = computed(() => {
+    const usage = editorStore.mapMetadata.tilesetUsage;
+    if (!usage || Object.keys(usage).length === 0) return null;
+    const keys = Object.keys(usage);
+    if (keys.length === 0) return null;
+    return keys.reduce((max, uuid) => (usage[uuid] > usage[max] ? uuid : max), keys[0]);
+});
+
+onMounted(() => {
+    if (mostUsedTileSetUuid.value) {
+        tileSetStore.activateTileSet(mostUsedTileSetUuid.value);
+    }
+});
 
 if (tileSetStore.tileSets.length === 0) {
     tileSetStore.loadTileSets();
