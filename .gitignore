@@ -37,7 +37,6 @@ lerna-debug.log*
 server/node_modules
 server/dist
 frontend/.vscode
-static
 
 /.phpunit.cache
 /bootstrap/ssr

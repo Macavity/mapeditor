@@ -15,6 +15,9 @@ use App\Services\Importers\TmxMapImporter;
 use App\Services\Importers\LaxLegacyImporter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\ValueObjects\Tile;
+use App\ValueObjects\Brush;
+use Illuminate\Support\Str;
 
 class MapImportService
 {
@@ -155,61 +158,6 @@ class MapImportService
     }
 
     /**
-     * Create a TileMap and related entities from parsed data.
-     */
-    private function createMapFromData(array $mapData, ?User $creator = null, array $options = []): array
-    {
-        $mapInfo = $mapData['map'];
-        
-        // Handle UUID conflicts if specified in options
-        if (isset($options['preserve_uuid']) && $options['preserve_uuid'] && isset($mapInfo['uuid'])) {
-            if (TileMap::where('uuid', $mapInfo['uuid'])->exists()) {
-                if (!($options['overwrite'] ?? false)) {
-                    throw new \RuntimeException("Map with UUID {$mapInfo['uuid']} already exists. Use --overwrite to replace it.");
-                }
-                // Delete existing map if overwrite is enabled
-                TileMap::where('uuid', $mapInfo['uuid'])->delete();
-            }
-        }
-
-        // Create or import tilesets first
-        $tilesetResults = $this->importTilesets($mapData['tilesets'] ?? [], $options);
-
-        // Create the map
-        $map = new TileMap();
-        $map->name = $mapInfo['name'];
-        $map->width = (int) $mapInfo['width'];
-        $map->height = (int) $mapInfo['height'];
-        $map->tile_width = (int) $mapInfo['tile_width'];
-        $map->tile_height = (int) $mapInfo['tile_height'];
-        
-        if (isset($mapInfo['external_creator'])) {
-            $map->external_creator = $mapInfo['external_creator'];
-        }
-        
-        if ($creator) {
-            $map->creator_id = $creator->id;
-        }
-
-        // Preserve UUID if requested and valid
-        if (isset($options['preserve_uuid']) && $options['preserve_uuid'] && isset($mapInfo['uuid'])) {
-            $map->uuid = $mapInfo['uuid'];
-        }
-
-        $map->save();
-
-        // Create layers
-        foreach ($mapData['layers'] as $layerData) {
-            $this->createLayer($map, $layerData, $options);
-        }
-
-        return [
-            'map' => $map->fresh(['creator', 'layers']),
-            'tilesets' => $tilesetResults,
-        ];
-    }
-
-    /**
      * Import or verify tilesets.
      */
     private function importTilesets(array $tilesets, array $options = []): array
@@ -217,32 +165,46 @@ class MapImportService
         $missingTilesets = [];
         $createdTilesets = [];
         $existingTilesets = [];
+        $uuidMap = [];
 
-        foreach ($tilesets as $tilesetData) {
-            if (!isset($tilesetData['uuid'])) {
-                continue;
+        foreach ($tilesets as &$tilesetData) {
+            $originalTmxUuid = $tilesetData['uuid'] ?? null;
+            $existingTileset = null;
+            // 1. Try to find by UUID
+            if (isset($tilesetData['uuid'])) {
+                $existingTileset = TileSet::where('uuid', $tilesetData['uuid'])->first();
             }
-
-            // Check if this tileset is marked as existing by the importer
-            if (isset($tilesetData['_existing']) && $tilesetData['_existing']) {
-                $existingTilesets[] = $tilesetData;
-                continue;
+            // 2. Try to find by name (case-insensitive, in PHP)
+            if (!$existingTileset && isset($tilesetData['name'])) {
+                $existingTileset = TileSet::all()->first(function ($ts) use ($tilesetData) {
+                    return mb_strtolower($ts->name) === mb_strtolower($tilesetData['name']);
+                });
             }
-
-            // Check if tileset already exists in database
-            $existingTileset = TileSet::where('uuid', $tilesetData['uuid'])->first();
-            
-            if (!$existingTileset) {
-                $missingTilesets[] = $tilesetData;
-                
-                // Only auto-create if explicitly allowed
-                if ($options['auto_create_tilesets'] ?? false) {
-                    $createdTilesets[] = $this->createMissingTileset($tilesetData);
+            // 3. Try to find by image_path (basename, case-insensitive)
+            if (!$existingTileset && isset($tilesetData['image_path'])) {
+                $basename = basename($tilesetData['image_path']);
+                $existingTileset = TileSet::whereRaw('LOWER(image_path) LIKE ?', ['%' . strtolower($basename)])->first();
+            }
+            // If found, update the import data UUID to match and track mapping
+            if ($existingTileset) {
+                if ($originalTmxUuid && $originalTmxUuid !== $existingTileset->uuid) {
+                    $uuidMap[$originalTmxUuid] = $existingTileset->uuid;
                 }
-            } else {
+                $tilesetData['uuid'] = $existingTileset->uuid;
                 $existingTilesets[] = $tilesetData;
+                continue;
+            }
+            // Not found, mark as missing and create if allowed
+            $missingTilesets[] = $tilesetData;
+            if ($options['auto_create_tilesets'] ?? false) {
+                $created = $this->createMissingTileset($tilesetData);
+                if ($originalTmxUuid && $originalTmxUuid !== $created->uuid) {
+                    $uuidMap[$originalTmxUuid] = $created->uuid;
+                }
+                $createdTilesets[] = $created;
             }
         }
+        unset($tilesetData);
 
         // If we have missing tilesets and auto-creation is disabled, throw an error
         if (!empty($missingTilesets) && !($options['auto_create_tilesets'] ?? false)) {
@@ -257,6 +219,7 @@ class MapImportService
             'missing' => $missingTilesets,
             'created' => $createdTilesets,
             'existing' => $existingTilesets,
+            'uuid_map' => $uuidMap,
         ];
     }
 
@@ -272,8 +235,35 @@ class MapImportService
         $tileset->image_height = (int) ($tilesetData['image_height'] ?? 0);
         $tileset->tile_width = (int) ($tilesetData['tile_width'] ?? 32);
         $tileset->tile_height = (int) ($tilesetData['tile_height'] ?? 32);
-        $tileset->image_url = $tilesetData['image_url'] ?? null;
-        $tileset->image_path = $tilesetData['image_path'] ?? null;
+
+        // Copy the referenced image file into storage/app/public/tilesets/
+        $originalImagePath = $tilesetData['image_path'] ?? null;
+        if ($originalImagePath) {
+            $basename = basename($originalImagePath);
+            $storagePath = 'tilesets/' . $basename;
+            $publicDisk = Storage::disk('public');
+
+            // Try to find the file relative to the project root or storage
+            $sourcePaths = [
+                base_path($originalImagePath),
+                base_path('tests/static/tilesets/' . $basename),
+                Storage::path($originalImagePath),
+            ];
+            $found = false;
+            foreach ($sourcePaths as $src) {
+                if (file_exists($src)) {
+                    $publicDisk->put($storagePath, file_get_contents($src));
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                throw new \RuntimeException("Tileset image file not found: {$originalImagePath}");
+            }
+            $tileset->image_path = $storagePath;
+        } else {
+            $tileset->image_path = null;
+        }
         
         // Calculate tile count if we have complete data
         if ($tileset->image_width > 0 && $tileset->image_height > 0 && 
@@ -313,7 +303,17 @@ class MapImportService
         $layer->height = (int) ($layerData['height'] ?? $map->height);
         $layer->visible = $layerData['visible'] ?? true;
         $layer->opacity = (float) ($layerData['opacity'] ?? 1.0);
-        $layer->data = $layerData['data'] ?? [];
+        $layer->data = array_map(function ($tile) {
+            return new Tile(
+                $tile['x'],
+                $tile['y'],
+                new Brush(
+                    $tile['brush']['tileset'] ?? '',
+                    $tile['brush']['tileX'] ?? 0,
+                    $tile['brush']['tileY'] ?? 0,
+                )
+            );
+        }, $layerData['data'] ?? []);
 
         // Preserve UUID if requested and valid
         if (isset($options['preserve_uuid']) && $options['preserve_uuid'] && isset($layerData['uuid'])) {
@@ -338,5 +338,72 @@ class MapImportService
             'field_type', 'fieldtype' => LayerType::FieldType,
             default => LayerType::Floor, // Default fallback
         };
+    }
+
+    /**
+     * Create a TileMap and related entities from parsed data.
+     */
+    private function createMapFromData(array $mapData, ?User $creator = null, array $options = []): array
+    {
+        $mapInfo = $mapData['map'];
+        
+        // Handle UUID conflicts if specified in options
+        if (isset($options['preserve_uuid']) && $options['preserve_uuid'] && isset($mapInfo['uuid'])) {
+            if (TileMap::where('uuid', $mapInfo['uuid'])->exists()) {
+                if (!($options['overwrite'] ?? false)) {
+                    throw new \RuntimeException("Map with UUID {$mapInfo['uuid']} already exists. Use --overwrite to replace it.");
+                }
+                // Delete existing map if overwrite is enabled
+                TileMap::where('uuid', $mapInfo['uuid'])->delete();
+            }
+        }
+
+        // Create or import tilesets first
+        $tilesetResults = $this->importTilesets($mapData['tilesets'] ?? [], $options);
+        $uuidMap = $tilesetResults['uuid_map'] ?? [];
+        // Rewrite all tile brush tileset UUIDs in layers
+        foreach ($mapData['layers'] as &$layer) {
+            foreach ($layer['data'] as &$tile) {
+                $oldUuid = $tile['brush']['tileset'];
+                if (isset($uuidMap[$oldUuid])) {
+                    $tile['brush']['tileset'] = $uuidMap[$oldUuid];
+                }
+            }
+            unset($tile);
+        }
+        unset($layer);
+
+        // Create the map
+        $map = new TileMap();
+        $map->name = $mapInfo['name'];
+        $map->width = (int) $mapInfo['width'];
+        $map->height = (int) $mapInfo['height'];
+        $map->tile_width = (int) $mapInfo['tile_width'];
+        $map->tile_height = (int) $mapInfo['tile_height'];
+        
+        if (isset($mapInfo['external_creator'])) {
+            $map->external_creator = $mapInfo['external_creator'];
+        }
+        
+        if ($creator) {
+            $map->creator_id = $creator->id;
+        }
+
+        // Preserve UUID if requested and valid
+        if (isset($options['preserve_uuid']) && $options['preserve_uuid'] && isset($mapInfo['uuid'])) {
+            $map->uuid = $mapInfo['uuid'];
+        }
+
+        $map->save();
+
+        // Create layers
+        foreach ($mapData['layers'] as $layerData) {
+            $this->createLayer($map, $layerData, $options);
+        }
+
+        return [
+            'map' => $map->fresh(['creator', 'layers']),
+            'tilesets' => $tilesetResults,
+        ];
     }
 } 
