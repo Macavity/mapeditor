@@ -21,10 +21,12 @@ use App\ValueObjects\Tile;
 class MapExportService
 {
     private OutputInterface $output;
+    private string $basePath;
 
-    public function __construct(OutputInterface $output)
+    public function __construct(OutputInterface $output, string $basePath = 'exports')
     {
         $this->output = $output;
+        $this->basePath = $basePath;
     }
 
     /**
@@ -98,7 +100,16 @@ class MapExportService
      */
     public function getDefaultExportPath(string $filename): string
     {
-        return "exports/{$filename}";
+        return "{$this->basePath}/{$filename}";
+    }
+
+    /**
+     * Ensure the export directory structure exists.
+     */
+    private function ensureExportDirectories(): void
+    {
+        Storage::makeDirectory($this->basePath);
+        Storage::makeDirectory("{$this->basePath}/tilesets");
     }
 
     /**
@@ -106,6 +117,7 @@ class MapExportService
      */
     public function exportAsJson(ExportMapFormatV1 $exportData, string $path): void
     {
+        $this->ensureExportDirectories();
         $json = $exportData->toJson();
         Storage::put($path, $json);
         $this->output->info('Stored JSON file at: ' . Storage::path($path));
@@ -142,7 +154,7 @@ class MapExportService
     {
         $publicDisk = Storage::disk('public');
         $filename = basename($imagePath);
-        $storagePath = "exports/tilesets/{$filename}";
+        $storagePath = "{$this->basePath}/tilesets/{$filename}";
         $relativePath = "tilesets/{$filename}";
 
         $this->output->writeln("Processing tileset image: {$imagePath}");
@@ -151,8 +163,6 @@ class MapExportService
             $this->output->error("Source tileset file not found: {$imagePath}");
             throw new \RuntimeException("Tileset file not found: {$imagePath}");
         }
-
-        Storage::makeDirectory('exports/tilesets');
 
         if (!Storage::exists($storagePath)) {
             $this->output->info("Copying tileset image: {$filename}");
@@ -174,6 +184,7 @@ class MapExportService
      */
     public function exportAsTmx(ExportMapFormatV1 $exportData, string $exportPath): void
     {
+        $this->ensureExportDirectories();
         $map = $exportData->map;
         $dom = new \DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;

@@ -161,8 +161,43 @@ test('can export map as tmx', function () {
     expect($exportedContent)->toContain('name="Test Layer"');
 });
 
+test('can export map to custom path', function () {
+    $output = \Mockery::mock(OutputInterface::class);
+    $output->shouldReceive('info')->andReturnNull();
+    $output->shouldReceive('writeln')->andReturnNull();
+    $output->shouldReceive('error')->andReturnNull();
+    
+    $customPath = 'custom/exports';
+    $service = new MapExportService($output, $customPath);
+    
+    // Prepare export data
+    $exportData = $service->prepareExportData($this->map);
+    
+    // Test JSON export
+    $jsonFilename = $service->generateFilename($this->map, 'json');
+    $jsonPath = $service->getDefaultExportPath($jsonFilename);
+    $service->exportAsJson($exportData, $jsonPath);
+    
+    // Assert JSON file exists in custom path
+    expect(Storage::exists($jsonPath))->toBeTrue();
+    expect($jsonPath)->toStartWith($customPath);
+    
+    // Test TMX export
+    $tmxFilename = $service->generateFilename($this->map, 'tmx');
+    $tmxPath = $service->getDefaultExportPath($tmxFilename);
+    $service->exportAsTmx($exportData, $tmxPath);
+    
+    // Assert TMX file exists in custom path
+    expect(Storage::exists($tmxPath))->toBeTrue();
+    expect($tmxPath)->toStartWith($customPath);
+    
+    // Assert tileset directory was created in custom path
+    expect(Storage::exists("{$customPath}/tilesets"))->toBeTrue();
+});
+
 afterEach(function () {
     // Clean up exported files
     Storage::deleteDirectory('exports');
+    Storage::deleteDirectory('custom');
     \Mockery::close();
 }); 
