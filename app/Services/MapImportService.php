@@ -90,6 +90,11 @@ class MapImportService
 
         $importer = $this->importers[$format];
         
+        // Configure importer with options
+        if ($importer instanceof LaxLegacyImporter && isset($options['tileset_directory'])) {
+            $importer->setTilesetDirectory($options['tileset_directory']);
+        }
+        
         // Parse the file data
         $mapData = $importer->parse($filePath);
         
@@ -112,6 +117,11 @@ class MapImportService
         }
 
         $importer = $this->importers[$format];
+        
+        // Configure importer with options
+        if ($importer instanceof LaxLegacyImporter && isset($options['tileset_directory'])) {
+            $importer->setTilesetDirectory($options['tileset_directory']);
+        }
         
         // Parse the raw data
         $mapData = $importer->parseString($data);
@@ -194,25 +204,22 @@ class MapImportService
                 $existingTilesets[] = $tilesetData;
                 continue;
             }
-            // Not found, mark as missing and create if allowed
-            $missingTilesets[] = $tilesetData;
+            // Not found, create if allowed
             if ($options['auto_create_tilesets'] ?? false) {
-                $created = $this->createMissingTileset($tilesetData);
+                $created = $this->createMissingTileset($tilesetData, $options);
                 if ($originalTmxUuid && $originalTmxUuid !== $created->uuid) {
                     $uuidMap[$originalTmxUuid] = $created->uuid;
                 }
                 $createdTilesets[] = $created;
+            } else {
+                $missingTilesets[] = $tilesetData;
             }
         }
         unset($tilesetData);
 
-        // If we have missing tilesets and auto-creation is disabled, throw an error
-        if (!empty($missingTilesets) && !($options['auto_create_tilesets'] ?? false)) {
-            $missingNames = array_map(fn($ts) => $ts['name'] ?? $ts['uuid'], $missingTilesets);
-            throw new \RuntimeException(
-                "Missing tilesets: " . implode(', ', $missingNames) . 
-                ". Use --auto-create-tilesets to create them automatically, but note that image files may be missing."
-            );
+        // Only report missing tilesets if auto-creation is disabled
+        if (($options['auto_create_tilesets'] ?? false)) {
+            $missingTilesets = [];
         }
 
         return [
@@ -226,31 +233,40 @@ class MapImportService
     /**
      * Create a missing tileset from import data.
      */
-    private function createMissingTileset(array $tilesetData): TileSet
+    private function createMissingTileset(array $tilesetData, array $options = []): TileSet
     {
         $tileset = new TileSet();
-        $tileset->uuid = $tilesetData['uuid'];
+        $tileset->uuid = $tilesetData['uuid'] ?? (string) \Illuminate\Support\Str::uuid();
         $tileset->name = $tilesetData['name'] ?? 'Imported Tileset';
         $tileset->image_width = (int) ($tilesetData['image_width'] ?? 0);
         $tileset->image_height = (int) ($tilesetData['image_height'] ?? 0);
         $tileset->tile_width = (int) ($tilesetData['tile_width'] ?? 32);
         $tileset->tile_height = (int) ($tilesetData['tile_height'] ?? 32);
 
-        // Copy the referenced image file into storage/app/public/tilesets/
+        // Always copy the image into storage/app/public/tilesets/
         $originalImagePath = $tilesetData['image_path'] ?? null;
         if ($originalImagePath) {
             $basename = basename($originalImagePath);
             $storagePath = 'tilesets/' . $basename;
             $publicDisk = Storage::disk('public');
 
-            // Try to find the file relative to the project root or storage
+            // Build possible source paths, including custom directory if provided
             $sourcePaths = [
+                // Custom directory as source (handle absolute and relative)
+                isset($options['tileset_directory'])
+                    ? (str_starts_with($options['tileset_directory'], '/')
+                        ? rtrim($options['tileset_directory'], '/') . '/' . $basename
+                        : base_path(trim($options['tileset_directory'], '/') . '/' . $basename))
+                    : null,
+                // Path as given in image_path
                 base_path($originalImagePath),
+                // Test static tilesets
                 base_path('tests/static/tilesets/' . $basename),
+                // Storage path
                 Storage::path($originalImagePath),
             ];
             $found = false;
-            foreach ($sourcePaths as $src) {
+            foreach (array_filter($sourcePaths) as $src) {
                 if (file_exists($src)) {
                     $publicDisk->put($storagePath, file_get_contents($src));
                     $found = true;

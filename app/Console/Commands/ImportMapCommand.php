@@ -23,6 +23,7 @@ class ImportMapCommand extends Command
                             {--preserve-uuid : Preserve original UUIDs from the import file}
                             {--overwrite : Overwrite existing map if UUID conflicts occur}
                             {--auto-create-tilesets : Automatically create missing tilesets (may not have image files)}
+                            {--tilesets= : Directory to look for tileset images (used as import source only)}
                             {--dry-run : Show what would be imported without actually importing}';
 
     /**
@@ -44,8 +45,9 @@ class ImportMapCommand extends Command
         $creatorEmail = $this->option('creator');
         $preserveUuid = $this->option('preserve-uuid');
         $overwrite = $this->option('overwrite');
-        $autoCreateTilesets = $this->option('auto-create-tilesets');
+        $autoCreateTilesets = $this->option('auto-create-tilesets', true);
         $dryRun = $this->option('dry-run');
+        $tilesetDirectory = $this->option('tilesets');
 
         $this->info("Starting map import...");
         $this->line("File: {$filePath}");
@@ -90,6 +92,7 @@ class ImportMapCommand extends Command
             'preserve_uuid' => $preserveUuid,
             'overwrite' => $overwrite,
             'auto_create_tilesets' => $autoCreateTilesets,
+            'tileset_directory' => $tilesetDirectory,
         ];
 
         try {
@@ -145,6 +148,12 @@ class ImportMapCommand extends Command
             }
 
             $importer = $importers[$format];
+            // Configure importer with tileset directory if provided
+            if ($tilesetDirectory = ($options['tileset_directory'] ?? null)) {
+                if (method_exists($importer, 'setTilesetDirectory')) {
+                    $importer->setTilesetDirectory($tilesetDirectory);
+                }
+            }
             $mapData = $importer->parse($filePath);
 
             // Display what would be imported

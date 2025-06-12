@@ -37,7 +37,7 @@ class TileSet extends Model
         'spacing' => 'integer',
     ];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'tiles_per_row'];
 
     protected static function boot()
     {
@@ -57,5 +57,13 @@ class TileSet extends Model
     public function getImageUrlAttribute(): ?string
     {
         return $this->image_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->image_path) : null;
+    }
+
+    public function getTilesPerRowAttribute(): int
+    {
+        if ($this->tile_width > 0) {
+            return (int) ($this->image_width / $this->tile_width);
+        }
+        return 0;
     }
 } 
