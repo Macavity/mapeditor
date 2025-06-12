@@ -408,8 +408,8 @@ class LaxLegacyImporter implements ImporterInterface
      */
     private function formatTilesetName(string $tilesetName): string
     {
-        // Convert snake_case to Title Case
-        return ucwords(str_replace('_', ' ', $tilesetName));
+        // Keep the original name format for legacy tilesets
+        return $tilesetName;
     }
 
     /**
@@ -443,8 +443,7 @@ class LaxLegacyImporter implements ImporterInterface
                     'image_height' => $tilesPerCol * 32,
                     'tile_width' => 32,
                     'tile_height' => 32,
-                    'image_url' => "legacy/{$tilesetName}.png", // Suggested path
-                    'image_path' => null,
+                    'image_path' => "tilesets/{$tilesetName}.png", // Set for storage copy
                     'margin' => 0,
                     'spacing' => 0,
                     '_existing' => false
