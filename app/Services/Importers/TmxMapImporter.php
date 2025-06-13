@@ -133,15 +133,24 @@ class TmxMapImporter implements ImporterInterface
         $layers = [];
         $tilesets = [];
 
-        // Parse tilesets
+        // Parse tilesets and build GID mapping
+        $tilesetGidMap = [];
+        $tilesetList = [];
         foreach ($xml->tileset as $tilesetXml) {
-            $tilesets[] = $this->parseTileset($tilesetXml);
+            $tileset = $this->parseTileset($tilesetXml);
+            $tilesets[] = $tileset;
+            $tilesetList[] = $tileset;
+            $tilesetGidMap[] = [
+                'firstgid' => $tileset['first_gid'],
+                'lastgid' => $tileset['first_gid'] + $tileset['tile_count'] - 1,
+                'tileset' => $tileset,
+            ];
         }
 
         // Parse layers
         $zIndex = 0;
         foreach ($xml->layer as $layerXml) {
-            $layers[] = $this->parseLayer($layerXml, $mapData, $zIndex++);
+            $layers[] = $this->parseLayerWithGidMapping($layerXml, $mapData, $zIndex++, $tilesetGidMap);
         }
 
         return [
@@ -149,6 +158,86 @@ class TmxMapImporter implements ImporterInterface
             'layers' => $layers,
             'tilesets' => $tilesets,
         ];
+    }
+
+    private function parseLayerWithGidMapping(\SimpleXMLElement $layerXml, array $mapData, int $zIndex, array $tilesetGidMap): array
+    {
+        $attributes = $layerXml->attributes();
+        
+        $layer = [
+            'uuid' => null, // TMX doesn't have UUIDs, will be generated
+            'name' => (string) ($attributes['name'] ?? 'Unnamed Layer'),
+            'type' => 'floor', // Default type, could be enhanced with TMX properties
+            'x' => (int) ($attributes['offsetx'] ?? 0),
+            'y' => (int) ($attributes['offsety'] ?? 0),
+            'z' => $zIndex,
+            'width' => (int) ($attributes['width'] ?? $mapData['width']),
+            'height' => (int) ($attributes['height'] ?? $mapData['height']),
+            'visible' => !isset($attributes['visible']) || (string) $attributes['visible'] !== '0',
+            'opacity' => (float) ($attributes['opacity'] ?? 1.0),
+            'data' => [],
+        ];
+
+        // Parse layer data
+        $dataElement = $layerXml->data;
+        if ($dataElement) {
+            $layer['data'] = $this->parseLayerDataWithGidMapping($dataElement, $layer['width'], $layer['height'], $tilesetGidMap);
+        }
+
+        return $layer;
+    }
+
+    private function parseLayerDataWithGidMapping(\SimpleXMLElement $dataElement, int $width, int $height, array $tilesetGidMap): array
+    {
+        $attributes = $dataElement->attributes();
+        $encoding = (string) ($attributes['encoding'] ?? '');
+        
+        $data = [];
+        
+        if ($encoding === 'csv') {
+            // Parse CSV data
+            $csvData = trim((string) $dataElement);
+            $values = array_map('intval', explode(',', $csvData));
+            
+            // Convert flat array to tile positions with correct tileset/brush
+            for ($y = 0; $y < $height; $y++) {
+                for ($x = 0; $x < $width; $x++) {
+                    $index = $y * $width + $x;
+                    $gid = $values[$index] ?? 0;
+                    
+                    if ($gid > 0) {
+                        // Find the correct tileset for this GID
+                        $tileset = null;
+                        foreach ($tilesetGidMap as $ts) {
+                            if ($gid >= $ts['firstgid'] && $gid <= $ts['lastgid']) {
+                                $tileset = $ts['tileset'];
+                                break;
+                            }
+                        }
+                        if ($tileset) {
+                            $localId = $gid - $tileset['first_gid'];
+                            $columns = $tileset['tile_width'] > 0 ? (int)($tileset['image_width'] / $tileset['tile_width']) : 1;
+                            $tileX = $columns > 0 ? $localId % $columns : 0;
+                            $tileY = $columns > 0 ? (int)($localId / $columns) : 0;
+                            $data[] = [
+                                'x' => $x,
+                                'y' => $y,
+                                'brush' => [
+                                    'tileset' => $tileset['uuid'],
+                                    'tileX' => $tileX,
+                                    'tileY' => $tileY,
+                                ]
+                            ];
+                        }
+                    }
+                }
+            }
+        } else {
+            // For other encodings (base64, etc.), you'd implement additional parsing
+            throw new \InvalidArgumentException("TMX encoding '{$encoding}' is not yet supported. Please use CSV encoding.");
+        }
+
+        return $data;
     }
 
     /**
@@ -160,19 +249,37 @@ class TmxMapImporter implements ImporterInterface
         $imageElement = $tilesetXml->image;
         $imageAttributes = $imageElement ? $imageElement->attributes() : null;
 
+        $name = (string) ($attributes['name'] ?? 'Unnamed Tileset');
+        $imagePath = $imageAttributes ? (string) $imageAttributes['source'] : null;
+        // Generate deterministic UUID if missing
+        $uuid = $this->generateTilesetUuid($name, $imagePath);
+
         return [
-            'uuid' => null, // TMX doesn't have UUIDs, will be generated
-            'name' => (string) ($attributes['name'] ?? 'Unnamed Tileset'),
+            'uuid' => $uuid,
+            'name' => $name,
             'first_gid' => (int) $attributes['firstgid'],
             'tile_width' => (int) $attributes['tilewidth'],
             'tile_height' => (int) $attributes['tileheight'],
             'tile_count' => (int) $attributes['tilecount'],
             'image_width' => $imageAttributes ? (int) $imageAttributes['width'] : 0,
             'image_height' => $imageAttributes ? (int) $imageAttributes['height'] : 0,
-            'image_path' => $imageAttributes ? (string) $imageAttributes['source'] : null,
+            'image_path' => $imagePath,
             'margin' => (int) ($attributes['margin'] ?? 0),
             'spacing' => (int) ($attributes['spacing'] ?? 0),
         ];
+    }
+
+    private function generateTilesetUuid(string $name, ?string $imagePath): string
+    {
+        $hash = md5('tmx_tileset_' . $name . '_' . ($imagePath ?? ''));
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            substr($hash, 0, 8),
+            substr($hash, 8, 4),
+            substr($hash, 12, 4),
+            substr($hash, 16, 4),
+            substr($hash, 20, 12)
+        );
     }
 
     /**

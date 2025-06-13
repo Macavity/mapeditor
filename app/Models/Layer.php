@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Casts\TileArrayCast;
 
 class Layer extends Model
 {
@@ -36,7 +37,7 @@ class Layer extends Model
         'z' => 'integer',
         'width' => 'integer',
         'height' => 'integer',
-        'data' => 'array',
+        'data' => TileArrayCast::class,
         'visible' => 'boolean',
         'opacity' => 'float',
         'created_at' => 'datetime',

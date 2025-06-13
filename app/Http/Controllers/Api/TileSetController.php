@@ -105,6 +105,10 @@ class TileSetController extends Controller
     public function destroy(string $uuid): Response
     {
         $tileSet = TileSet::where('uuid', $uuid)->firstOrFail();
+        // Remove the image file from storage if it exists
+        if ($tileSet->image_path && Storage::disk('public')->exists($tileSet->image_path)) {
+            Storage::disk('public')->delete($tileSet->image_path);
+        }
         $tileSet->delete();
 
         session()->flash('success', 'Tile set deleted successfully.');

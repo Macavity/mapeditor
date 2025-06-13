@@ -17,4 +17,5 @@ export interface TileMap {
         id: number;
         name: string;
     }>;
+    tileset_usage?: Record<string, number>;
 }

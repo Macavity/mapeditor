@@ -16,7 +16,7 @@ class ExportMapCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'map:export {uuid : The UUID of the map to export (can be partial)} {--format=json : Export format (json)} {--path= : Custom export path}';
+    protected $signature = 'map:export {uuid : The (partial) UUID of the map to export} {--format=json : Export format (json, tmx)} {--path= : Custom export path}';
 
     /**
      * The console command description.
@@ -28,16 +28,15 @@ class ExportMapCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(MapRepository $mapRepository): int
     {
-        $mapRepository = app(MapRepository::class);
-        $exportService = app(MapExportService::class);
-        
         $uuid = $this->argument('uuid');
         $format = $this->option('format');
         $customPath = $this->option('path');
 
-        // Validate format
+        // Create export service with command output
+        $exportService = new MapExportService($this->output);
+
         if (!$exportService->isValidFormat($format)) {
             $supportedFormats = implode(', ', $exportService->getSupportedFormats());
             $this->error("Unsupported format: {$format}. Supported formats: {$supportedFormats}");
@@ -69,6 +68,9 @@ class ExportMapCommand extends Command
             switch ($format) {
                 case 'json':
                     $exportService->exportAsJson($exportData, $exportPath);
+                    break;
+                case 'tmx':
+                    $exportService->exportAsTmx($exportData, $exportPath);
                     break;
             }
 

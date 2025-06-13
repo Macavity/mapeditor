@@ -10,6 +10,29 @@ use Illuminate\Support\Facades\Storage;
 class LaxLegacyImporter implements ImporterInterface
 {
     private array $tilesetMapping = [];
+    private string $tilesetDirectory;
+
+    public function __construct(string $tilesetDirectory = 'tilesets')
+    {
+        $this->tilesetDirectory = $tilesetDirectory;
+    }
+
+    /**
+     * Set the tileset directory for this import.
+     */
+    public function setTilesetDirectory(string $directory): self
+    {
+        $this->tilesetDirectory = $directory;
+        return $this;
+    }
+
+    /**
+     * Get the current tileset directory.
+     */
+    public function getTilesetDirectory(): string
+    {
+        return $this->tilesetDirectory;
+    }
 
     /**
      * Parse a legacy JavaScript map file and return structured data.
@@ -181,7 +204,6 @@ class LaxLegacyImporter implements ImporterInterface
      */
     private function convertToStandardFormat(array $mapData): array
     {
-        // Reset tileset mapping for this import
         $this->tilesetMapping = [];
 
         $result = [
@@ -189,7 +211,7 @@ class LaxLegacyImporter implements ImporterInterface
                 'name' => $mapData['name'] ?: 'Legacy Map',
                 'width' => $mapData['width'],
                 'height' => $mapData['height'],
-                'tile_width' => 32, // Default tile size
+                'tile_width' => 32,
                 'tile_height' => 32,
                 'external_creator' => $mapData['external_creator'],
             ],
@@ -197,7 +219,6 @@ class LaxLegacyImporter implements ImporterInterface
             'tilesets' => [],
         ];
 
-        // Process layers in correct order (background first, then floor, then sky)
         $layerMappings = [
             'field_bg' => ['type' => 'background', 'z' => 0],
             'field_layer1' => ['type' => 'floor', 'z' => 1],
@@ -206,80 +227,179 @@ class LaxLegacyImporter implements ImporterInterface
             'field_layer5' => ['type' => 'sky', 'z' => 4],
         ];
 
-        foreach ($layerMappings as $jsLayerName => $config) {
-            if (!isset($mapData['layers'][$jsLayerName])) {
-                continue;
-            }
-
-            $layer = $this->convertLayer(
-                $mapData['layers'][$jsLayerName],
-                $config['type'],
-                $config['z'],
-                $mapData['width'],
-                $mapData['height'],
-                $jsLayerName === 'field_bg' ? $mapData['main_bg'] : null
-            );
-
-            if (!empty($layer['data'])) {
-                $result['layers'][] = $layer;
-            }
-        }
-
-        // Generate tilesets from the collected mapping
-        $result['tilesets'] = $this->generateTilesets();
+        $tilesetUsage = $this->scanTilesetUsage($mapData, $layerMappings);
+        $tilesetModels = $this->buildTilesetModels($tilesetUsage);
+        $result['layers'] = $this->buildLayerData($mapData, $layerMappings, $tilesetModels);
+        $result['tilesets'] = $this->buildTilesetsArray($tilesetModels);
 
         return $result;
     }
 
-    /**
-     * Convert a single layer from JavaScript format to our format.
-     */
-    private function convertLayer(array $jsLayer, string $type, int $z, int $width, int $height, ?string $defaultTile = null): array
+    private function scanTilesetUsage(array $mapData, array $layerMappings): array
     {
-        $layer = [
-            'name' => ucfirst($type) . ' Layer',
-            'type' => $type,
-            'x' => 0,
-            'y' => 0,
-            'z' => $z,
-            'width' => $width,
-            'height' => $height,
-            'visible' => true,
-            'opacity' => 1.0,
-            'data' => [],
-        ];
-
-        // Process each tile position
-        for ($row = 0; $row < $height; $row++) {
-            for ($col = 0; $col < $width; $col++) {
-                $tileValue = null;
-
-                // Check if this position has a tile
-                if (isset($jsLayer[$row][$col])) {
-                    $tileValue = $jsLayer[$row][$col];
-                } elseif ($defaultTile && $type === 'background') {
-                    // Fill background with main_bg if no specific tile
-                    $tileValue = $defaultTile;
-                }
-
-                if ($tileValue) {
-                    $tileInfo = $this->parseTileValue($tileValue);
-                    if ($tileInfo) {
-                        $layer['data'][] = [
-                            'x' => $col,
-                            'y' => $row,
-                            'brush' => [
-                                'tileset' => $tileInfo['tileset_uuid'],
-                                'tileX' => $tileInfo['tileX'],
-                                'tileY' => $tileInfo['tileY'],
-                            ]
-                        ];
+        $tilesetUsage = [];
+        foreach ($layerMappings as $jsLayerName => $config) {
+            if (!isset($mapData['layers'][$jsLayerName])) {
+                continue;
+            }
+            $jsLayer = $mapData['layers'][$jsLayerName];
+            $width = $mapData['width'];
+            $height = $mapData['height'];
+            for ($row = 0; $row < $height; $row++) {
+                for ($col = 0; $col < $width; $col++) {
+                    if (isset($jsLayer[$row][$col])) {
+                        $tileValue = $jsLayer[$row][$col];
+                        if (preg_match('/^([^\/]+)\/(\d+)\.png$/', $tileValue, $matches)) {
+                            $tilesetName = $matches[1];
+                            $tileId = (int) $matches[2];
+                            $tilesetUsage[$tilesetName][] = $tileId;
+                        }
                     }
                 }
             }
         }
+        return $tilesetUsage;
+    }
 
-        return $layer;
+    private function buildTilesetModels(array $tilesetUsage): array
+    {
+        $tilesetModels = [];
+        foreach ($tilesetUsage as $tilesetName => $tileIds) {
+            $existingTileset = TileSet::where('name', $tilesetName)->first();
+            if ($existingTileset) {
+                $tilesetModels[$tilesetName] = $existingTileset;
+            } else {
+                $basename = $tilesetName . '.png';
+                $imageFile = null;
+                $searchDirs = [
+                    isset($this->tilesetDirectory)
+                        ? (str_starts_with($this->tilesetDirectory, '/')
+                            ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
+                            : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename))
+                        : null,
+                    base_path('tests/static/tilesets/' . $basename),
+                ];
+                foreach (array_filter($searchDirs) as $src) {
+                    if (file_exists($src)) {
+                        $imageFile = $src;
+                        break;
+                    }
+                }
+                if (!$imageFile) {
+                    throw new \Exception("Tileset image file not found: {$tilesetName}");
+                }
+                $imgInfo = @getimagesize($imageFile);
+                if (!$imgInfo) {
+                    throw new \Exception("Could not read image size for tileset: {$tilesetName}");
+                }
+                $imageWidth = $imgInfo[0];
+                $imageHeight = $imgInfo[1];
+                if ($imageWidth <= 0 || $imageHeight <= 0) {
+                    throw new \Exception("Invalid image dimensions for tileset: {$tilesetName}");
+                }
+                $tileWidth = 32;
+                $tileHeight = 32;
+                $tilesPerRow = (int) ($imageWidth / $tileWidth);
+                if ($tilesPerRow <= 0) {
+                    throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
+                }
+                $maxTileId = max($tileIds);
+                $tilesPerCol = (int) ceil($maxTileId / $tilesPerRow);
+                $tilesetModels[$tilesetName] = [
+                    'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                    'name' => $tilesetName,
+                    'image_width' => $imageWidth,
+                    'image_height' => $imageHeight,
+                    'tile_width' => $tileWidth,
+                    'tile_height' => $tileHeight,
+                    'tiles_per_row' => $tilesPerRow,
+                    'image_path' => "tilesets/{$tilesetName}.png",
+                ];
+            }
+        }
+        return $tilesetModels;
+    }
+
+    private function buildLayerData(array $mapData, array $layerMappings, array $tilesetModels): array
+    {
+        $layers = [];
+        foreach ($layerMappings as $jsLayerName => $config) {
+            if (!isset($mapData['layers'][$jsLayerName])) {
+                continue;
+            }
+            $jsLayer = $mapData['layers'][$jsLayerName];
+            $width = $mapData['width'];
+            $height = $mapData['height'];
+            $layer = [
+                'name' => ucfirst($config['type']) . ' Layer',
+                'type' => $config['type'],
+                'x' => 0,
+                'y' => 0,
+                'z' => $config['z'],
+                'width' => $width,
+                'height' => $height,
+                'visible' => true,
+                'opacity' => 1.0,
+                'data' => [],
+            ];
+            for ($row = 0; $row < $height; $row++) {
+                for ($col = 0; $col < $width; $col++) {
+                    if (isset($jsLayer[$row][$col])) {
+                        $tileValue = $jsLayer[$row][$col];
+                        if (preg_match('/^([^\/]+)\/(\d+)\.png$/', $tileValue, $matches)) {
+                            $tilesetName = $matches[1];
+                            $tileId = (int) $matches[2];
+                            $tileset = $tilesetModels[$tilesetName] ?? null;
+                            if (!$tileset) {
+                                throw new \Exception("Tileset not found in models: {$tilesetName}");
+                            }
+                            $tilesPerRow = $tileset['tiles_per_row'] ?? 0;
+                            if ($tilesPerRow <= 0) {
+                                throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
+                            }
+                            $adjustedTileId = $tileId - 1;
+                            $tileX = $adjustedTileId % $tilesPerRow;
+                            $tileY = (int) ($adjustedTileId / $tilesPerRow);
+
+                            $layer['data'][] = [
+                                'x' => $col,
+                                'y' => $row,
+                                'brush' => [
+                                    'tileset' => $tileset['uuid'],
+                                    'tileX' => $tileX,
+                                    'tileY' => $tileY,
+                                ]
+                            ];
+                        }
+                    }
+                }
+            }
+            if (!empty($layer['data'])) {
+                $layers[] = $layer;
+            }
+        }
+        return $layers;
+    }
+
+    private function buildTilesetsArray(array $tilesetModels): array
+    {
+        return array_values(array_map(function ($ts) {
+            if ($ts instanceof \App\Models\TileSet) {
+                return [
+                    'uuid' => $ts->uuid,
+                    'name' => $ts->name,
+                    'image_width' => $ts->image_width,
+                    'image_height' => $ts->image_height,
+                    'tile_width' => $ts->tile_width,
+                    'tile_height' => $ts->tile_height,
+                    'image_path' => $ts->image_path,
+                    'margin' => $ts->margin,
+                    'spacing' => $ts->spacing,
+                    '_existing' => true
+                ];
+            }
+            return $ts + ['_existing' => false];
+        }, $tilesetModels));
     }
 
     /**
@@ -339,24 +459,32 @@ class LaxLegacyImporter implements ImporterInterface
      */
     private function convertTileIdToCoordinates(int $tileId, string $tilesetName): array
     {
-        $tilesPerRow = 16; // Default assumption for legacy tilesets
-        
-        // If tileset exists in mapping and was found in database, try to get actual tiles per row
-        if (isset($this->tilesetMapping[$tilesetName]['existing']) && 
-            $this->tilesetMapping[$tilesetName]['existing']) {
-            
+        $tilesPerRow = null;
+        // If tileset exists in mapping and was found in database, use the model accessor
+        if (isset($this->tilesetMapping[$tilesetName]['existing']) && $this->tilesetMapping[$tilesetName]['existing']) {
             $existingTileset = TileSet::where('uuid', $this->tilesetMapping[$tilesetName]['uuid'])->first();
-            if ($existingTileset && $existingTileset->tile_width > 0) {
-                $tilesPerRow = intval($existingTileset->image_width / $existingTileset->tile_width);
+            if ($existingTileset && $existingTileset->tiles_per_row > 0) {
+                $tilesPerRow = $existingTileset->tiles_per_row;
+            } else {
+                throw new \Exception("Cannot determine tilesPerRow for existing tileset: {$tilesetName}");
             }
+        } else if (
+            isset($this->tilesetMapping[$tilesetName]['image_width']) &&
+            isset($this->tilesetMapping[$tilesetName]['tile_width']) &&
+            $this->tilesetMapping[$tilesetName]['tile_width'] > 0
+        ) {
+            $tilesPerRow = (int) ($this->tilesetMapping[$tilesetName]['image_width'] / $this->tilesetMapping[$tilesetName]['tile_width']);
+            if ($tilesPerRow <= 0) {
+                throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
+            }
+        } else {
+            dd($this->tilesetMapping[$tilesetName]);
+            throw new \Exception("Cannot determine tilesPerRow for tileset: {$tilesetName}");
         }
-        
-        // Adjust for 1-based tile IDs (subtract 1 to make it 0-based)
         $adjustedTileId = $tileId - 1;
-        
         return [
-            'tileX' => $adjustedTileId % $tilesPerRow,
-            'tileY' => intval($adjustedTileId / $tilesPerRow),
+            'tileX' => $tilesPerRow > 0 ? $adjustedTileId % $tilesPerRow : 0,
+            'tileY' => $tilesPerRow > 0 ? intval($adjustedTileId / $tilesPerRow) : 0,
         ];
     }
 
@@ -408,50 +536,7 @@ class LaxLegacyImporter implements ImporterInterface
      */
     private function formatTilesetName(string $tilesetName): string
     {
-        // Convert snake_case to Title Case
-        return ucwords(str_replace('_', ' ', $tilesetName));
-    }
-
-    /**
-     * Generate tileset definitions from the collected mapping.
-     */
-    private function generateTilesets(): array
-    {
-        $tilesets = [];
-
-        foreach ($this->tilesetMapping as $tilesetName => $info) {
-            if (isset($info['existing']) && $info['existing']) {
-                // For existing tilesets, just include UUID and name for reference
-                $tilesets[] = [
-                    'uuid' => $info['uuid'],
-                    'name' => $info['name'],
-                    '_existing' => true
-                ];
-            } else {
-                // For new tilesets, include full definition
-                $maxTileId = !empty($info['tiles']) ? max($info['tiles']) : 1;
-                
-                // Calculate reasonable tileset dimensions
-                // Assume 16 tiles per row as a default for legacy tilesets
-                $tilesPerRow = 16;
-                $tilesPerCol = (int) ceil($maxTileId / $tilesPerRow);
-                
-                $tilesets[] = [
-                    'uuid' => $info['uuid'],
-                    'name' => $info['name'],
-                    'image_width' => $tilesPerRow * 32, // Assume 32px tiles
-                    'image_height' => $tilesPerCol * 32,
-                    'tile_width' => 32,
-                    'tile_height' => 32,
-                    'image_url' => "legacy/{$tilesetName}.png", // Suggested path
-                    'image_path' => null,
-                    'margin' => 0,
-                    'spacing' => 0,
-                    '_existing' => false
-                ];
-            }
-        }
-
-        return $tilesets;
+        // Keep the original name format for legacy tilesets
+        return $tilesetName;
     }
 } 
