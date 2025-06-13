@@ -21,7 +21,7 @@ const form = {
     processing: false,
 };
 
-const props = defineProps<{
+defineProps<{
     tokens: Array<{
         id: string;
         name: string;
