@@ -15,12 +15,39 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
+#[OA\Info(
+    version: '1.0.0',
+    title: 'Tile Map API',
+    description: 'API for managing tile maps and their layers'
+)]
+#[OA\Server(
+    url: '/api',
+    description: 'API Base URL'
+)]
 class TileMapController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of tile maps.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
+    #[OA\Get(
+        path: '/tile-maps',
+        summary: 'Get all tile maps',
+        tags: ['Tile Maps'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of tile maps',
+                content: new OA\JsonContent(
+                    type: 'array',
+                    items: new OA\Items(ref: '#/components/schemas/TileMap')
+                )
+            )
+        ]
+    )]
     public function index(): JsonResponse
     {
         $tileMaps = TileMap::with(['creator', 'layers'])
@@ -33,8 +60,35 @@ class TileMapController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created tile map in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
+    #[OA\Post(
+        path: '/tile-maps',
+        summary: 'Create a new tile map',
+        tags: ['Tile Maps'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/TileMapStoreRequest')
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Tile map created successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/TileMap')
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'message', type: 'string', example: 'The given data was invalid.'),
+                    new OA\Property(property: 'errors', type: 'object')
+                ])
+            )
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -55,8 +109,39 @@ class TileMapController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified tile map.
+     *
+     * @param  \App\Models\TileMap  $tileMap
+     * @return \Illuminate\Http\JsonResponse
      */
+    #[OA\Get(
+        path: '/tile-maps/{tileMap}',
+        summary: 'Get a specific tile map',
+        tags: ['Tile Maps'],
+        parameters: [
+            new OA\Parameter(
+                name: 'tileMap',
+                in: 'path',
+                required: true,
+                description: 'ID of the tile map',
+                schema: new OA\Schema(type: 'integer')
+            )
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Tile map details',
+                content: new OA\JsonContent(ref: '#/components/schemas/TileMap')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Tile map not found',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'message', type: 'string', example: 'No query results for model [App\\Models\\TileMap] 1')
+                ])
+            )
+        ]
+    )]
     public function show(TileMap $tileMap): JsonResponse
     {
         $usedTilesets = collect([]);
@@ -78,8 +163,52 @@ class TileMapController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified tile map in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\TileMap  $tileMap
+     * @return \Illuminate\Http\JsonResponse
      */
+    #[OA\Put(
+        path: '/tile-maps/{tileMap}',
+        summary: 'Update a tile map',
+        tags: ['Tile Maps'],
+        parameters: [
+            new OA\Parameter(
+                name: 'tileMap',
+                in: 'path',
+                required: true,
+                description: 'ID of the tile map',
+                schema: new OA\Schema(type: 'integer')
+            )
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/TileMapUpdateRequest')
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Tile map updated successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/TileMap')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Tile map not found',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'message', type: 'string', example: 'No query results for model [App\\Models\\TileMap] 1')
+                ])
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'message', type: 'string', example: 'The given data was invalid.'),
+                    new OA\Property(property: 'errors', type: 'object')
+                ])
+            )
+        ]
+    )]
     public function update(Request $request, TileMap $tileMap): JsonResponse
     {
         $validated = $request->validate([

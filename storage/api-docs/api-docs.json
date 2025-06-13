@@ -1,0 +1,908 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Tile Map API",
+        "description": "API for managing tile maps and their layers",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api",
+            "description": "API Base URL"
+        }
+    ],
+    "paths": {
+        "/tile-maps": {
+            "get": {
+                "tags": [
+                    "Tile Maps"
+                ],
+                "summary": "Get all tile maps",
+                "description": "Display a listing of tile maps.",
+                "operationId": "1451f735565d79a945b69f51a5b698af",
+                "responses": {
+                    "200": {
+                        "description": "List of tile maps",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TileMap"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Tile Maps"
+                ],
+                "summary": "Create a new tile map",
+                "description": "Store a newly created tile map in storage.",
+                "operationId": "0a90d1cc4f40966f1f3bf0001c3be798",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TileMapStoreRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tile map created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TileMap"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tile-maps/{tileMap}": {
+            "get": {
+                "tags": [
+                    "Tile Maps"
+                ],
+                "summary": "Get a specific tile map",
+                "description": "Display the specified tile map.",
+                "operationId": "b48e3df75f9920260dafb8ae18e86131",
+                "parameters": [
+                    {
+                        "name": "tileMap",
+                        "in": "path",
+                        "description": "ID of the tile map",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tile map details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TileMap"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tile map not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No query results for model [App\\Models\\TileMap] 1"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Tile Maps"
+                ],
+                "summary": "Update a tile map",
+                "description": "Update the specified tile map in storage.",
+                "operationId": "01ee3c7c4168755ed3ee3708251f233b",
+                "parameters": [
+                    {
+                        "name": "tileMap",
+                        "in": "path",
+                        "description": "ID of the tile map",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TileMapUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tile map updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TileMap"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tile map not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No query results for model [App\\Models\\TileMap] 1"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tile-sets": {
+            "get": {
+                "tags": [
+                    "Tile Sets"
+                ],
+                "summary": "Get all tile sets",
+                "description": "Get all tile sets",
+                "operationId": "bb944de821d7b8e00c9685276209ced4",
+                "responses": {
+                    "200": {
+                        "description": "List of tile sets",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TileSet"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Tile Sets"
+                ],
+                "summary": "Create a new tile set",
+                "description": "Create a new tile set",
+                "operationId": "429350cb4f811d952b289a6bdbc411f1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TileSetStoreRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tile set created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TileSet"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tile-sets/{uuid}": {
+            "get": {
+                "tags": [
+                    "Tile Sets"
+                ],
+                "summary": "Get a specific tile set",
+                "description": "Get a specific tile set",
+                "operationId": "2ced28a7f9a019b62abcfc37f95dda82",
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "UUID of the tile set",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tile set details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TileSet"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tile set not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Tile Sets"
+                ],
+                "summary": "Update a tile set",
+                "description": "Update a tile set",
+                "operationId": "005caffc9994a81b49553226d8440c57",
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "UUID of the tile set",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TileSetUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tile set updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TileSet"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tile set not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Layer": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "tile_map_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Ground Layer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "tile",
+                            "object"
+                        ],
+                        "example": "tile"
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "opacity": {
+                        "type": "number",
+                        "format": "float",
+                        "maximum": 1,
+                        "minimum": 0,
+                        "example": 1
+                    },
+                    "order": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "properties": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "x": {
+                                    "type": "integer",
+                                    "example": 0
+                                },
+                                "y": {
+                                    "type": "integer",
+                                    "example": 0
+                                },
+                                "brush": {
+                                    "properties": {
+                                        "tileset": {
+                                            "type": "string",
+                                            "example": "tileset-1"
+                                        },
+                                        "tileX": {
+                                            "type": "integer",
+                                            "example": 0
+                                        },
+                                        "tileY": {
+                                            "type": "integer",
+                                            "example": 0
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "LayerStoreRequest": {
+                "required": [
+                    "tile_map_id",
+                    "name",
+                    "type"
+                ],
+                "properties": {
+                    "tile_map_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "New Layer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "tile",
+                            "object"
+                        ],
+                        "example": "tile"
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "opacity": {
+                        "type": "number",
+                        "format": "float",
+                        "maximum": 1,
+                        "minimum": 0,
+                        "example": 1
+                    },
+                    "order": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "properties": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "LayerUpdateRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Updated Layer Name"
+                    },
+                    "visible": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "opacity": {
+                        "type": "number",
+                        "format": "float",
+                        "maximum": 1,
+                        "minimum": 0,
+                        "example": 0.8
+                    },
+                    "order": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "properties": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "TileMap": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "My Tile Map"
+                    },
+                    "width": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "height": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "tile_width": {
+                        "type": "integer",
+                        "example": 32
+                    },
+                    "tile_height": {
+                        "type": "integer",
+                        "example": 32
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "creator": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "layers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Layer"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "TileMapStoreRequest": {
+                "required": [
+                    "name",
+                    "width",
+                    "height",
+                    "tile_width",
+                    "tile_height"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "My New Tile Map"
+                    },
+                    "width": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 10
+                    },
+                    "height": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 10
+                    },
+                    "tile_width": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 32
+                    },
+                    "tile_height": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 32
+                    }
+                },
+                "type": "object"
+            },
+            "TileMapUpdateRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Updated Tile Map Name"
+                    },
+                    "width": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 20
+                    },
+                    "height": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 20
+                    },
+                    "tile_width": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 32
+                    },
+                    "tile_height": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 32
+                    }
+                },
+                "type": "object"
+            },
+            "TileSet": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "My Tile Set"
+                    },
+                    "image_width": {
+                        "type": "integer",
+                        "example": 512
+                    },
+                    "image_height": {
+                        "type": "integer",
+                        "example": 512
+                    },
+                    "tile_width": {
+                        "type": "integer",
+                        "example": 32
+                    },
+                    "tile_height": {
+                        "type": "integer",
+                        "example": 32
+                    },
+                    "tile_count": {
+                        "type": "integer",
+                        "example": 256
+                    },
+                    "first_gid": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "margin": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "spacing": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "TileSetStoreRequest": {
+                "required": [
+                    "name",
+                    "imageWidth",
+                    "imageHeight",
+                    "tileWidth",
+                    "tileHeight",
+                    "tileCount",
+                    "firstGid"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "My New Tile Set"
+                    },
+                    "imageWidth": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 512
+                    },
+                    "imageHeight": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 512
+                    },
+                    "tileWidth": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 32
+                    },
+                    "tileHeight": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 32
+                    },
+                    "tileCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 256
+                    },
+                    "firstGid": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 1
+                    },
+                    "margin": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "example": 0
+                    },
+                    "spacing": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "example": 0
+                    }
+                },
+                "type": "object"
+            },
+            "TileSetUpdateRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Updated Tile Set Name"
+                    },
+                    "imageWidth": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 1024
+                    },
+                    "imageHeight": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 1024
+                    },
+                    "tileWidth": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 64
+                    },
+                    "tileHeight": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 64
+                    },
+                    "tileCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 256
+                    },
+                    "firstGid": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 1
+                    },
+                    "margin": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "example": 2
+                    },
+                    "spacing": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "example": 2
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "John Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Tile Sets",
+            "description": "Endpoints for managing tile sets"
+        },
+        {
+            "name": "Tile Maps",
+            "description": "Tile Maps"
+        }
+    ]
+}

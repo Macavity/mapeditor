@@ -20,6 +20,8 @@ PHP/Laravel
 - Use PHP 8.1+ features when appropriate (e.g., typed properties, match expressions).
 - Follow PSR-12 coding standards.
 - Use strict typing: declare(strict_types=1);
+- For OpenAPI annotations use the #[OA\] syntax.
+- If possible prefer annotations over php docblocks
 - Utilize Laravel's built-in features and helpers when possible.
 - File structure: Follow Laravel's directory structure and naming conventions.
 - Implement proper error handling and logging:
