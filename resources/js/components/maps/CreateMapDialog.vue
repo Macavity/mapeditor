@@ -1,5 +1,5 @@
 <template>
-    <form @submit.prevent="createMap" class="space-y-6">
+    <form @submit.prevent="createMap" class="space-y-6" :data-testid="TestId.CREATE_MAP_FORM">
         <DialogHeader>
             <DialogTitle>Create New Map</DialogTitle>
             <DialogDescription>Create a new map with custom dimensions.</DialogDescription>
@@ -8,24 +8,24 @@
         <div class="space-y-4">
             <div class="space-y-2">
                 <Label>Name</Label>
-                <Input v-model="name" type="text" placeholder="Enter map name" required />
+                <Input v-model="name" type="text" placeholder="Enter map name" required :data-testid="TestId.MAP_NAME_INPUT" />
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="space-y-2">
                     <Label>Width (tiles)</Label>
-                    <Input v-model.number="width" type="number" min="1" required />
+                    <Input v-model.number="width" type="number" min="1" required :data-testid="TestId.MAP_WIDTH_INPUT" />
                 </div>
 
                 <div class="space-y-2">
                     <Label>Height (tiles)</Label>
-                    <Input v-model.number="height" type="number" min="1" required />
+                    <Input v-model.number="height" type="number" min="1" required :data-testid="TestId.MAP_HEIGHT_INPUT" />
                 </div>
             </div>
 
             <div class="space-y-2">
                 <Label>Tile Size (pixels)</Label>
-                <Input v-model.number="tileSize" type="number" min="1" required />
+                <Input v-model.number="tileSize" type="number" min="1" required :data-testid="TestId.MAP_TILE_SIZE_INPUT" />
             </div>
 
             <div v-if="error" class="text-sm text-red-500">
@@ -37,7 +37,7 @@
             <DialogClose asChild>
                 <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button type="submit" :disabled="isCreating">
+            <Button type="submit" :disabled="isCreating" :data-testid="TestId.CREATE_MAP_SUBMIT">
                 <div v-if="isCreating" class="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                 <span v-else>Create Map</span>
             </Button>
@@ -48,6 +48,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import { DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TestId } from '@/types/TestId';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMapStore } from '@/stores/mapStore';
