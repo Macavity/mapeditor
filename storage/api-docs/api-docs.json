@@ -470,7 +470,7 @@
                                     "properties": {
                                         "tileset": {
                                             "type": "string",
-                                            "example": "tileset-1"
+                                            "example": "0b74820e-fe8d-41e9-8a46-4f1650e91242"
                                         },
                                         "tileX": {
                                             "type": "integer",
