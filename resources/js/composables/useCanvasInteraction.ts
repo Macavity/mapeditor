@@ -1,10 +1,8 @@
-import { useSaveManager } from '@/composables/useSaveManager';
 import { useEditorStore } from '@/stores/editorStore';
 import { EditorTool } from '@/types/EditorTool';
 
 export function useCanvasInteraction() {
     const editorStore = useEditorStore();
-    const saveManager = useSaveManager();
 
     function calculateTilePosition(event: MouseEvent): { tileX: number; tileY: number } | null {
         const target = event.currentTarget as HTMLElement;
@@ -61,21 +59,14 @@ export function useCanvasInteraction() {
         if (editorStore.activeTool === EditorTool.DRAW && canPlaceTiles()) {
             // Place tiles (single or multi-tile)
             editorStore.placeTiles(position.tileX, position.tileY);
-            saveManager.markAsChanged();
             return { success: true, action: 'draw' };
         } else if (editorStore.activeTool === EditorTool.ERASE && canEraseTiles()) {
             // Erase tile
             const tileExists = editorStore.eraseTile(position.tileX, position.tileY);
-            if (tileExists) {
-                saveManager.markAsChanged();
-            }
             return { success: true, action: 'erase', tileExists };
         } else if (editorStore.activeTool === EditorTool.FILL && canFillTiles()) {
             // Fill connected tiles
             const filled = editorStore.fillTiles(position.tileX, position.tileY);
-            if (filled) {
-                saveManager.markAsChanged();
-            }
             return { success: true, action: 'fill', tileExists: filled };
         } else {
             return { success: false, action: 'none' };

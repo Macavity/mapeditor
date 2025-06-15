@@ -1,3 +1,4 @@
+import { useSaveManager } from '@/composables/useSaveManager';
 import { MapService } from '@/services/MapService';
 import type { BrushSelection, BrushSelectionConfig } from '@/types/BrushSelection';
 import { EditorTool } from '@/types/EditorTool';
@@ -202,6 +203,11 @@ export const useEditorStore = defineStore('editorStore', {
             }
 
             this.hasUnsavedChanges = true;
+            const saveManager = useSaveManager();
+            saveManager.markAsChanged();
+            saveManager.scheduleAutoSave(async () => {
+                await this.saveAllLayers();
+            });
         },
 
         eraseTile(mapX: number, mapY: number): boolean {
@@ -226,6 +232,11 @@ export const useEditorStore = defineStore('editorStore', {
                 // Remove the tile
                 this.layers[activeLayerIndex].data.splice(existingTileIndex, 1);
                 this.hasUnsavedChanges = true;
+                const saveManager = useSaveManager();
+                saveManager.markAsChanged();
+                saveManager.scheduleAutoSave(async () => {
+                    await this.saveAllLayers();
+                });
                 return true; // Tile was erased
             }
 
@@ -381,6 +392,11 @@ export const useEditorStore = defineStore('editorStore', {
             }
 
             this.hasUnsavedChanges = true;
+            const saveManager = useSaveManager();
+            saveManager.markAsChanged();
+            saveManager.scheduleAutoSave(async () => {
+                await this.saveAllLayers();
+            });
             return true;
         },
 
@@ -405,8 +421,15 @@ export const useEditorStore = defineStore('editorStore', {
         async saveAllLayers() {
             if (!this.mapMetadata.uuid) return;
 
-            await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
-            this.hasUnsavedChanges = false;
+            try {
+                await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
+                this.hasUnsavedChanges = false;
+                return { success: true };
+            } catch (error) {
+                console.error('Error saving layers:', error);
+                this.hasUnsavedChanges = true;
+                throw error; // Propagate the error to the save manager
+            }
         },
 
         async createSkyLayer(options?: { name?: string }) {

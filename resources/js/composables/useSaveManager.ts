@@ -44,19 +44,20 @@ export function useSaveManager() {
         }, 2000);
     }
 
-    async function saveWithErrorHandling(saveCallback: () => Promise<void>) {
-        if (isSaving.value) return false;
+    async function saveWithErrorHandling(saveFn: () => Promise<void>): Promise<void> {
+        if (isSaving.value) return;
 
         isSaving.value = true;
         saveError.value = null;
 
         try {
-            await saveCallback();
+            await saveFn();
             markAsSaved();
-            return true;
         } catch (error) {
-            saveError.value = error instanceof Error ? error.message : 'Save failed';
-            return false;
+            console.error('Save failed:', error);
+            saveError.value = error instanceof Error ? error.message : 'Failed to save changes';
+            hasUnsavedChanges.value = true;
+            throw error; // Re-throw to allow caller to handle
         } finally {
             isSaving.value = false;
         }
