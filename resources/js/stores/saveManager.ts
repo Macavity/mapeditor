@@ -10,9 +10,9 @@ export const useSaveManager = defineStore('saveManager', () => {
         isSaving: false,
         saveError: null as string | null,
         autoSaveEnabled: true,
-        autoSaveTimeout: null as NodeJS.Timeout | null
+        autoSaveTimeout: null as NodeJS.Timeout | null,
     });
-    
+
     // Computed
     const saveStatus = computed(() => {
         if (state.isSaving) return SaveStatusType.SAVING;
@@ -34,7 +34,10 @@ export const useSaveManager = defineStore('saveManager', () => {
     }
 
     async function saveWithErrorHandling(saveFn: () => Promise<void>): Promise<void> {
-        if (state.isSaving) return;
+        if (state.isSaving) {
+            console.warn('Save already in progress, ignoring duplicate save request');
+            return;
+        }
 
         state.isSaving = true;
         state.saveError = null;
@@ -77,6 +80,11 @@ export const useSaveManager = defineStore('saveManager', () => {
         if (!state.autoSaveEnabled && state.autoSaveTimeout) {
             clearTimeout(state.autoSaveTimeout);
             state.autoSaveTimeout = null;
+        } else if (state.autoSaveEnabled && state.hasUnsavedChanges) {
+            // If auto-save is enabled and there are unsaved changes, trigger auto-save
+            scheduleAutoSave(async () => {
+                // This will be handled by the editor store's saveAllLayers
+            });
         }
     }
 
@@ -101,23 +109,33 @@ export const useSaveManager = defineStore('saveManager', () => {
         // State
         hasUnsavedChanges: computed({
             get: () => state.hasUnsavedChanges,
-            set: (value) => { state.hasUnsavedChanges = value; }
+            set: (value) => {
+                state.hasUnsavedChanges = value;
+            },
         }),
         lastSaved: computed({
             get: () => state.lastSaved,
-            set: (value) => { state.lastSaved = value; }
+            set: (value) => {
+                state.lastSaved = value;
+            },
         }),
         isSaving: computed({
             get: () => state.isSaving,
-            set: (value) => { state.isSaving = value; }
+            set: (value) => {
+                state.isSaving = value;
+            },
         }),
         saveError: computed({
             get: () => state.saveError,
-            set: (value) => { state.saveError = value; }
+            set: (value) => {
+                state.saveError = value;
+            },
         }),
         autoSaveEnabled: computed({
             get: () => state.autoSaveEnabled,
-            set: (value) => { state.autoSaveEnabled = value; }
+            set: (value) => {
+                state.autoSaveEnabled = value;
+            },
         }),
         saveStatus,
 

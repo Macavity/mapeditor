@@ -10,29 +10,36 @@ interface SaveStatusConfig {
     text: () => string;
     icon: any;
     color: string;
+    showButton: boolean;
 }
 
 const editorStore = useEditorStore();
 const saveManager = useSaveManager();
 
 // Auto-save handler
-const handleAutoSave = async () => {
-    if (saveManager.hasUnsavedChanges && saveManager.autoSaveEnabled) {
-        await saveManager.saveWithErrorHandling(async () => {
-            await editorStore.saveAllLayers();
-        });
-    }
-};
-
-// Watch for changes and trigger auto-save
 watch(
-    () => saveManager.saveStatus,
-    async (newStatus: SaveStatusType) => {
-        if (newStatus === SaveStatusType.UNSAVED && saveManager.autoSaveEnabled) {
-            await handleAutoSave();
+    () => saveManager.hasUnsavedChanges,
+    (hasChanges) => {
+        if (hasChanges && saveManager.autoSaveEnabled) {
+            saveManager.scheduleAutoSave(async () => {
+                await editorStore.saveAllLayers();
+            });
         }
     },
-    { immediate: true },
+);
+
+// Watch for save status changes
+watch(
+    () => saveManager.saveStatus,
+    (newStatus) => {
+        if (newStatus === SaveStatusType.SAVED) {
+            // Success message is handled by the backend
+            console.log('Changes saved successfully');
+        } else if (newStatus === SaveStatusType.ERROR) {
+            // Error message is handled by the backend
+            console.error('Save failed:', saveManager.saveError);
+        }
+    },
 );
 
 const saveStatusConfig: Record<SaveStatusType, SaveStatusConfig> = {
@@ -58,9 +65,24 @@ const saveStatusConfig: Record<SaveStatusType, SaveStatusConfig> = {
     },
 };
 
-const currentStatusConfig = computed(() => {
-    return saveStatusConfig[saveManager.saveStatus] || saveStatusConfig[SaveStatusType.SAVED];
-});
+// Handle manual save
+async function handleManualSave() {
+    if (saveManager.isSaving) {
+        console.warn('Save already in progress');
+        return;
+    }
+
+    try {
+        await editorStore.saveAllLayers();
+    } catch (error) {
+        console.error('Manual save failed:', error);
+        // Error is already handled by the save manager
+    }
+}
+
+// Computed properties
+const currentStatus = computed(() => saveStatusConfig[saveManager.saveStatus]);
+const showSaveButton = computed(() => currentStatus.value.showButton && !saveManager.isSaving && saveManager.hasUnsavedChanges);
 
 function formatTime(date: Date | string): string {
     const now = new Date();
@@ -74,41 +96,31 @@ function formatTime(date: Date | string): string {
     return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-async function handleManualSave() {
-    // Use saveManager to handle the save with error handling
-    await saveManager.saveWithErrorHandling(async () => {
-        editorStore.saveAllLayers();
-    });
-}
+// Auto-save Toggle
+const handleAutoSaveToggle = () => {
+    saveManager.toggleAutoSave();
+};
 </script>
 
 <template>
     <div :data-testid="TestId.SAVE_STATUS" class="flex items-center gap-2 text-sm">
         <!-- Save Status -->
-        <div class="flex items-center gap-1.5" :class="currentStatusConfig.color">
-            <component 
-                :is="currentStatusConfig.icon" 
-                :data-testid="TestId.SAVE_STATUS_ICON" 
-                class="h-4 w-4" 
-            />
-            <span :data-testid="TestId.SAVE_STATUS_TEXT">{{ currentStatusConfig.text() }}</span>
+        <div class="flex items-center gap-1.5" :class="currentStatus.color">
+            <component :is="currentStatus.icon" :data-testid="TestId.SAVE_STATUS_ICON" class="h-4 w-4" />
+            <span :data-testid="TestId.SAVE_STATUS_TEXT">{{ currentStatus.text() }}</span>
         </div>
 
         <!-- Error Details -->
-        <div 
-            v-if="saveManager.saveError" 
-            :data-testid="TestId.SAVE_STATUS_ERROR"
-            class="text-xs text-red-600"
-        >
+        <div v-if="saveManager.saveError" :data-testid="TestId.SAVE_STATUS_ERROR" class="text-xs text-red-600">
             {{ saveManager.saveError }}
         </div>
 
         <!-- Manual Save Button -->
         <button
-            v-if="saveManager.hasUnsavedChanges && !saveManager.isSaving"
+            v-if="showSaveButton"
             :data-testid="TestId.SAVE_BUTTON"
             @click="handleManualSave"
-            class="rounded bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700"
+            class="rounded bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="saveManager.isSaving"
         >
             Save Now
@@ -117,7 +129,7 @@ async function handleManualSave() {
         <!-- Auto-save Toggle -->
         <button
             :data-testid="TestId.AUTO_SAVE_TOGGLE"
-            @click="saveManager.toggleAutoSave()"
+            @click="handleAutoSaveToggle"
             class="rounded border px-2 py-1 text-xs transition-colors"
             :class="
                 saveManager.autoSaveEnabled

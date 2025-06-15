@@ -1,5 +1,5 @@
-import { useSaveManager } from '@/composables/useSaveManager';
 import { MapService } from '@/services/MapService';
+import { useSaveManager } from '@/stores/saveManager';
 import type { BrushSelection, BrushSelectionConfig } from '@/types/BrushSelection';
 import { EditorTool } from '@/types/EditorTool';
 import { MapLayer } from '@/types/MapLayer';
@@ -34,7 +34,6 @@ export const useEditorStore = defineStore('editorStore', {
             backgroundPosition: '0px 0px',
             tilesetUuid: null,
         } as BrushSelection,
-        hasUnsavedChanges: false,
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
@@ -113,7 +112,8 @@ export const useEditorStore = defineStore('editorStore', {
                 }
 
                 this.loaded = true;
-                this.hasUnsavedChanges = false;
+                const saveManager = useSaveManager();
+                saveManager.markAsSaved();
             } catch (error) {
                 console.error('Error loading map:', error);
                 throw error;
@@ -202,7 +202,6 @@ export const useEditorStore = defineStore('editorStore', {
                 }
             }
 
-            this.hasUnsavedChanges = true;
             const saveManager = useSaveManager();
             saveManager.markAsChanged();
             saveManager.scheduleAutoSave(async () => {
@@ -231,7 +230,6 @@ export const useEditorStore = defineStore('editorStore', {
             if (existingTileIndex !== -1) {
                 // Remove the tile
                 this.layers[activeLayerIndex].data.splice(existingTileIndex, 1);
-                this.hasUnsavedChanges = true;
                 const saveManager = useSaveManager();
                 saveManager.markAsChanged();
                 saveManager.scheduleAutoSave(async () => {
@@ -391,7 +389,6 @@ export const useEditorStore = defineStore('editorStore', {
                 }
             }
 
-            this.hasUnsavedChanges = true;
             const saveManager = useSaveManager();
             saveManager.markAsChanged();
             saveManager.scheduleAutoSave(async () => {
@@ -423,11 +420,13 @@ export const useEditorStore = defineStore('editorStore', {
 
             try {
                 await MapService.saveLayers(this.mapMetadata.uuid, this.layers);
-                this.hasUnsavedChanges = false;
+                const saveManager = useSaveManager();
+                saveManager.markAsSaved();
                 return { success: true };
             } catch (error) {
                 console.error('Error saving layers:', error);
-                this.hasUnsavedChanges = true;
+                const saveManager = useSaveManager();
+                saveManager.markAsChanged();
                 throw error; // Propagate the error to the save manager
             }
         },
