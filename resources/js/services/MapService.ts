@@ -53,7 +53,21 @@ export class MapService {
     }
 
     static async saveLayers(mapUuid: string, layers: MapLayer[]): Promise<MapLayer[]> {
-        const response = await api.put<{ data: MapLayer[] }>(`${this.BASE_URL}/${mapUuid}/layers`, { layers });
+        // Ensure each layer's data is properly formatted
+        const formattedLayers = layers.map((layer) => ({
+            ...layer,
+            data: layer.data.map((tile) => ({
+                x: tile.x,
+                y: tile.y,
+                brush: {
+                    tileset: tile.brush.tileset,
+                    tileX: tile.brush.tileX,
+                    tileY: tile.brush.tileY,
+                },
+            })),
+        }));
+
+        const response = await api.put<{ data: MapLayer[] }>(`${this.BASE_URL}/${mapUuid}/layers`, { layers: formattedLayers });
         return response.data.data;
     }
 

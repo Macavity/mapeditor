@@ -28,15 +28,28 @@ class TileArrayCast implements CastsAttributes
 
     public function set($model, string $key, $value, array $attributes)
     {
-        // $value is expected to be an array of Tile objects
-        $tiles = array_map(function (Tile $tile) {
+        // Handle both Tile objects and arrays
+        $tiles = array_map(function ($tile) {
+            if ($tile instanceof Tile) {
+                return [
+                    'x' => $tile->x,
+                    'y' => $tile->y,
+                    'brush' => [
+                        'tileset' => $tile->brush->tileset,
+                        'tileX' => $tile->brush->tileX,
+                        'tileY' => $tile->brush->tileY,
+                    ],
+                ];
+            }
+            
+            // Handle array input
             return [
-                'x' => $tile->x,
-                'y' => $tile->y,
+                'x' => $tile['x'],
+                'y' => $tile['y'],
                 'brush' => [
-                    'tileset' => $tile->brush->tileset,
-                    'tileX' => $tile->brush->tileX,
-                    'tileY' => $tile->brush->tileY,
+                    'tileset' => $tile['brush']['tileset'],
+                    'tileX' => $tile['brush']['tileX'],
+                    'tileY' => $tile['brush']['tileY'],
                 ],
             ];
         }, $value);
