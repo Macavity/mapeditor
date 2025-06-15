@@ -109,10 +109,6 @@ const handleMouseLeave = () => {
         @mouseleave="handleMouseLeave"
         @click="onCanvasClick"
         class="border-opacity-50 relative border"
-        :style="{
-            width: store.canvasWidth + 'px',
-            height: store.canvasHeight + 'px',
-        }"
     >
         <!-- Restored tool cursor component with shared state -->
         <ToolCursor ref="toolCursorRef" />

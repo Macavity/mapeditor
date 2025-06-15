@@ -1,3 +1,4 @@
+import { SaveStatusType } from '@/types/SaveStatus';
 import { computed, readonly, ref } from 'vue';
 
 export function useSaveManager() {
@@ -9,10 +10,10 @@ export function useSaveManager() {
     const autoSaveTimeout = ref<number | null>(null);
 
     const saveStatus = computed(() => {
-        if (isSaving.value) return 'saving';
-        if (saveError.value) return 'error';
-        if (hasUnsavedChanges.value) return 'unsaved';
-        return 'saved';
+        if (isSaving.value) return SaveStatusType.SAVING;
+        if (saveError.value) return SaveStatusType.ERROR;
+        if (hasUnsavedChanges.value) return SaveStatusType.UNSAVED;
+        return SaveStatusType.SAVED;
     });
 
     function markAsChanged() {
@@ -65,6 +66,7 @@ export function useSaveManager() {
 
     function toggleAutoSave() {
         autoSaveEnabled.value = !autoSaveEnabled.value;
+        console.log('Auto-save enabled: ' + autoSaveEnabled.value);
 
         if (!autoSaveEnabled.value && autoSaveTimeout.value) {
             clearTimeout(autoSaveTimeout.value);

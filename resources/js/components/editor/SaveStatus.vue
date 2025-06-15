@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { useSaveManager } from '@/composables/useSaveManager';
 import { useEditorStore } from '@/stores/editorStore';
+import { useSaveManager } from '@/stores/saveManager';
+import { SaveStatusType } from '@/types/SaveStatus';
+import { TestId } from '@/types/TestId';
 import { AlertCircle, Check, Clock, Save } from 'lucide-vue-next';
-import { computed } from 'vue';
-
-enum SaveStatusType {
-    SAVING = 'saving',
-    ERROR = 'error',
-    UNSAVED = 'unsaved',
-    SAVED = 'saved',
-}
+import { computed, watch } from 'vue';
 
 interface SaveStatusConfig {
     text: () => string;
@@ -19,6 +14,26 @@ interface SaveStatusConfig {
 
 const editorStore = useEditorStore();
 const saveManager = useSaveManager();
+
+// Auto-save handler
+const handleAutoSave = async () => {
+    if (saveManager.hasUnsavedChanges && saveManager.autoSaveEnabled) {
+        await saveManager.saveWithErrorHandling(async () => {
+            await editorStore.saveAllLayers();
+        });
+    }
+};
+
+// Watch for changes and trigger auto-save
+watch(
+    () => saveManager.saveStatus,
+    async (newStatus: SaveStatusType) => {
+        if (newStatus === SaveStatusType.UNSAVED && saveManager.autoSaveEnabled) {
+            await handleAutoSave();
+        }
+    },
+    { immediate: true },
+);
 
 const saveStatusConfig: Record<SaveStatusType, SaveStatusConfig> = {
     [SaveStatusType.SAVING]: {
@@ -37,14 +52,14 @@ const saveStatusConfig: Record<SaveStatusType, SaveStatusConfig> = {
         color: 'text-yellow-600',
     },
     [SaveStatusType.SAVED]: {
-        text: () => (saveManager.lastSaved.value ? `Saved ${formatTime(saveManager.lastSaved.value)}` : 'Saved'),
+        text: () => (saveManager.lastSaved ? `Saved ${formatTime(saveManager.lastSaved)}` : 'Saved'),
         icon: Check,
         color: 'text-green-600',
     },
 };
 
 const currentStatusConfig = computed(() => {
-    return saveStatusConfig[saveManager.saveStatus.value as SaveStatusType] || saveStatusConfig[SaveStatusType.SAVED];
+    return saveStatusConfig[saveManager.saveStatus] || saveStatusConfig[SaveStatusType.SAVED];
 });
 
 function formatTime(date: Date | string): string {
@@ -68,21 +83,30 @@ async function handleManualSave() {
 </script>
 
 <template>
-    <div class="flex items-center gap-2 text-sm">
+    <div :data-testid="TestId.SAVE_STATUS" class="flex items-center gap-2 text-sm">
         <!-- Save Status -->
         <div class="flex items-center gap-1.5" :class="currentStatusConfig.color">
-            <component :is="currentStatusConfig.icon" class="h-4 w-4" />
-            <span>{{ currentStatusConfig.text() }}</span>
+            <component 
+                :is="currentStatusConfig.icon" 
+                :data-testid="TestId.SAVE_STATUS_ICON" 
+                class="h-4 w-4" 
+            />
+            <span :data-testid="TestId.SAVE_STATUS_TEXT">{{ currentStatusConfig.text() }}</span>
         </div>
 
         <!-- Error Details -->
-        <div v-if="saveManager.saveError" class="text-xs text-red-600">
+        <div 
+            v-if="saveManager.saveError" 
+            :data-testid="TestId.SAVE_STATUS_ERROR"
+            class="text-xs text-red-600"
+        >
             {{ saveManager.saveError }}
         </div>
 
         <!-- Manual Save Button -->
         <button
             v-if="saveManager.hasUnsavedChanges && !saveManager.isSaving"
+            :data-testid="TestId.SAVE_BUTTON"
             @click="handleManualSave"
             class="rounded bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700"
             :disabled="saveManager.isSaving"
@@ -92,6 +116,7 @@ async function handleManualSave() {
 
         <!-- Auto-save Toggle -->
         <button
+            :data-testid="TestId.AUTO_SAVE_TOGGLE"
             @click="saveManager.toggleAutoSave()"
             class="rounded border px-2 py-1 text-xs transition-colors"
             :class="
