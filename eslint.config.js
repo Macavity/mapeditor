@@ -17,6 +17,7 @@ export default defineConfigWithVueTs(
             'storage/app/*',
             'tests/static/*',
             'playwright-report/*',
+            '**/*.spec.ts',
         ],
     },
     {
