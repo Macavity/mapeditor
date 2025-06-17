@@ -16,6 +16,8 @@ export default defineConfigWithVueTs(
             'resources/js/components/ui/*',
             'storage/app/*',
             'tests/static/*',
+            'playwright-report/*',
+            '**/*.spec.ts',
         ],
     },
     {

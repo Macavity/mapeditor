@@ -1,17 +1,19 @@
 <template>
     <div class="map-list">
-        <div v-if="store.loading && !deletingMap" class="flex items-center justify-center p-4">
+        <div v-if="store.loading && !deletingMap" :data-testid="TestId.MAP_LIST_LOADING" class="flex items-center justify-center p-4">
             <div class="border-primary h-8 w-8 animate-spin rounded-full border-b-2"></div>
         </div>
 
-        <div v-else-if="store.error" class="p-4 text-red-500">
+        <div v-else-if="store.error" :data-testid="TestId.MAP_LIST_ERROR" class="p-4 text-red-500">
             {{ store.error }}
         </div>
 
-        <div v-else-if="store.maps.length === 0" class="p-4 text-gray-500">No maps found. Create your first map using the panel above.</div>
+        <div v-else-if="store.maps.length === 0" :data-testid="TestId.MAP_LIST_EMPTY_STATE" class="p-4 text-gray-500">
+            No maps found. Create your first map using the panel above.
+        </div>
 
         <div v-else class="relative overflow-x-auto">
-            <table class="w-full text-left text-sm">
+            <table :data-testid="TestId.MAP_LIST_TABLE" class="w-full text-left text-sm">
                 <thead class="bg-sidebar-border/5 text-xs uppercase">
                     <tr>
                         <th scope="col" class="px-6 py-3">Name</th>
@@ -21,14 +23,22 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="map in store.maps" :key="map.uuid" class="border-sidebar-border/10 hover:bg-sidebar-border/5 border-b">
-                        <td class="px-6 py-4 font-medium">{{ map.name }}</td>
+                    <tr
+                        v-for="map in store.maps"
+                        :key="map.uuid"
+                        :data-testid="`${TestId.MAP_ROW}-${map.uuid}`"
+                        class="border-sidebar-border/10 hover:bg-sidebar-border/5 border-b"
+                    >
+                        <td class="px-6 py-4 font-medium" :data-testid="`${TestId.MAP_ROW_NAME}`">
+                            {{ map.name }}
+                        </td>
                         <td class="px-6 py-4 text-gray-500">{{ map.width }}x{{ map.height }}</td>
                         <td class="px-6 py-4 text-gray-500">{{ new Date(map.created_at).toLocaleDateString() }}</td>
                         <td class="px-6 py-4">
                             <div class="flex justify-end gap-2">
                                 <button
                                     type="button"
+                                    :data-testid="`${TestId.MAP_ROW_EDIT_BUTTON}-${map.uuid}`"
                                     @click="goToMapEdit(map.uuid)"
                                     class="ring-offset-background focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
                                 >
@@ -36,6 +46,7 @@
                                 </button>
                                 <button
                                     type="button"
+                                    :data-testid="`${TestId.MAP_ROW_DELETE_BUTTON}-${map.uuid}`"
                                     @click="deleteMap(map.uuid)"
                                     :disabled="deletingMap === map.uuid"
                                     class="ring-offset-background focus-visible:ring-ring bg-destructive text-destructive-foreground hover:bg-destructive/90 inline-flex h-9 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
@@ -54,6 +65,8 @@
 
 <script setup lang="ts">
 import { useMapStore } from '@/stores/mapStore';
+import { TestId } from '@/types/TestId';
+
 import { router } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 

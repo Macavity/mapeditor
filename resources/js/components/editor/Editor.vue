@@ -1,5 +1,5 @@
 <template>
-    <div class="flex h-[calc(100vh-10rem)] flex-col gap-4 overflow-hidden">
+    <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
             <SaveStatus />
@@ -12,12 +12,8 @@
         <div class="flex flex-1 gap-4">
             <!-- Left Sidebar -->
             <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4 transition-all duration-200">
-                <section class="border-sidebar-border/70 dark:border-sidebar-border min-h-0 flex-1 overflow-auto rounded-xl border p-4">
-                    <EditorLayers />
-                </section>
-                <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4" v-show="store.showProperties">
-                    <EditorMapProperties v-if="store.mapMetadata" />
-                </section>
+                <EditorLayers />
+                <EditorMapProperties v-if="store.showProperties" />
             </aside>
 
             <!-- Main Canvas -->

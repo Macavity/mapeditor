@@ -1,26 +1,13 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
 import { EditorTool } from '@/types/EditorTool';
-import { Eraser, FileJson, Grid, Layers, Paintbrush, PaintBucket } from 'lucide-vue-next';
+import { Eraser, Grid, Layers, Paintbrush, PaintBucket } from 'lucide-vue-next';
 
 const store = useEditorStore();
 </script>
 
 <template>
     <div class="flex items-center gap-4" role="toolbar">
-        <!-- Import JSON Button -->
-        <div class="flex" role="group">
-            <button
-                type="button"
-                class="border-primary text-primary hover:bg-primary flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors hover:text-white"
-                data-toggle="modal"
-                data-target="#import-json-modal"
-            >
-                <FileJson class="h-4 w-4" />
-                Import JSON File
-            </button>
-        </div>
-
         <!-- Toggle Buttons -->
         <div class="flex gap-2" role="group">
             <button

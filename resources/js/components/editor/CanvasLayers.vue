@@ -16,7 +16,7 @@ const toolCursorRef = ref<InstanceType<typeof ToolCursor> | null>(null);
 
 // Feedback state for empty tile clicks
 const showEmptyTileMessage = ref(false);
-const emptyTileMessageTimeout = ref<number | null>(null);
+const emptyTileMessageTimeout = ref<NodeJS.Timeout | null>(null);
 
 // Centralized cursor state management
 const mapTileWidth = computed(() => store.mapMetadata.tileWidth);
@@ -109,10 +109,6 @@ const handleMouseLeave = () => {
         @mouseleave="handleMouseLeave"
         @click="onCanvasClick"
         class="border-opacity-50 relative border"
-        :style="{
-            width: store.canvasWidth + 'px',
-            height: store.canvasHeight + 'px',
-        }"
     >
         <!-- Restored tool cursor component with shared state -->
         <ToolCursor ref="toolCursorRef" />
