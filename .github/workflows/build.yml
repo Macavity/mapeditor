@@ -58,7 +58,7 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress
+        run: composer install --prefer-dist --no-progress --no-scripts
 
       - name: Copy Environment File
         run: cp .env.example .env
@@ -103,11 +103,11 @@ jobs:
       - name: Install Node Dependencies
         run: npm ci
 
-      - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
       - name: Copy Environment File
         run: cp .env.example .env
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Generate Application Key
         run: php artisan key:generate
