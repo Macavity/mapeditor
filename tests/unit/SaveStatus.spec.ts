@@ -1,6 +1,7 @@
 import SaveStatus from '@/components/editor/SaveStatus.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { useSaveManager } from '@/stores/saveManager';
+import { SaveStatusType } from '@/types/SaveStatus';
 import { TestId } from '@/types/TestId';
 import { createTestingPinia } from '@pinia/testing';
 import { mount } from '@vue/test-utils';
@@ -22,32 +23,39 @@ describe('SaveStatus.vue', () => {
     let saveManager: ReturnType<typeof useSaveManager>;
     let clock: any;
 
-    const createWrapper = async () => {
+    async function createWrapper() {
         const pinia = createTestingPinia({
             createSpy: vi.fn,
             stubActions: false,
+            initialState: {
+                saveManager: {
+                    autoSaveEnabled: true,
+                    hasUnsavedChanges: false,
+                    isSaving: false,
+                    saveError: null,
+                    lastSaved: null,
+                },
+            },
         });
+
         setActivePinia(pinia);
 
         // Create stores
-        saveManager = useSaveManager();
-        editorStore = useEditorStore(pinia);
-
-        // Mock editor store method
+        const saveManager = useSaveManager();
+        const editorStore = useEditorStore(pinia);
         editorStore.saveAllLayers = vi.fn().mockResolvedValue({ success: true });
 
         // Mount the component
-        wrapper = mount(SaveStatus, {
+        const wrapper = mount(SaveStatus, {
             global: {
                 plugins: [pinia],
             },
         });
 
-        // Wait for initial render
         await nextTick();
 
         return { wrapper, saveManager, editorStore };
-    };
+    }
 
     beforeEach(() => {
         // Setup fake timers
@@ -74,11 +82,9 @@ describe('SaveStatus.vue', () => {
     it('shows saving state when isSaving is true', async () => {
         const { wrapper, saveManager } = await createWrapper();
 
-        // Trigger saving state by calling an action that sets isSaving
-        saveManager.$patch({
-            isSaving: true,
-            hasUnsavedChanges: true,
-        });
+        // Trigger saving state
+        saveManager.isSaving = true;
+        saveManager.hasUnsavedChanges = true;
         await nextTick();
 
         // Check the rendered output
@@ -87,7 +93,7 @@ describe('SaveStatus.vue', () => {
 
         expect(statusText.text()).toContain('Saving...');
         expect(statusIcon.text()).toBe('Clock');
-        expect(statusText.classes()).toContain('text-blue-600');
+        expect(statusIcon.classes()).toContain('text-blue-600');
     });
 
     it('shows error state when there is a save error', async () => {
@@ -95,10 +101,8 @@ describe('SaveStatus.vue', () => {
         const errorMessage = 'Failed to save';
 
         // Trigger error state
-        saveManager.$patch({
-            saveError: errorMessage,
-            hasUnsavedChanges: true,
-        });
+        saveManager.saveError = errorMessage;
+        saveManager.hasUnsavedChanges = true;
         await nextTick();
 
         const statusText = wrapper.find(`[data-testid="${TestId.SAVE_STATUS_TEXT}"]`);
@@ -109,24 +113,24 @@ describe('SaveStatus.vue', () => {
         expect(errorElement.exists()).toBe(true);
         expect(errorElement.text()).toContain(errorMessage);
         expect(statusIcon.text()).toBe('AlertCircle');
-        expect(statusText.classes()).toContain('text-red-600');
+        expect(statusIcon.classes()).toContain('text-red-600');
     });
 
     it('shows unsaved changes state when there are unsaved changes', async () => {
         const { wrapper, saveManager } = await createWrapper();
 
         // Trigger unsaved changes
-        saveManager.$patch({
-            hasUnsavedChanges: true,
-        });
+        saveManager.hasUnsavedChanges = true;
         await nextTick();
 
         const statusText = wrapper.find(`[data-testid="${TestId.SAVE_STATUS_TEXT}"]`);
         const statusIcon = wrapper.find(`[data-testid="${TestId.SAVE_STATUS_ICON}"]`);
+        const saveButton = wrapper.find(`[data-testid="${TestId.SAVE_BUTTON}"]`);
 
         expect(statusText.text()).toContain('Unsaved changes');
         expect(statusIcon.text()).toBe('Save');
-        expect(statusText.classes()).toContain('text-yellow-600');
+        expect(statusIcon.classes()).toContain('text-yellow-600');
+        expect(saveButton.exists()).toBe(true);
     });
 
     it('formats the last saved time correctly', async () => {
@@ -135,9 +139,7 @@ describe('SaveStatus.vue', () => {
         const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
         // Set last saved time
-        saveManager.$patch({
-            lastSaved: fiveMinutesAgo,
-        });
+        saveManager.lastSaved = fiveMinutesAgo;
         await nextTick();
 
         const statusText = wrapper.find(`[data-testid="${TestId.SAVE_STATUS_TEXT}"]`);
@@ -148,12 +150,11 @@ describe('SaveStatus.vue', () => {
         const { wrapper, saveManager, editorStore } = await createWrapper();
 
         // Set up unsaved changes
-        saveManager.$patch({
-            hasUnsavedChanges: true,
-        });
+        saveManager.hasUnsavedChanges = true;
         await nextTick();
 
         const saveButton = wrapper.find(`[data-testid="${TestId.SAVE_BUTTON}"]`);
+        expect(saveButton.exists()).toBe(true);
         await saveButton.trigger('click');
 
         // Wait for the save operation to complete
@@ -180,35 +181,10 @@ describe('SaveStatus.vue', () => {
     });
 
     it('disables save button when saving', async () => {
-        // Create a fresh instance with initial state
-        const pinia = createTestingPinia({
-            createSpy: vi.fn,
-            stubActions: false,
-            initialState: {
-                saveManager: {
-                    autoSaveEnabled: true,
-                    hasUnsavedChanges: true, // Ensure unsaved changes exist
-                    isSaving: false,
-                    saveError: null,
-                    lastSaved: null,
-                },
-            },
-        });
+        const { wrapper, saveManager } = await createWrapper();
 
-        setActivePinia(pinia);
-
-        // Create stores
-        const saveManager = useSaveManager();
-        const editorStore = useEditorStore(pinia);
-        editorStore.saveAllLayers = vi.fn().mockResolvedValue({ success: true });
-
-        // Mount the component
-        const wrapper = mount(SaveStatus, {
-            global: {
-                plugins: [pinia],
-            },
-        });
-
+        // Set up unsaved changes
+        saveManager.hasUnsavedChanges = true;
         await nextTick();
 
         // Verify save button is visible (has unsaved changes and not currently saving)
@@ -216,7 +192,7 @@ describe('SaveStatus.vue', () => {
         expect(saveButton.exists()).toBe(true);
 
         // Set saving state to true
-        await saveManager.$patch({ isSaving: true });
+        saveManager.isSaving = true;
         await nextTick();
 
         // Button should be disabled when saving
@@ -224,7 +200,7 @@ describe('SaveStatus.vue', () => {
         expect(saveButton.attributes('disabled')).toBeDefined();
 
         // Set saving state back to false
-        await saveManager.$patch({ isSaving: false });
+        saveManager.isSaving = false;
         await nextTick();
 
         // Button should be enabled again
@@ -233,35 +209,10 @@ describe('SaveStatus.vue', () => {
     });
 
     it('hides save button when saving', async () => {
-        // Create a fresh instance with initial state
-        const pinia = createTestingPinia({
-            createSpy: vi.fn,
-            stubActions: false,
-            initialState: {
-                saveManager: {
-                    autoSaveEnabled: true,
-                    hasUnsavedChanges: true, // Ensure unsaved changes exist
-                    isSaving: false,
-                    saveError: null,
-                    lastSaved: null,
-                },
-            },
-        });
+        const { wrapper, saveManager } = await createWrapper();
 
-        setActivePinia(pinia);
-
-        // Create stores
-        const saveManager = useSaveManager();
-        const editorStore = useEditorStore(pinia);
-        editorStore.saveAllLayers = vi.fn().mockResolvedValue({ success: true });
-
-        // Mount the component
-        const wrapper = mount(SaveStatus, {
-            global: {
-                plugins: [pinia],
-            },
-        });
-
+        // Set up unsaved changes
+        saveManager.hasUnsavedChanges = true;
         await nextTick();
 
         // Verify save button is visible when there are unsaved changes and not saving
@@ -269,7 +220,7 @@ describe('SaveStatus.vue', () => {
         expect(saveButton.exists(), 'Save button should exist when there are unsaved changes').toBe(true);
 
         // Set saving state to true
-        await saveManager.$patch({ isSaving: true });
+        saveManager.isSaving = true;
         await nextTick();
 
         // Button should be hidden when saving
@@ -277,7 +228,7 @@ describe('SaveStatus.vue', () => {
         expect(saveButton.exists(), 'Save button should not exist when saving').toBe(false);
 
         // Set saving state back to false
-        await saveManager.$patch({ isSaving: false });
+        saveManager.isSaving = false;
         await nextTick();
 
         // Button should be visible again
@@ -302,6 +253,7 @@ describe('SaveStatus.vue', () => {
                     isSaving: false,
                     saveError: null,
                     lastSaved: null,
+                    saveStatus: SaveStatusType.UNSAVED, // Explicitly set save status
                 },
             },
         });

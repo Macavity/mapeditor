@@ -47,21 +47,25 @@ const saveStatusConfig: Record<SaveStatusType, SaveStatusConfig> = {
         text: () => 'Saving...',
         icon: Clock,
         color: 'text-blue-600',
+        showButton: false,
     },
     [SaveStatusType.ERROR]: {
         text: () => 'Save failed',
         icon: AlertCircle,
         color: 'text-red-600',
+        showButton: true,
     },
     [SaveStatusType.UNSAVED]: {
         text: () => 'Unsaved changes',
         icon: Save,
         color: 'text-yellow-600',
+        showButton: true,
     },
     [SaveStatusType.SAVED]: {
         text: () => (saveManager.lastSaved ? `Saved ${formatTime(saveManager.lastSaved)}` : 'Saved'),
         icon: Check,
         color: 'text-green-600',
+        showButton: false,
     },
 };
 
@@ -105,9 +109,9 @@ const handleAutoSaveToggle = () => {
 <template>
     <div :data-testid="TestId.SAVE_STATUS" class="flex items-center gap-2 text-sm">
         <!-- Save Status -->
-        <div class="flex items-center gap-1.5" :class="currentStatus.color">
-            <component :is="currentStatus.icon" :data-testid="TestId.SAVE_STATUS_ICON" class="h-4 w-4" />
-            <span :data-testid="TestId.SAVE_STATUS_TEXT">{{ currentStatus.text() }}</span>
+        <div class="flex items-center gap-1.5">
+            <component :is="currentStatus.icon" :data-testid="TestId.SAVE_STATUS_ICON" class="h-4 w-4" :class="currentStatus.color" />
+            <span :data-testid="TestId.SAVE_STATUS_TEXT" :class="currentStatus.color">{{ currentStatus.text() }}</span>
         </div>
 
         <!-- Error Details -->
