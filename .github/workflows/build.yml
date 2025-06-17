@@ -107,7 +107,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
       - name: Generate Application Key
         run: php artisan key:generate
