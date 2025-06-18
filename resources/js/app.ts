@@ -8,6 +8,7 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
+import { initializeSentry } from './lib/sentry';
 
 const appName = import.meta.env.VITE_APP_NAME;
 
@@ -18,11 +19,12 @@ createInertiaApp({
         const pinia = createPinia();
         pinia.use(piniaPluginPersistedState);
 
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .use(pinia)
-            .use(ZiggyVue)
-            .mount(el);
+        const app = createApp({ render: () => h(App, props) });
+
+        // Initialize Sentry
+        initializeSentry(app, appName);
+
+        app.use(plugin).use(pinia).use(ZiggyVue).mount(el);
     },
     progress: {
         color: '#4B5563',
