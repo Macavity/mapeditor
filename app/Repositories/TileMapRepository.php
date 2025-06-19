@@ -9,7 +9,7 @@ use App\Models\TileSet;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 
-class MapRepository
+class TileMapRepository
 {
     /**
      * Find a map by full or partial UUID.

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Repositories\MapRepository;
+use App\Repositories\TileMapRepository;
 use App\Services\MapExportService;
 use App\DataTransferObjects\Export\ExportMapFormatV1;
 use Illuminate\Console\Command;
@@ -28,7 +28,7 @@ class ExportMapCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(MapRepository $mapRepository): int
+    public function handle(TileMapRepository $mapRepository): int
     {
         $uuid = $this->argument('uuid');
         $format = $this->option('format');

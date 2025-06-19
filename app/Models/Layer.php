@@ -103,6 +103,7 @@ class Layer extends Model
         'data',
         'visible',
         'opacity',
+        'image_path',
     ];
 
     protected $casts = [
@@ -137,6 +138,7 @@ class Layer extends Model
         'data', // Array of Tile objects
         'visible',
         'opacity',
+        'image_path',
         'created_at',
         'updated_at',
     ];
