@@ -51,9 +51,8 @@ class TileMapController extends Controller
         ],
         LayerType::FieldType->value => [
             'name_prefix' => 'Field Type Layer',
-            'z_index_strategy' => 'above_types', // Above specific types
-            'affected_types' => [LayerType::Background->value, LayerType::Floor->value, LayerType::Object->value],
-            'shift_types' => [LayerType::Sky->value], // Shift sky layers up
+            'z_index_strategy' => 'top', // Always on top of all other layers
+            'affected_types' => [], // No other layers affected
         ],
     ];
 
@@ -324,6 +323,11 @@ class TileMapController extends Controller
         $updatedLayers = DB::transaction(function () use ($validated, $tileMap) {
             $layers = [];
             
+            // Get the highest z-index of non-field type layers for validation
+            $maxNonFieldTypeZ = $tileMap->layers()
+                ->where('type', '!=', LayerType::FieldType->value)
+                ->max('z') ?? -1;
+            
             foreach ($validated['layers'] as $layerData) {
                 $layer = $tileMap->layers()->where('uuid', $layerData['uuid'])->first();
                 
@@ -344,7 +348,12 @@ class TileMapController extends Controller
                     $updateData['opacity'] = $layerData['opacity'];
                 }
                 if (isset($layerData['z'])) {
-                    $updateData['z'] = $layerData['z'];
+                    // Ensure field type layers stay above all other layers
+                    if ($layer->type === LayerType::FieldType) {
+                        $updateData['z'] = max($layerData['z'], $maxNonFieldTypeZ + 1);
+                    } else {
+                        $updateData['z'] = $layerData['z'];
+                    }
                 }
                 
                 // Only update if there are fields to update
@@ -384,6 +393,14 @@ class TileMapController extends Controller
             'width' => 'sometimes|integer|min:1',
             'height' => 'sometimes|integer|min:1',
         ]);
+
+        // Ensure field type layers stay above all other layers
+        if (isset($validated['z']) && $layer->type === LayerType::FieldType) {
+            $maxNonFieldTypeZ = $tileMap->layers()
+                ->where('type', '!=', LayerType::FieldType->value)
+                ->max('z') ?? -1;
+            $validated['z'] = max($validated['z'], $maxNonFieldTypeZ + 1);
+        }
 
         $layer->update($validated);
 

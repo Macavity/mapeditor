@@ -133,6 +133,9 @@ const renderFieldTypeLayer = async (ctx: CanvasRenderingContext2D) => {
         await store.loadFieldTypes();
     }
 
+    // Set opacity for field types so background shows through
+    ctx.globalAlpha = 0.5;
+
     // Draw each field type
     for (const fieldTypeTile of props.layer.data as FieldTypeTile[]) {
         // Skip invalid field type tiles
@@ -152,19 +155,10 @@ const renderFieldTypeLayer = async (ctx: CanvasRenderingContext2D) => {
         // Draw field type as a colored rectangle
         ctx.fillStyle = fieldType.color;
         ctx.fillRect(destX, destY, store.mapMetadata.tileWidth, store.mapMetadata.tileHeight);
-
-        // Add a border to make it more visible
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(destX, destY, store.mapMetadata.tileWidth, store.mapMetadata.tileHeight);
-
-        // Add field type name as text
-        ctx.fillStyle = '#000000';
-        ctx.font = '8px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(fieldType.name, destX + store.mapMetadata.tileWidth / 2, destY + store.mapMetadata.tileHeight / 2);
     }
+
+    // Reset globalAlpha back to 1.0 for other layers
+    ctx.globalAlpha = 1.0;
 };
 
 // Expose render method for parent component

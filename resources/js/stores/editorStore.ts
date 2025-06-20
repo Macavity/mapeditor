@@ -52,11 +52,32 @@ export const useEditorStore = defineStore('editorStore', {
             return state.mapMetadata.height * state.mapMetadata.tileHeight;
         },
         layersSortedByZ: (state) => {
-            return [...state.layers].sort((a, b) => a.z - b.z);
+            // For rendering: field type layers always on top, then by z-index (lowest first for proper layering)
+            return [...state.layers].sort((a, b) => {
+                // Field type layers always come last (rendered on top)
+                if (a.type === MapLayerType.FieldType && b.type !== MapLayerType.FieldType) {
+                    return 1;
+                }
+                if (a.type !== MapLayerType.FieldType && b.type === MapLayerType.FieldType) {
+                    return -1;
+                }
+                // For non-field type layers, sort by z-index (lowest first for proper layering)
+                return a.z - b.z;
+            });
         },
         layersDisplayOrder: (state) => {
-            // For UI display: highest z-index at top of list (reverse order)
-            return [...state.layers].sort((a, b) => b.z - a.z);
+            // For UI display: field type layers always at top, then by z-index (highest at top)
+            return [...state.layers].sort((a, b) => {
+                // Field type layers always come first
+                if (a.type === MapLayerType.FieldType && b.type !== MapLayerType.FieldType) {
+                    return -1;
+                }
+                if (a.type !== MapLayerType.FieldType && b.type === MapLayerType.FieldType) {
+                    return 1;
+                }
+                // For non-field type layers, sort by z-index (highest first)
+                return b.z - a.z;
+            });
         },
         brushTilesWide: (state) => {
             return Math.ceil(state.brushSelection.width / state.mapMetadata.tileWidth);
