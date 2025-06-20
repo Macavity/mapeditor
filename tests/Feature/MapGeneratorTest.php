@@ -130,11 +130,11 @@ test('generates map images for visible layers only', function () {
     $this->mapGenerator->generateMapImage($this->map);
 
     // Check that only visible layer image was created
-    $visibleLayerPath = "public/maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
-    $hiddenLayerPath = "public/maps/{$this->map->id}/layer_{$this->hiddenLayer->id}.png";
+    $visibleLayerPath = "maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
+    $hiddenLayerPath = "maps/{$this->map->id}/layer_{$this->hiddenLayer->id}.png";
 
-    expect(Storage::exists($visibleLayerPath))->toBeTrue();
-    expect(Storage::exists($hiddenLayerPath))->toBeFalse();
+    expect(Storage::disk('public')->exists($visibleLayerPath))->toBeTrue();
+    expect(Storage::disk('public')->exists($hiddenLayerPath))->toBeFalse();
 
     // Check that layer image_path was updated
     $this->visibleLayer->refresh();
@@ -149,7 +149,7 @@ test('creates correct image dimensions', function () {
 
     $this->mapGenerator->generateMapImage($this->map);
 
-    $imagePath = Storage::path("app/public/maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png");
+    $imagePath = Storage::disk('public')->path("maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png");
     
     expect(file_exists($imagePath))->toBeTrue();
     
@@ -187,8 +187,8 @@ test('handles map with no visible layers', function () {
     $this->mapGenerator->generateMapImage($mapWithHiddenLayers);
 
     // Should not create any image files
-    $layerPath = "public/maps/{$mapWithHiddenLayers->id}/layer_{$hiddenLayer->id}.png";
-    expect(Storage::exists($layerPath))->toBeFalse();
+    $layerPath = "maps/{$mapWithHiddenLayers->id}/layer_{$hiddenLayer->id}.png";
+    expect(Storage::disk('public')->exists($layerPath))->toBeFalse();
 });
 
 test('handles layer with no tile data', function () {
@@ -208,8 +208,8 @@ test('handles layer with no tile data', function () {
     $this->mapGenerator->generateMapImage($this->map);
 
     // Should create an empty image file
-    $layerPath = "public/maps/{$this->map->id}/layer_{$emptyLayer->id}.png";
-    expect(Storage::exists($layerPath))->toBeTrue();
+    $layerPath = "maps/{$this->map->id}/layer_{$emptyLayer->id}.png";
+    expect(Storage::disk('public')->exists($layerPath))->toBeTrue();
 
     $emptyLayer->refresh();
     expect($emptyLayer->image_path)->toBe($layerPath);
@@ -239,8 +239,8 @@ test('handles missing tileset gracefully', function () {
     $this->mapGenerator->generateMapImage($this->map);
 
     // Should still create the image file
-    $layerPath = "public/maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
-    expect(Storage::exists($layerPath))->toBeTrue();
+    $layerPath = "maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
+    expect(Storage::disk('public')->exists($layerPath))->toBeTrue();
 });
 
 test('handles missing tileset image gracefully', function () {
@@ -275,8 +275,8 @@ test('handles missing tileset image gracefully', function () {
     $this->mapGenerator->generateMapImage($this->map);
 
     // Should still create the image file
-    $layerPath = "public/maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
-    expect(Storage::exists($layerPath))->toBeTrue();
+    $layerPath = "maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
+    expect(Storage::disk('public')->exists($layerPath))->toBeTrue();
 });
 
 test('creates directory structure correctly', function () {
@@ -288,12 +288,12 @@ test('creates directory structure correctly', function () {
     $this->mapGenerator->generateMapImage($this->map);
 
     // Check that the base directory was created
-    $baseDirectory = "public/maps/{$this->map->id}";
-    expect(Storage::exists($baseDirectory))->toBeTrue();
+    $baseDirectory = "maps/{$this->map->id}";
+    expect(Storage::disk('public')->exists($baseDirectory))->toBeTrue();
 
     // Check that the layer image was created in the correct location
     $layerPath = "{$baseDirectory}/layer_{$this->visibleLayer->id}.png";
-    expect(Storage::exists($layerPath))->toBeTrue();
+    expect(Storage::disk('public')->exists($layerPath))->toBeTrue();
 });
 
 test('updates layer image_path after generation', function () {
@@ -309,7 +309,7 @@ test('updates layer image_path after generation', function () {
 
     // After generation, image_path should be set
     $this->visibleLayer->refresh();
-    expect($this->visibleLayer->image_path)->toBe("public/maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png");
+    expect($this->visibleLayer->image_path)->toBe("maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png");
 });
 
 test('handles multiple tilesets in same layer', function () {
@@ -346,11 +346,11 @@ test('handles multiple tilesets in same layer', function () {
     $this->mapGenerator->generateMapImage($this->map);
 
     // Should create the image successfully
-    $layerPath = "public/maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
-    expect(Storage::exists($layerPath))->toBeTrue();
+    $layerPath = "maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
+    expect(Storage::disk('public')->exists($layerPath))->toBeTrue();
 });
 
 afterEach(function () {
     // Clean up generated files
-    Storage::deleteDirectory('public/maps');
+    Storage::disk('public')->deleteDirectory('maps');
 }); 

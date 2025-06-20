@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { AlertTriangle, ArrowLeft } from 'lucide-vue-next';
+import { AlertTriangle, ArrowLeft, Play } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -65,6 +65,13 @@ onMounted(() => {
 
             <!-- Editor State -->
             <div v-else-if="store.mapMetadata" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border p-4">
+                <!-- Header with test button -->
+                <div class="absolute top-4 right-4 z-10">
+                    <Link :href="`/maps/${props.uuid}/test`" class="btn btn-secondary flex items-center gap-2">
+                        <Play class="h-4 w-4" />
+                        Test Map
+                    </Link>
+                </div>
                 <Editor />
             </div>
         </div>

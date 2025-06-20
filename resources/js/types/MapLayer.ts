@@ -2,6 +2,8 @@ export enum MapLayerType {
     Background = 'background',
     Floor = 'floor',
     Sky = 'sky',
+    Object = 'object',
+    Player = 'player',
     FieldTypes = 'field_type',
 }
 

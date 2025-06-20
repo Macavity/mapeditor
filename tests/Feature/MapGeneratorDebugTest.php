@@ -69,18 +69,18 @@ test('debug map generator', function () {
         $mapGenerator->generateMapImage($map);
         
         // Check what happened
-        $layerPath = "public/maps/{$map->id}/layer_{$layer->id}.png";
+        $layerPath = "maps/{$map->id}/layer_{$layer->id}.png";
         dump("Layer path: " . $layerPath);
-        dump("Storage exists: " . (Storage::exists($layerPath) ? 'true' : 'false'));
-        dump("Full path: " . Storage::path($layerPath));
-        dump("File exists: " . (file_exists(Storage::path($layerPath)) ? 'true' : 'false'));
+        dump("Storage exists: " . (Storage::disk('public')->exists($layerPath) ? 'true' : 'false'));
+        dump("Full path: " . Storage::disk('public')->path($layerPath));
+        dump("File exists: " . (file_exists(Storage::disk('public')->path($layerPath)) ? 'true' : 'false'));
         
         $layer->refresh();
         dump("Layer image_path: " . $layer->image_path);
         
         // Check if directory was created
-        $baseDirectory = "public/maps/{$map->id}";
-        dump("Base directory exists: " . (Storage::exists($baseDirectory) ? 'true' : 'false'));
+        $baseDirectory = "maps/{$map->id}";
+        dump("Base directory exists: " . (Storage::disk('public')->exists($baseDirectory) ? 'true' : 'false'));
         
     } catch (Exception $e) {
         dump("Exception: " . $e->getMessage());
@@ -88,5 +88,5 @@ test('debug map generator', function () {
     }
     
     // Clean up
-    Storage::deleteDirectory('public/maps');
+    Storage::disk('public')->deleteDirectory('maps');
 }); 

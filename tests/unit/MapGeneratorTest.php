@@ -139,9 +139,9 @@ class MapGeneratorTest extends TestCase
         $method = $reflection->getMethod('saveLayerImage');
         $method->setAccessible(true);
         
-        $result = $method->invoke($this->mapGenerator, $this->imageInterface, $layer, 'public/maps/1');
+        $result = $method->invoke($this->mapGenerator, $this->imageInterface, $layer, 'maps/1');
         
-        $this->assertEquals('public/maps/1/layer_5.png', $result);
+        $this->assertEquals('maps/1/layer_5.png', $result);
     }
 
     public function test_extract_tileset_uuids_returns_unique_uuids()
@@ -341,7 +341,7 @@ class MapGeneratorTest extends TestCase
     public function test_update_layer_image_path_updates_layer()
     {
         $layer = $this->createMockLayer();
-        $imagePath = 'public/maps/1/layer_5.png';
+        $imagePath = 'maps/1/layer_5.png';
         
         $layer->shouldReceive('update')
             ->once()
