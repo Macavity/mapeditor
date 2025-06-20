@@ -2,7 +2,13 @@
     <div class="flex flex-col gap-4">
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
-            <SaveStatus />
+            <div class="flex items-center gap-4">
+                <SaveStatus />
+                <Link :href="`/maps/${map.uuid}/test`" class="btn btn-secondary flex items-center gap-2">
+                    <Play class="h-4 w-4" />
+                    Test Map
+                </Link>
+            </div>
         </div>
 
         <div class="mb-4">
@@ -43,6 +49,8 @@ import EditorToolbar from '@/components/editor/EditorToolbar.vue';
 import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
+import { Link } from '@inertiajs/vue3';
+import { Play } from 'lucide-vue-next';
 import { reactive } from 'vue';
 
 const store = useEditorStore();
