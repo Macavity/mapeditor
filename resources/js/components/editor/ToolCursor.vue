@@ -2,6 +2,7 @@
 import { useEditorStore } from '@/stores/editorStore';
 import type { CursorState } from '@/types/CursorState';
 import { EditorTool } from '@/types/EditorTool';
+import { isFieldTypeLayer, isTileLayer } from '@/types/MapLayer';
 import { computed, defineAsyncComponent, inject, provide, ref } from 'vue';
 
 const store = useEditorStore();
@@ -9,25 +10,52 @@ const store = useEditorStore();
 // Inject shared cursor state from CanvasLayers
 const cursorState = inject<CursorState>('cursorState');
 
+if (!cursorState) {
+    throw new Error('ToolCursor: cursorState not provided, cursor functionality may not work properly');
+}
+
 // Lazy load tool components only when needed
 const BrushCursor = defineAsyncComponent(() => import('./BrushCursor.vue'));
 const EraseCursor = defineAsyncComponent(() => import('./EraseCursor.vue'));
 const FillCursor = defineAsyncComponent(() => import('./FillCursor.vue'));
+const FieldTypeCursor = defineAsyncComponent(() => import('./FieldTypeCursor.vue'));
 
 // Reference to the active cursor component
 const activeCursorRef = ref<any>(null);
 
-// Only instantiate the component for the active tool
+// Get the active layer
+const activeLayer = computed(() => {
+    if (!store.activeLayer) return null;
+    return store.layers.find((layer) => layer.uuid === store.activeLayer);
+});
+
+// Only instantiate the component for the active tool and layer type
 const activeToolComponent = computed(() => {
+    const layer = activeLayer.value;
+
+    if (!layer) return null;
+
     switch (store.activeTool) {
         case EditorTool.DRAW:
-            // Only show brush cursor if we have a valid brush selection
-            return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? BrushCursor : null;
+            if (isTileLayer(layer)) {
+                // Show brush cursor for tile layers if we have a valid brush selection
+                return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? BrushCursor : null;
+            } else if (isFieldTypeLayer(layer)) {
+                // Show field type cursor for field type layers if we have a selected field type
+                return store.getSelectedFieldTypeId() !== null ? FieldTypeCursor : null;
+            }
+            return null;
         case EditorTool.ERASE:
             return EraseCursor;
         case EditorTool.FILL:
-            // Only show fill cursor if we have a valid brush selection
-            return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? FillCursor : null;
+            if (isTileLayer(layer)) {
+                // Show fill cursor for tile layers if we have a valid brush selection
+                return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? FillCursor : null;
+            } else if (isFieldTypeLayer(layer)) {
+                // Show fill cursor for field type layers if we have a selected field type
+                return store.getSelectedFieldTypeId() !== null ? FillCursor : null;
+            }
+            return null;
         default:
             return null;
     }

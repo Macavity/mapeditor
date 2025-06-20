@@ -83,8 +83,12 @@ const handleMouseMove = (event: MouseEvent) => {
         updatePosition(event);
 
         // Update fill preview when fill tool is active
-        if (store.activeTool === EditorTool.FILL && toolCursorRef.value) {
-            toolCursorRef.value.updateFillPreview(event);
+        if (store.activeTool === EditorTool.FILL && toolCursorRef.value?.updateFillPreview) {
+            try {
+                toolCursorRef.value.updateFillPreview(event);
+            } catch (error) {
+                console.warn('Error updating fill preview:', error);
+            }
         }
     }
 };
@@ -103,13 +107,7 @@ const handleMouseLeave = () => {
 </script>
 
 <template>
-    <div
-        @mousemove="handleMouseMove"
-        @mouseenter="handleMouseEnter"
-        @mouseleave="handleMouseLeave"
-        @click="onCanvasClick"
-        class="border-opacity-50 relative border"
-    >
+    <div @mousemove="handleMouseMove" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave" @click="onCanvasClick" class="relative">
         <!-- Restored tool cursor component with shared state -->
         <ToolCursor ref="toolCursorRef" />
 

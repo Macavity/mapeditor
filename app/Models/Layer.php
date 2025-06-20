@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use App\Casts\TileArrayCast;
+use App\Casts\LayerDataCast;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -113,7 +113,7 @@ class Layer extends Model
         'z' => 'integer',
         'width' => 'integer',
         'height' => 'integer',
-        'data' => TileArrayCast::class,
+        'data' => LayerDataCast::class,
         'visible' => 'boolean',
         'opacity' => 'float',
         'created_at' => 'datetime',

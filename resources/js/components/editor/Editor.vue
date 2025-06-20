@@ -33,7 +33,8 @@
                     <EditorMiniMap />
                 </section>
                 <div class="min-h-0 flex-1">
-                    <TileSetBox />
+                    <TileSetBox v-if="isTileLayer" />
+                    <FieldTypeBox v-else-if="isFieldTypeLayer" />
                 </div>
             </aside>
         </div>
@@ -46,16 +47,33 @@ import EditorLayers from '@/components/editor/EditorLayers.vue';
 import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
 import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
+import FieldTypeBox from '@/components/editor/FieldTypeBox.vue';
 import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
+import { MapLayerType } from '@/types/MapLayer';
 import { Link } from '@inertiajs/vue3';
 import { Play } from 'lucide-vue-next';
-import { reactive } from 'vue';
+import { computed, reactive } from 'vue';
 
 const store = useEditorStore();
 
 const map = reactive(store.mapMetadata);
+
+// Computed properties to determine which sidebar to show
+const activeLayer = computed(() => {
+    if (!store.activeLayer) return null;
+    return store.layers.find((layer) => layer.uuid === store.activeLayer);
+});
+
+const isTileLayer = computed(() => {
+    if (!activeLayer.value) return false;
+    return [MapLayerType.Sky, MapLayerType.Floor, MapLayerType.Background, MapLayerType.Object].includes(activeLayer.value.type);
+});
+
+const isFieldTypeLayer = computed(() => {
+    return activeLayer.value?.type === MapLayerType.FieldType;
+});
 </script>
 
 <style lang="scss">

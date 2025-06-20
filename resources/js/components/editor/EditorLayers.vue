@@ -14,11 +14,11 @@ const isSky = (layer: MapLayer) => layer.type === MapLayerType.Sky;
 const isBackground = (layer: MapLayer) => layer.type === MapLayerType.Background;
 const isFloor = (layer: MapLayer) => layer.type === MapLayerType.Floor;
 const isObject = (layer: MapLayer) => layer.type === MapLayerType.Object;
-const isFieldType = (layer: MapLayer) => layer.type === MapLayerType.FieldTypes;
+const isFieldType = (layer: MapLayer) => layer.type === MapLayerType.FieldType;
 
 // Check if FieldType layer already exists
 const hasFieldTypeLayer = computed(() => {
-    return store.layers.some((layer) => layer.type === MapLayerType.FieldTypes);
+    return store.layers.some((layer) => layer.type === MapLayerType.FieldType);
 });
 
 const createSkyLayer = async () => {
@@ -34,7 +34,7 @@ const createObjectLayer = async () => {
 };
 
 const createFieldTypeLayer = async () => {
-    await createLayer(MapLayerType.FieldTypes);
+    await createLayer(MapLayerType.FieldType);
 };
 
 /**
@@ -55,7 +55,7 @@ const createLayer = async (layerType: MapLayerType) => {
             case MapLayerType.Object:
                 await store.createObjectLayer();
                 break;
-            case MapLayerType.FieldTypes:
+            case MapLayerType.FieldType:
                 await store.createFieldTypeLayer();
                 break;
             default:

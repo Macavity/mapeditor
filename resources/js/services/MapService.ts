@@ -1,4 +1,5 @@
 import { MapDto } from '@/dtos/Map.dto';
+import { LayerItemFactory } from '@/factories/LayerItemFactory';
 import api from '@/lib/api';
 import { MapLayer, MapLayerType } from '@/types/MapLayer';
 import type { TileMap } from '@/types/TileMap';
@@ -53,18 +54,10 @@ export class MapService {
     }
 
     static async saveLayers(mapUuid: string, layers: MapLayer[]): Promise<MapLayer[]> {
-        // Ensure each layer's data is properly formatted
+        // Ensure each layer's data is properly validated
         const formattedLayers = layers.map((layer) => ({
             ...layer,
-            data: layer.data.map((tile) => ({
-                x: tile.x,
-                y: tile.y,
-                brush: {
-                    tileset: tile.brush.tileset,
-                    tileX: tile.brush.tileX,
-                    tileY: tile.brush.tileY,
-                },
-            })),
+            data: LayerItemFactory.filterValidItems(layer.data),
         }));
 
         const response = await api.put<{ data: MapLayer[] }>(`${this.BASE_URL}/${mapUuid}/layers`, { layers: formattedLayers });
@@ -129,7 +122,7 @@ export class MapService {
             opacity?: number;
         },
     ): Promise<MapLayer> {
-        return this.createLayer(mapUuid, MapLayerType.FieldTypes, options);
+        return this.createLayer(mapUuid, MapLayerType.FieldType, options);
     }
 
     /**
