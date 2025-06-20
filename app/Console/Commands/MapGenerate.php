@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\TileMap;
-use App\Services\MapGenerator;
+use App\Services\TileMapGenerator;
 use App\Repositories\TileMapRepository;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;

@@ -14,11 +14,13 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Interfaces\ImageInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
+use Sentry\Severity;
+use Sentry\Laravel\Facade as Sentry;
 use RuntimeException;
 
-class MapGenerator
+class TileMapGenerator
 {
-    private const MAPS_BASE_DIRECTORY = 'public/maps';
+    private const MAPS_BASE_DIRECTORY = 'maps';
     private const LAYER_IMAGE_FORMAT = 'png';
     private const LAYER_IMAGE_QUALITY = 100;
     private const DIRECTORY_PERMISSIONS = 0755;
@@ -52,6 +54,53 @@ class MapGenerator
             ]);
             throw $e;
         }
+    }
+
+    public function generateLayerImage(Layer $layer): void
+    {
+        $this->configureImageProcessing();
+        
+        try {
+            if (!$layer->visible) {
+                Log::warning("Layer ID {$layer->id} is not visible, skipping generation");
+                return;
+            }
+            
+            $baseDirectory = $this->createMapDirectory($layer->tileMap);
+            Log::info("Generating single layer image: {$layer->name} (ID: {$layer->id})");
+            
+            $this->processLayer($layer, $layer->tileMap, $baseDirectory);
+            
+        } catch (RuntimeException $e) {
+            Log::error("Error generating layer image for layer ID {$layer->id}: " . $e->getMessage(), [
+                'exception' => $e,
+                'layer' => $layer->toArray(),
+            ]);
+            throw $e;
+        }
+    }
+
+    public function layerImageExists(Layer $layer): bool
+    {
+        if (!$layer->image_path) {
+            return false;
+        }
+        
+        return Storage::disk('public')->exists($layer->image_path);
+    }
+
+    public function isLayerImageUpToDate(Layer $layer): bool
+    {
+        if (!$this->layerImageExists($layer)) {
+            return false;
+        }
+        
+        // Check if the layer has been modified since the image was created
+        $imagePath = Storage::disk('public')->path($layer->image_path);
+        $imageModifiedTime = filemtime($imagePath);
+        $layerUpdatedTime = $layer->updated_at->getTimestamp();
+        
+        return $imageModifiedTime >= $layerUpdatedTime;
     }
 
     private function configureImageProcessing(): void
@@ -89,7 +138,7 @@ class MapGenerator
     private function processLayer(Layer $layer, TileMap $tileMap, string $baseDirectory): void
     {
         try {
-            Log::debug("Processing layer: {$layer->name} (ID: {$layer->id})");
+            // Log::debug("Processing layer: {$layer->name} (ID: {$layer->id})");
             
             $image = $this->createLayerImage($tileMap);
             $this->renderLayer($image, $layer, $tileMap->tile_width, $tileMap->tile_height);
@@ -129,7 +178,9 @@ class MapGenerator
     private function saveLayerImage(ImageInterface $image, Layer $layer, string $baseDirectory): string
     {
         $relativePath = "{$baseDirectory}/layer_{$layer->id}." . self::LAYER_IMAGE_FORMAT;
-        $fullPath = storage_path("app/{$relativePath}");
+        
+        // Use Storage::disk('public') to ensure proper path handling
+        $fullPath = Storage::disk('public')->path($relativePath);
         
         $this->ensureDirectoryExists($fullPath);
         
@@ -156,6 +207,7 @@ class MapGenerator
     {
         if (empty($layer->data)) {
             Log::debug("No tile data found for layer ID: {$layer->id}");
+            // Still save a blank image for empty layers
             return;
         }
         
@@ -216,7 +268,7 @@ class MapGenerator
             
             $this->placeTileOnImage($image, $tileImage, $tile, $tileWidth, $tileHeight);
             
-            $this->logTileRendering($tile);
+            // $this->logTileRendering($tile);
             
         } catch (RuntimeException $e) {
             Log::error("Error rendering tile: " . $e->getMessage(), [
@@ -231,12 +283,14 @@ class MapGenerator
         $tileset = $tilesets->get($tile->brush->tileset);
         
         if (!$tileset) {
-            Log::warning(sprintf(
-                "Tileset %s not found for tile at [%d, %d]", 
-                $tile->brush->tileset, 
-                $tile->x, 
+            $message = sprintf(
+                "Tileset %s not found for tile at [%d, %d]",
+                $tile->brush->tileset,
+                $tile->x,
                 $tile->y
-            ));
+            );
+            Log::error($message);
+            Sentry::captureMessage($message, Severity::error());
             return null;
         }
         
