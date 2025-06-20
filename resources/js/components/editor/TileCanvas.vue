@@ -129,7 +129,7 @@ const renderTileLayer = async (ctx: CanvasRenderingContext2D) => {
 
 const renderFieldTypeLayer = async (ctx: CanvasRenderingContext2D) => {
     // Ensure field types are loaded
-    if (!store.fieldTypesLoaded) {
+    if (store.fieldTypes.length === 0) {
         await store.loadFieldTypes();
     }
 

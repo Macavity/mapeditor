@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 
 const editorStore = useEditorStore();
+
+const fieldTypesLoaded = computed(() => editorStore.fieldTypes.length > 0);
 
 onMounted(async () => {
     try {
@@ -27,7 +29,7 @@ const selectFieldType = (fieldType: any) => {
         <!-- Body -->
         <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4">
             <!-- Loading State -->
-            <div v-if="!editorStore.fieldTypesLoaded" class="flex items-center justify-center py-8">
+            <div v-if="!fieldTypesLoaded" class="flex items-center justify-center py-8">
                 <div class="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
             </div>
 

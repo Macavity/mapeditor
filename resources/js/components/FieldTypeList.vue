@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import CreateFieldTypeDialog from '@/components/CreateFieldTypeDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { FieldTypeService, type FieldType } from '@/services/FieldTypeService';

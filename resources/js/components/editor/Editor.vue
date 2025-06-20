@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col gap-4">
+    <div class="flex h-full flex-col gap-4">
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
             <div class="flex items-center gap-4">

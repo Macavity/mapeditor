@@ -39,7 +39,6 @@ export const useEditorStore = defineStore('editorStore', {
         // Field type state
         fieldTypes: [] as FieldType[],
         selectedFieldType: null as FieldType | null,
-        fieldTypesLoaded: false,
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
@@ -811,20 +810,24 @@ export const useEditorStore = defineStore('editorStore', {
 
         // Field type management methods
         async loadFieldTypes() {
-            if (this.fieldTypesLoaded) {
-                return; // Already loaded
-            }
-
             try {
                 this.fieldTypes = await FieldTypeService.getAll();
                 if (this.fieldTypes.length > 0 && !this.selectedFieldType) {
                     this.selectedFieldType = this.fieldTypes[0];
                 }
-                this.fieldTypesLoaded = true;
             } catch (error) {
                 console.error('Failed to load field types:', error);
                 throw error;
             }
+        },
+
+        async refreshFieldTypes() {
+            return this.loadFieldTypes();
+        },
+
+        resetFieldTypes() {
+            this.fieldTypes = [];
+            this.selectedFieldType = null;
         },
 
         selectFieldType(fieldType: FieldType) {
