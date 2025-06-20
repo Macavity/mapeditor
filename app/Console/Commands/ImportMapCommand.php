@@ -198,7 +198,16 @@ class ImportMapCommand extends Command
         $this->line("");
         $this->info("Layers: " . count($mapData['layers'] ?? []));
         foreach (($mapData['layers'] ?? []) as $index => $layer) {
-            $this->line("  [{$index}] " . ($layer['name'] ?? 'Unnamed') . " (type: " . ($layer['type'] ?? 'unknown') . ")");
+            $layerType = $layer['type'] ?? 'unknown';
+            $layerName = $layer['name'] ?? 'Unnamed';
+            $dataCount = count($layer['data'] ?? []);
+            
+            $this->line("  [{$index}] {$layerName} (type: {$layerType}, data: {$dataCount} items)");
+            
+            // Show special info for field type layers
+            if ($layerType === 'field_type') {
+                $this->line("      ^ Field type layer - will be imported from _ft.js file");
+            }
         }
 
         $this->line("");
@@ -252,6 +261,18 @@ class ImportMapCommand extends Command
             $this->line("");
             $this->info("Creator: {$creator->name} ({$creator->email})");
         }
+        
+        // Show field type file detection info
+        $fieldTypeLayers = array_filter($mapData['layers'] ?? [], function($layer) {
+            return ($layer['type'] ?? '') === 'field_type';
+        });
+        
+        if (!empty($fieldTypeLayers)) {
+            $this->line("");
+            $this->info("Field Type Files:");
+            $this->line("  ✓ Field type data detected and will be imported");
+            $this->line("  ^ Values will be mapped: 1→3, 2→1, 3→2");
+        }
     }
 
     /**
@@ -276,6 +297,29 @@ class ImportMapCommand extends Command
         }
 
         $this->line("  Created: " . $map->created_at->format('Y-m-d H:i:s'));
+
+        // Display layer information
+        $fieldTypeLayers = $map->layers->where('type', \App\Enums\LayerType::FieldType);
+        $tileLayers = $map->layers->where('type', '!=', \App\Enums\LayerType::FieldType);
+        
+        if ($tileLayers->count() > 0) {
+            $this->line("");
+            $this->info("Tile Layers: " . $tileLayers->count());
+            foreach ($tileLayers as $layer) {
+                $dataCount = count($layer->data ?? []);
+                $this->line("  • {$layer->name} ({$layer->type->value}, {$dataCount} tiles)");
+            }
+        }
+        
+        if ($fieldTypeLayers->count() > 0) {
+            $this->line("");
+            $this->info("Field Type Layers: " . $fieldTypeLayers->count());
+            foreach ($fieldTypeLayers as $layer) {
+                $dataCount = count($layer->data ?? []);
+                $this->line("  • {$layer->name} ({$dataCount} field types)");
+                $this->line("    ^ Imported from _ft.js file with value mapping");
+            }
+        }
 
         // Display tileset information
         if (!empty($tilesetResults['created'])) {
