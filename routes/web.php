@@ -23,6 +23,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('ManageTilesets');
     })->name('manage-tilesets');
 
+    Route::get('manage-field-types', function () {
+        return Inertia::render('ManageFieldTypes');
+    })->name('manage-field-types');
+
     Route::get('settings/api-tokens', function () {
         return Inertia::render('Settings/ApiTokens');
     })->name('settings.api-tokens');

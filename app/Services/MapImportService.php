@@ -351,6 +351,7 @@ class MapImportService
             'background' => LayerType::Background,
             'floor' => LayerType::Floor,
             'sky' => LayerType::Sky,
+            'object' => LayerType::Object,
             'field_type', 'fieldtype' => LayerType::FieldType,
             default => LayerType::Floor, // Default fallback
         };

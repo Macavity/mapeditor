@@ -2,7 +2,7 @@ import { MapService } from '@/services/MapService';
 import { useSaveManager } from '@/stores/saveManager';
 import type { BrushSelection, BrushSelectionConfig } from '@/types/BrushSelection';
 import { EditorTool } from '@/types/EditorTool';
-import { MapLayer } from '@/types/MapLayer';
+import { MapLayer, MapLayerType } from '@/types/MapLayer';
 import { defineStore } from 'pinia';
 
 export const useEditorStore = defineStore('editorStore', {
@@ -432,10 +432,46 @@ export const useEditorStore = defineStore('editorStore', {
         },
 
         async createSkyLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.Sky, options);
+        },
+
+        async createFloorLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.Floor, options);
+        },
+
+        async createObjectLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.Object, options);
+        },
+
+        async createFieldTypeLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.FieldTypes, options);
+        },
+
+        /**
+         * Generic layer creation method
+         */
+        async createLayer(layerType: MapLayerType, options?: { name?: string }) {
             if (!this.mapMetadata.uuid) return;
 
             try {
-                const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
+                let newLayer;
+
+                switch (layerType) {
+                    case MapLayerType.Sky:
+                        newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
+                        break;
+                    case MapLayerType.Floor:
+                        newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
+                        break;
+                    case MapLayerType.Object:
+                        newLayer = await MapService.createObjectLayer(this.mapMetadata.uuid, options);
+                        break;
+                    case MapLayerType.FieldTypes:
+                        newLayer = await MapService.createFieldTypeLayer(this.mapMetadata.uuid, options);
+                        break;
+                    default:
+                        throw new Error(`Unknown layer type: ${layerType}`);
+                }
 
                 // Refresh all layers to get updated z-indices
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
@@ -445,26 +481,7 @@ export const useEditorStore = defineStore('editorStore', {
 
                 return newLayer;
             } catch (error) {
-                console.error('Error creating sky layer:', error);
-                throw error;
-            }
-        },
-
-        async createFloorLayer(options?: { name?: string }) {
-            if (!this.mapMetadata.uuid) return;
-
-            try {
-                const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
-
-                // Refresh all layers to get updated z-indices (sky layers get shifted up)
-                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Activate the new layer
-                this.activeLayer = newLayer.uuid;
-
-                return newLayer;
-            } catch (error) {
-                console.error('Error creating floor layer:', error);
+                console.error(`Error creating ${layerType} layer:`, error);
                 throw error;
             }
         },

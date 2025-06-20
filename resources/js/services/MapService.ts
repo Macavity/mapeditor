@@ -1,6 +1,6 @@
 import { MapDto } from '@/dtos/Map.dto';
 import api from '@/lib/api';
-import type { MapLayer } from '@/types/MapLayer';
+import { MapLayer, MapLayerType } from '@/types/MapLayer';
 import type { TileMap } from '@/types/TileMap';
 
 export class MapService {
@@ -87,8 +87,7 @@ export class MapService {
             opacity?: number;
         },
     ): Promise<MapLayer> {
-        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/sky`, options || {});
-        return response.data;
+        return this.createLayer(mapUuid, MapLayerType.Sky, options);
     }
 
     static async createFloorLayer(
@@ -102,7 +101,55 @@ export class MapService {
             opacity?: number;
         },
     ): Promise<MapLayer> {
-        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/floor`, options || {});
+        return this.createLayer(mapUuid, MapLayerType.Floor, options);
+    }
+
+    static async createObjectLayer(
+        mapUuid: string,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        return this.createLayer(mapUuid, MapLayerType.Object, options);
+    }
+
+    static async createFieldTypeLayer(
+        mapUuid: string,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        return this.createLayer(mapUuid, MapLayerType.FieldTypes, options);
+    }
+
+    /**
+     * Generic layer creation method
+     */
+    private static async createLayer(
+        mapUuid: string,
+        layerType: MapLayerType,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        // Convert enum value to URL format (underscore to hyphen)
+        const urlLayerType = layerType.replace('_', '-');
+        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/${urlLayerType}`, options || {});
         return response.data;
     }
 
@@ -112,6 +159,7 @@ export class MapService {
             floor: number;
             sky: number;
             field_type: number;
+            object: number;
         };
         limits: {
             floor: number;

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
 import { MapLayer, MapLayerType } from '@/types/MapLayer';
-import { ChevronRight, Cloud, Eye, EyeOff, Layers, List, Trash2 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ChevronRight, Cloud, Eye, EyeOff, Layers, List, Map, Package, Trash2 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 const store = useEditorStore();
 const isCreatingLayer = ref(false);
@@ -13,29 +13,56 @@ const layerToDelete = ref<MapLayer | null>(null);
 const isSky = (layer: MapLayer) => layer.type === MapLayerType.Sky;
 const isBackground = (layer: MapLayer) => layer.type === MapLayerType.Background;
 const isFloor = (layer: MapLayer) => layer.type === MapLayerType.Floor;
+const isObject = (layer: MapLayer) => layer.type === MapLayerType.Object;
+const isFieldType = (layer: MapLayer) => layer.type === MapLayerType.FieldTypes;
+
+// Check if FieldType layer already exists
+const hasFieldTypeLayer = computed(() => {
+    return store.layers.some((layer) => layer.type === MapLayerType.FieldTypes);
+});
 
 const createSkyLayer = async () => {
-    if (isCreatingLayer.value) return;
-
-    isCreatingLayer.value = true;
-    try {
-        await store.createSkyLayer();
-    } catch (error) {
-        console.error('Failed to create sky layer:', error);
-        // You could add a toast notification here
-    } finally {
-        isCreatingLayer.value = false;
-    }
+    await createLayer(MapLayerType.Sky);
 };
 
 const createFloorLayer = async () => {
+    await createLayer(MapLayerType.Floor);
+};
+
+const createObjectLayer = async () => {
+    await createLayer(MapLayerType.Object);
+};
+
+const createFieldTypeLayer = async () => {
+    await createLayer(MapLayerType.FieldTypes);
+};
+
+/**
+ * Generic layer creation function
+ */
+const createLayer = async (layerType: MapLayerType) => {
     if (isCreatingLayer.value) return;
 
     isCreatingLayer.value = true;
     try {
-        await store.createFloorLayer();
+        switch (layerType) {
+            case MapLayerType.Sky:
+                await store.createSkyLayer();
+                break;
+            case MapLayerType.Floor:
+                await store.createFloorLayer();
+                break;
+            case MapLayerType.Object:
+                await store.createObjectLayer();
+                break;
+            case MapLayerType.FieldTypes:
+                await store.createFieldTypeLayer();
+                break;
+            default:
+                throw new Error(`Unknown layer type: ${layerType}`);
+        }
     } catch (error) {
-        console.error('Failed to create floor layer:', error);
+        console.error(`Failed to create ${layerType} layer:`, error);
         // You could add a toast notification here
     } finally {
         isCreatingLayer.value = false;
@@ -91,33 +118,9 @@ const cancelDelete = () => {
     <div class="flex h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <!-- Header -->
         <div class="border-b border-gray-200 p-4 dark:border-gray-700">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <List class="h-5 w-5" />
-                    <h3 class="text-lg font-semibold">Layers</h3>
-                </div>
-
-                <!-- Add Layer Buttons -->
-                <div class="flex gap-1">
-                    <button
-                        @click="createSkyLayer"
-                        :disabled="isCreatingLayer"
-                        class="flex items-center gap-1 rounded-md bg-blue-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                        title="Add Sky Layer"
-                    >
-                        <Cloud class="h-3 w-3" />
-                        Sky
-                    </button>
-                    <button
-                        @click="createFloorLayer"
-                        :disabled="isCreatingLayer"
-                        class="flex items-center gap-1 rounded-md bg-green-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                        title="Add Floor Layer"
-                    >
-                        <Layers class="h-3 w-3" />
-                        Floor
-                    </button>
-                </div>
+            <div class="flex items-center gap-2">
+                <List class="h-5 w-5" />
+                <h3 class="text-lg font-semibold">Layers</h3>
             </div>
         </div>
 
@@ -164,6 +167,8 @@ const cancelDelete = () => {
                         <span v-if="isBackground(layer)" class="rounded-full bg-gray-500 px-2 py-1 text-xs font-medium text-white"> Bg </span>
                         <span v-if="isSky(layer)" class="rounded-full bg-blue-500 px-2 py-1 text-xs font-medium text-white"> Sky </span>
                         <span v-if="isFloor(layer)" class="rounded-full bg-green-500 px-2 py-1 text-xs font-medium text-white"> Floor </span>
+                        <span v-if="isObject(layer)" class="rounded-full bg-purple-500 px-2 py-1 text-xs font-medium text-white"> Object </span>
+                        <span v-if="isFieldType(layer)" class="rounded-full bg-orange-500 px-2 py-1 text-xs font-medium text-white"> Field </span>
                     </div>
 
                     <!-- Delete button -->
@@ -177,6 +182,48 @@ const cancelDelete = () => {
                     </button>
                 </li>
             </ul>
+        </div>
+
+        <!-- Footer with Add Layer Buttons -->
+        <div class="border-t border-gray-200 p-4 dark:border-gray-700">
+            <div class="flex gap-1">
+                <button
+                    @click="createSkyLayer"
+                    :disabled="isCreatingLayer"
+                    class="flex items-center gap-1 rounded-md bg-blue-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    title="Add Sky Layer"
+                >
+                    <Cloud class="h-3 w-3" />
+                    Sky
+                </button>
+                <button
+                    @click="createFloorLayer"
+                    :disabled="isCreatingLayer"
+                    class="flex items-center gap-1 rounded-md bg-green-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    title="Add Floor Layer"
+                >
+                    <Layers class="h-3 w-3" />
+                    Floor
+                </button>
+                <button
+                    @click="createObjectLayer"
+                    :disabled="isCreatingLayer"
+                    class="flex items-center gap-1 rounded-md bg-purple-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-purple-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    title="Add Object Layer"
+                >
+                    <Package class="h-3 w-3" />
+                    Object
+                </button>
+                <button
+                    @click="createFieldTypeLayer"
+                    :disabled="isCreatingLayer || hasFieldTypeLayer"
+                    class="flex items-center gap-1 rounded-md bg-orange-500 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    :title="hasFieldTypeLayer ? 'Field Type layer already exists (only one allowed)' : 'Add Field Type Layer'"
+                >
+                    <Map class="h-3 w-3" />
+                    Field
+                </button>
+            </div>
         </div>
     </div>
 
