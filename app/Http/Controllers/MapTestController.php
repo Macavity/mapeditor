@@ -199,7 +199,7 @@ class MapTestController extends Controller
             return $a['z'] <=> $b['z'];
         });
 
-        return Inertia::render('MapTest', [
+        return Inertia::render('maps.test', [
             'map' => [
                 'uuid' => $tileMap->uuid,
                 'name' => $tileMap->name,

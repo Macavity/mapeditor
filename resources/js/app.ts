@@ -14,7 +14,24 @@ const appName = import.meta.env.VITE_APP_NAME;
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
+    resolve: (name) => {
+        // Convert route names to file paths
+        // e.g., 'manage-maps' -> './pages/manage-maps/ManageMaps.vue'
+        // e.g., 'settings.api-tokens' -> './pages/settings/ApiTokens.vue'
+        // e.g., 'maps.edit' -> './pages/maps/Edit.vue'
+        // e.g., 'maps.test' -> './pages/maps/Test.vue'
+
+        const parts = name.split('.');
+        const directory = parts[0];
+        const componentName =
+            parts.length > 1
+                ? parts[parts.length - 1].charAt(0).toUpperCase() + parts[parts.length - 1].slice(1)
+                : directory.charAt(0).toUpperCase() + directory.slice(1);
+
+        const fullPath = `./pages/${directory}/${componentName}.vue`;
+
+        return resolvePageComponent(fullPath, import.meta.glob<DefineComponent>('./pages/**/*.vue'));
+    },
     setup({ el, App, props, plugin }) {
         const pinia = createPinia();
         pinia.use(piniaPluginPersistedState);
