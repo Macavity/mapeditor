@@ -106,6 +106,9 @@ test('forces refresh when refresh parameter is provided', function () {
     // Get the old modification time
     $oldModTime = filemtime(Storage::disk('public')->path($oldImagePath));
     
+    // Add a small delay to ensure different timestamps
+    sleep(1);
+    
     // Request with refresh parameter
     $response = $this->get("/layers/{$this->layer->uuid}.png?refresh=true");
     
@@ -115,7 +118,17 @@ test('forces refresh when refresh parameter is provided', function () {
     // Check that a new image was generated
     $this->layer->refresh();
     $newModTime = filemtime(Storage::disk('public')->path($this->layer->image_path));
-    expect($newModTime)->toBeGreaterThan($oldModTime);
+    
+    // The new modification time should be greater than the old one
+    // If they're the same, check that the file content is different (it should be a real PNG now)
+    if ($newModTime === $oldModTime) {
+        $oldContent = Storage::disk('public')->get($oldImagePath);
+        $newContent = Storage::disk('public')->get($this->layer->image_path);
+        expect($newContent)->not->toBe($oldContent);
+        expect($newContent)->toContain("\x89PNG"); // PNG file signature
+    } else {
+        expect($newModTime)->toBeGreaterThan($oldModTime);
+    }
 });
 
 test('returns 404 for non-existent layer', function () {

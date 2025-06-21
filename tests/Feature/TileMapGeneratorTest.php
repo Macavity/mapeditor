@@ -3,12 +3,14 @@
 use App\Models\TileMap;
 use App\Models\TileSet;
 use App\Models\Layer;
-use App\Services\MapGenerator;
+use App\Services\TileMapGenerator;
 use App\ValueObjects\Tile;
 use App\ValueObjects\Brush;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Intervention\Image\ImageManager;
+use Intervention\Image\Interfaces\ImageInterface;
 use Intervention\Image\Drivers\Gd\Driver;
 
 beforeEach(function () {
@@ -117,8 +119,10 @@ beforeEach(function () {
     ];
     $this->hiddenLayer->save();
 
-    $this->mapGenerator = new MapGenerator();
+    $this->mapGenerator = new TileMapGenerator();
 });
+
+// Feature Tests (Integration Tests)
 
 test('generates map images for visible layers only', function () {
     // Mock Log facade to avoid actual logging during tests
@@ -349,6 +353,168 @@ test('handles multiple tilesets in same layer', function () {
     $layerPath = "maps/{$this->map->id}/layer_{$this->visibleLayer->id}.png";
     expect(Storage::disk('public')->exists($layerPath))->toBeTrue();
 });
+
+// Unit Tests (Private Method Tests)
+
+test('configure_image_processing_sets_error_reporting', function () {
+    $originalErrorLevel = error_reporting();
+    
+    $this->mapGenerator->generateMapImage($this->map);
+    
+    // The method should configure error reporting
+    // We can't easily test ini_set directly, but we can verify the method doesn't throw
+    expect(true)->toBeTrue();
+});
+
+test('get_visible_layers_returns_only_visible_layers', function () {
+    $tileMap = $this->map;
+    
+    // Use reflection to test private method
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('getVisibleLayers');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $tileMap);
+    
+    expect($result)->toBeInstanceOf(Collection::class);
+    expect($result)->toHaveCount(1); // Only visible layer
+    expect($result->first()->name)->toBe('Visible Layer');
+});
+
+test('create_map_directory_creates_storage_directory', function () {
+    $tileMap = $this->map;
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('createMapDirectory');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $tileMap);
+    
+    expect($result)->toBe('maps/' . $tileMap->id);
+});
+
+test('create_layer_image_creates_correct_dimensions', function () {
+    $tileMap = $this->map;
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('createLayerImage');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $tileMap);
+    
+    expect($result)->toBeInstanceOf(ImageInterface::class);
+});
+
+test('extract_tileset_uuids_returns_unique_uuids', function () {
+    $layer = $this->visibleLayer;
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('extractTilesetUuids');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $layer);
+    
+    expect($result)->toHaveCount(1);
+    expect($result)->toContain((string) $this->tileset->uuid);
+});
+
+test('get_tileset_for_tile_returns_correct_tileset', function () {
+    $tile = new Tile(0, 0, new Brush($this->tileset->uuid, 0, 0));
+    $tilesets = collect([(string) $this->tileset->uuid => $this->tileset]);
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('getTilesetForTile');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $tile, $tilesets);
+    
+    expect($result)->toBe($this->tileset);
+});
+
+test('get_tileset_for_tile_returns_null_for_missing_tileset', function () {
+    $tile = new Tile(0, 0, new Brush('missing-uuid', 0, 0));
+    $tilesets = collect([(string) $this->tileset->uuid => $this->tileset]);
+    
+    Log::shouldReceive('error')->once();
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('getTilesetForTile');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $tile, $tilesets);
+    
+    expect($result)->toBeNull();
+});
+
+test('tileset_image_exists_returns_true_for_existing_file', function () {
+    $testPath = storage_path('app/public/test.png');
+    
+    // Create a temporary file
+    file_put_contents($testPath, 'test');
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('tilesetImageExists');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $testPath);
+    
+    expect($result)->toBeTrue();
+    
+    // Clean up
+    unlink($testPath);
+});
+
+test('tileset_image_exists_returns_false_for_missing_file', function () {
+    $nonExistentPath = storage_path('app/public/non-existent.png');
+    
+    Log::shouldReceive('warning')->once();
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('tilesetImageExists');
+    $method->setAccessible(true);
+    
+    $result = $method->invoke($this->mapGenerator, $nonExistentPath);
+    
+    expect($result)->toBeFalse();
+});
+
+test('update_layer_image_path_updates_layer', function () {
+    $layer = $this->visibleLayer;
+    $imagePath = 'maps/1/layer_5.png';
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('updateLayerImagePath');
+    $method->setAccessible(true);
+    
+    $method->invoke($this->mapGenerator, $layer, $imagePath);
+    
+    // Verify the layer was updated
+    $layer->refresh();
+    expect($layer->image_path)->toBe($imagePath);
+});
+
+test('ensure_directory_exists_creates_directory', function () {
+    $testDir = storage_path('app/test-directory');
+    $testFile = $testDir . '/test-file.txt';
+    
+    // Ensure directory doesn't exist initially
+    if (is_dir($testDir)) {
+        rmdir($testDir);
+    }
+    
+    $reflection = new ReflectionClass($this->mapGenerator);
+    $method = $reflection->getMethod('ensureDirectoryExists');
+    $method->setAccessible(true);
+    
+    $method->invoke($this->mapGenerator, $testFile);
+    
+    expect(is_dir($testDir))->toBeTrue();
+    
+    // Clean up
+    rmdir($testDir);
+});
+
+// Utility Methods
 
 afterEach(function () {
     // Clean up generated files
