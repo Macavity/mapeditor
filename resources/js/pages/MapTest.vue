@@ -14,7 +14,6 @@ const props = defineProps<{
 }>();
 
 const error = ref<string | null>(null);
-const isLoading = ref(false);
 
 // Reactive player position
 const playerPos = ref({ x: props.playerPosition.x, y: props.playerPosition.y });
@@ -47,13 +46,9 @@ const viewportHeight = computed(() => Math.min(480, props.map.height * props.map
 // Calculate the player's z-index to position it between floor and sky layers
 const playerZIndex = computed(() => {
     const floorLayers = props.layers.filter((layer) => layer.type === MapLayerType.Floor);
-    const skyLayers = props.layers.filter((layer) => layer.type === MapLayerType.Sky);
 
     // Find the highest floor layer z-index
     const highestFloorZ = floorLayers.length > 0 ? Math.max(...floorLayers.map((layer) => layer.z)) : 0;
-
-    // Find the lowest sky layer z-index
-    const lowestSkyZ = skyLayers.length > 0 ? Math.min(...skyLayers.map((layer) => layer.z)) : highestFloorZ + 1;
 
     // Position player between floor and sky layers
     return highestFloorZ + 1;
@@ -84,32 +79,16 @@ const fieldTypeLayer = computed(() => {
 });
 
 const getLayerStyle = (layer: MapLayer) => ({
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
     zIndex: layer.z,
     opacity: layer.opacity,
 });
 
 const getPlayerStyle = () => ({
-    position: 'absolute' as const,
-    left: `calc(50% - ${props.map.tile_width / 2}px)`,
-    top: `calc(50% - ${props.map.tile_height / 2}px)`,
+    left: `${playerPos.value.x * props.map.tile_width}px`,
+    top: `${playerPos.value.y * props.map.tile_height}px`,
     width: `${props.map.tile_width}px`,
     height: `${props.map.tile_height}px`,
-    backgroundColor: 'red',
-    borderRadius: '50%',
     zIndex: playerZIndex.value,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: '12px',
-    border: '2px solid white',
-    boxShadow: '0 0 4px rgba(0,0,0,0.5)',
 });
 
 const getLayerImageUrl = (layerUuid: string) => {
@@ -250,7 +229,11 @@ const moveRight = () => movePlayer(1, 0);
                         <!-- Map layers, shifted to center player -->
                         <div class="absolute top-0 left-0" :style="[mapStyle, mapOffset]">
                             <template v-for="layer in sortedLayers" :key="layer.uuid">
-                                <div v-if="layer.type !== MapLayerType.Object" :style="getLayerStyle(layer)">
+                                <div
+                                    v-if="layer.type !== MapLayerType.Object"
+                                    class="absolute top-0 left-0 h-full w-full"
+                                    :style="getLayerStyle(layer)"
+                                >
                                     <img
                                         :src="getLayerImageUrl(layer.uuid)"
                                         :alt="`${layer.name} layer`"
@@ -263,24 +246,8 @@ const moveRight = () => movePlayer(1, 0);
 
                             <!-- Player layer positioned between floor and sky layers -->
                             <div
-                                :style="{
-                                    position: 'absolute',
-                                    left: `${playerPos.x * props.map.tile_width}px`,
-                                    top: `${playerPos.y * props.map.tile_height}px`,
-                                    width: `${props.map.tile_width}px`,
-                                    height: `${props.map.tile_height}px`,
-                                    zIndex: playerZIndex,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: 'red',
-                                    borderRadius: '50%',
-                                    color: 'white',
-                                    fontWeight: 'bold',
-                                    fontSize: '12px',
-                                    border: '2px solid white',
-                                    boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-                                }"
+                                class="absolute flex items-center justify-center rounded-full border-2 border-white bg-red-500 text-xs font-bold text-white shadow-lg"
+                                :style="getPlayerStyle()"
                                 title="Player"
                             >
                                 <div>P</div>
