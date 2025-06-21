@@ -20,6 +20,7 @@ createInertiaApp({
         // e.g., 'settings.api-tokens' -> './pages/settings/ApiTokens.vue'
         // e.g., 'maps.edit' -> './pages/maps/Edit.vue'
         // e.g., 'maps.test' -> './pages/maps/Test.vue'
+        // e.g., 'ManageObjectTypes' -> './pages/manage-object-types/ManageObjectTypes.vue'
 
         const parts = name.split('.');
         const directory = parts[0];

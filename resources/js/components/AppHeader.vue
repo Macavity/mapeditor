@@ -19,7 +19,7 @@ import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import type { PageProps } from '@/types/globals';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
+import { BookOpen, Box, Folder, LayoutGrid, Menu, Palette, Search } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Props {
@@ -44,6 +44,26 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Maps',
+        href: '/manage-maps',
+        icon: Folder,
+    },
+    {
+        title: 'Tilesets',
+        href: '/manage-tilesets',
+        icon: Folder,
+    },
+    {
+        title: 'Field Types',
+        href: '/manage-field-types',
+        icon: Palette,
+    },
+    {
+        title: 'Object Types',
+        href: '/manage-object-types',
+        icon: Box,
     },
 ];
 

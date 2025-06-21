@@ -27,6 +27,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('manage-field-types');
     })->name('manage-field-types');
 
+    Route::get('manage-object-types', function () {
+        return Inertia::render('manage-object-types');
+    })->name('manage-object-types');
+
     Route::get('settings/api-tokens', function () {
         return Inertia::render('settings.api-tokens');
     })->name('settings.api-tokens');

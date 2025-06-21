@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\TileMapController;
 use App\Http\Controllers\Api\TileSetController;
 use App\Http\Controllers\Api\FieldTypeController;
+use App\Http\Controllers\Api\ObjectTypeController;
 use App\Http\Controllers\Api\ApiTokenController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('tile-sets/import', [TileSetController::class, 'import']);
 
     Route::apiResource('field-types', FieldTypeController::class);
+    Route::apiResource('object-types', ObjectTypeController::class);
 
     Route::post('api-tokens', [ApiTokenController::class, 'store'])->name('api.api-tokens.store');
     Route::delete('api-tokens/{tokenId}', [ApiTokenController::class, 'destroy'])->name('api.api-tokens.destroy');
