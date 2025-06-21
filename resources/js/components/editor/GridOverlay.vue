@@ -13,6 +13,7 @@ const store = useEditorStore();
             width: store.canvasWidth + 'px',
             height: store.canvasHeight + 'px',
             backgroundSize: store.mapMetadata.tileWidth + 'px ' + store.mapMetadata.tileHeight + 'px',
+            zIndex: 1000,
             backgroundImage: `
                 repeating-linear-gradient(0deg, black, black 1px, transparent 1px, transparent ${store.mapMetadata.tileWidth}px),
                 repeating-linear-gradient(-90deg, black, black 1px, transparent 1px, transparent ${store.mapMetadata.tileHeight}px)

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\MapImportService;
 use App\Models\TileMap;
 use App\Models\TileSet;
+use App\Models\FieldType;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -55,6 +56,64 @@ test('can import LAX legacy map and reference correct tileset', function () {
     expect($layer->data)->not->toBeEmpty();
     $tile = $layer->data[0];
     expect($tile->brush->tileset)->toBe(is_array($tileset) ? ($tileset['uuid'] ?? null) : $tileset->uuid);
+});
+
+test('can import LAX legacy map with field type file', function () {
+    $importService = app(MapImportService::class);
+    $jsPath = 'tests/static/maps/dalaran.js';
+    $format = 'js';
+    $options = [
+        'preserve_uuid' => false,
+        'overwrite' => true,
+        'auto_create_tilesets' => true,
+    ];
+
+    $result = $importService->importFromFile($jsPath, $format, null, $options);
+    $map = $result['map'];
+
+    // Assert map was imported
+    expect($map)->not->toBeNull();
+    expect($map)->toBeInstanceOf(TileMap::class);
+    expect($map->name)->toBe('Dalaran Zentrum');
+
+    // Assert field type layer was created
+    $fieldTypeLayer = $map->layers->where('type', 'field_type')->first();
+    expect($fieldTypeLayer)->not->toBeNull();
+    expect($fieldTypeLayer->name)->toBe('Field Types');
+    expect($fieldTypeLayer->data)->not->toBeEmpty();
+
+    // Assert field type data was converted correctly
+    // The mapping should be: 1→3, 2→1, 3→2
+    $fieldTypeData = $fieldTypeLayer->data;
+    
+    // Check that we have field type data with the correct structure
+    $firstFieldType = $fieldTypeData[0];
+    expect($firstFieldType)->toHaveKey('x');
+    expect($firstFieldType)->toHaveKey('y');
+    expect($firstFieldType)->toHaveKey('fieldType');
+    
+    // Verify the value mapping is correct
+    // From dalaran_ft.js, we know there are values 1 and 3 (but not 2)
+    $fieldTypeValues = collect($fieldTypeData)->pluck('fieldType')->unique()->values();
+    expect($fieldTypeValues)->toContain(2); // old value 3
+    expect($fieldTypeValues)->toContain(3); // old value 1
+    // Do not check for 1 (old value 2) since it does not exist in dalaran_ft.js
+    
+    // Verify specific mappings from the dalaran_ft.js file
+    // Row 0: [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3] (all 3s)
+    // Row 1: [3,3,3,3,3,3,3,3,3,3,1,1,3,3,3,3,3,3,3,3] (mostly 3s, two 1s)
+    // Row 8: [1,1,1,1,1,1,1,1,3,3,1,1,3,3,1,1,1,1,1,1] (mix of 1s and 3s)
+    
+    // Check that old value 1 (walkable with monsters) maps to field type 3
+    $walkableWithMonsters = collect($fieldTypeData)->where('fieldType', 3);
+    expect($walkableWithMonsters)->not->toBeEmpty();
+    
+    // Check that old value 3 (not walkable) maps to field type 2
+    $notWalkable = collect($fieldTypeData)->where('fieldType', 2);
+    expect($notWalkable)->not->toBeEmpty();
+    
+    // Verify the layer is positioned correctly (z-index 10)
+    expect($fieldTypeLayer->z)->toBe(10);
 });
 
 test('import matches existing tileset by name for LAX legacy', function () {

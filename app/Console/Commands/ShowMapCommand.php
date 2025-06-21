@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Repositories\MapRepository;
+use App\Repositories\TileMapRepository;
 use App\Services\MapDisplayService;
 use Illuminate\Console\Command;
 
@@ -29,7 +29,7 @@ class ShowMapCommand extends Command
      */
     public function handle(): int
     {
-        $mapRepository = app(MapRepository::class);
+        $mapRepository = app(TileMapRepository::class);
         $displayService = app(MapDisplayService::class);
         
         $uuidInput = $this->argument('uuid');

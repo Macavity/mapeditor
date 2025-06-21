@@ -29,6 +29,45 @@ use OpenApi\Attributes as OA;
 class TileMapController extends Controller
 {
     /**
+     * Layer type configurations for creation
+     */
+    private const LAYER_CONFIGS = [
+        LayerType::Sky->value => [
+            'name_prefix' => 'Sky Layer',
+            'z_index_strategy' => 'top', // Always on top
+            'affected_types' => [], // No other layers affected
+        ],
+        LayerType::Floor->value => [
+            'name_prefix' => 'Floor Layer',
+            'z_index_strategy' => 'above_types', // Above specific types
+            'affected_types' => [LayerType::Background->value, LayerType::Floor->value],
+            'shift_types' => [LayerType::Sky->value], // Shift sky layers up
+        ],
+        LayerType::Object->value => [
+            'name_prefix' => 'Object Layer',
+            'z_index_strategy' => 'above_floor', // Above floor layers specifically
+            'affected_types' => [LayerType::Floor->value], // Only consider floor layers
+            'shift_types' => [LayerType::Sky->value], // Shift sky layers up
+        ],
+        LayerType::FieldType->value => [
+            'name_prefix' => 'Field Type Layer',
+            'z_index_strategy' => 'top', // Always on top of all other layers
+            'affected_types' => [], // No other layers affected
+        ],
+    ];
+
+    /**
+     * Validation rules for layer creation
+     */
+    private const LAYER_VALIDATION_RULES = [
+        'name' => 'sometimes|string|max:255',
+        'x' => 'sometimes|integer',
+        'y' => 'sometimes|integer',
+        'visible' => 'sometimes|boolean',
+        'opacity' => 'sometimes|numeric|min:0|max:1',
+    ];
+
+    /**
      * Display a listing of tile maps.
      *
      * @return \Illuminate\Http\JsonResponse
@@ -284,6 +323,11 @@ class TileMapController extends Controller
         $updatedLayers = DB::transaction(function () use ($validated, $tileMap) {
             $layers = [];
             
+            // Get the highest z-index of non-field type layers for validation
+            $maxNonFieldTypeZ = $tileMap->layers()
+                ->where('type', '!=', LayerType::FieldType->value)
+                ->max('z') ?? -1;
+            
             foreach ($validated['layers'] as $layerData) {
                 $layer = $tileMap->layers()->where('uuid', $layerData['uuid'])->first();
                 
@@ -304,7 +348,12 @@ class TileMapController extends Controller
                     $updateData['opacity'] = $layerData['opacity'];
                 }
                 if (isset($layerData['z'])) {
-                    $updateData['z'] = $layerData['z'];
+                    // Ensure field type layers stay above all other layers
+                    if ($layer->type === LayerType::FieldType) {
+                        $updateData['z'] = max($layerData['z'], $maxNonFieldTypeZ + 1);
+                    } else {
+                        $updateData['z'] = $layerData['z'];
+                    }
                 }
                 
                 // Only update if there are fields to update
@@ -344,6 +393,14 @@ class TileMapController extends Controller
             'width' => 'sometimes|integer|min:1',
             'height' => 'sometimes|integer|min:1',
         ]);
+
+        // Ensure field type layers stay above all other layers
+        if (isset($validated['z']) && $layer->type === LayerType::FieldType) {
+            $maxNonFieldTypeZ = $tileMap->layers()
+                ->where('type', '!=', LayerType::FieldType->value)
+                ->max('z') ?? -1;
+            $validated['z'] = max($validated['z'], $maxNonFieldTypeZ + 1);
+        }
 
         $layer->update($validated);
 
@@ -392,29 +449,70 @@ class TileMapController extends Controller
      */
     public function createSkyLayer(Request $request, TileMap $tileMap): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'x' => 'sometimes|integer',
-            'y' => 'sometimes|integer',
-            'visible' => 'sometimes|boolean',
-            'opacity' => 'sometimes|numeric|min:0|max:1',
-        ]);
+        return $this->createLayer($request, $tileMap, LayerType::Sky);
+    }
 
-        $skyLayerCount = $tileMap->layers()->where('type', LayerType::Sky)->count();
+    /**
+     * Create a new Floor layer for the tile map.
+     */
+    public function createFloorLayer(Request $request, TileMap $tileMap): JsonResponse
+    {
+        return $this->createLayer($request, $tileMap, LayerType::Floor);
+    }
 
-        return DB::transaction(function () use ($validated, $tileMap, $skyLayerCount) {
-            // Sky layers should always be on top of all other layers
-            $maxZ = $tileMap->layers()->max('z') ?? -1;
+    /**
+     * Create a new Object layer for the tile map.
+     */
+    public function createObjectLayer(Request $request, TileMap $tileMap): JsonResponse
+    {
+        return $this->createLayer($request, $tileMap, LayerType::Object);
+    }
+
+    /**
+     * Create a new Field Type layer for the tile map.
+     */
+    public function createFieldTypeLayer(Request $request, TileMap $tileMap): JsonResponse
+    {
+        // Check if a FieldType layer already exists
+        $existingFieldTypeLayer = $tileMap->layers()->where('type', LayerType::FieldType)->first();
+        
+        if ($existingFieldTypeLayer) {
+            return response()->json([
+                'error' => 'A Field Type layer already exists for this map. Only one Field Type layer is allowed per map.'
+            ], 422);
+        }
+
+        return $this->createLayer($request, $tileMap, LayerType::FieldType);
+    }
+
+    /**
+     * Generic layer creation method
+     */
+    private function createLayer(Request $request, TileMap $tileMap, LayerType $layerType): JsonResponse
+    {
+        $validated = $request->validate(self::LAYER_VALIDATION_RULES);
+        $config = self::LAYER_CONFIGS[$layerType->value];
+        
+        $layerCount = $tileMap->layers()->where('type', $layerType)->count();
+
+        return DB::transaction(function () use ($validated, $tileMap, $layerType, $config, $layerCount) {
+            // Calculate z-index based on strategy
+            $newZ = $this->calculateZIndex($tileMap, $config);
+            
+            // Shift other layers if needed
+            if (isset($config['shift_types']) && !empty($config['shift_types'])) {
+                $this->shiftLayers($tileMap, $config['shift_types']);
+            }
 
             $layer = Layer::create([
                 'tile_map_id' => $tileMap->id,
-                'name' => $validated['name'] ?? 'Sky Layer ' . ($skyLayerCount + 1),
-                'type' => LayerType::Sky,
+                'name' => $validated['name'] ?? $config['name_prefix'] . ' ' . ($layerCount + 1),
+                'type' => $layerType,
                 'width' => $tileMap->width,
                 'height' => $tileMap->height,
                 'x' => $validated['x'] ?? 0,
                 'y' => $validated['y'] ?? 0,
-                'z' => $maxZ + 1,
+                'z' => $newZ,
                 'data' => [],
                 'visible' => $validated['visible'] ?? true,
                 'opacity' => $validated['opacity'] ?? 1.0,
@@ -427,52 +525,43 @@ class TileMapController extends Controller
     }
 
     /**
-     * Create a new Floor layer for the tile map.
+     * Calculate z-index for new layer based on configuration
      */
-    public function createFloorLayer(Request $request, TileMap $tileMap): JsonResponse
+    private function calculateZIndex(TileMap $tileMap, array $config): int
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'x' => 'sometimes|integer',
-            'y' => 'sometimes|integer',
-            'visible' => 'sometimes|boolean',
-            'opacity' => 'sometimes|numeric|min:0|max:1',
-        ]);
-
-        $floorLayerCount = $tileMap->layers()->where('type', LayerType::Floor)->count();
-
-        return DB::transaction(function () use ($validated, $tileMap, $floorLayerCount) {
-            // Floor layers go above background and other floor layers, but below sky layers
-            // Find the highest z-index among background and floor layers
-            $maxFloorZ = $tileMap->layers()
-                ->whereIn('type', [LayerType::Background, LayerType::Floor])
+        if ($config['z_index_strategy'] === 'top') {
+            // Always on top of all other layers
+            return ($tileMap->layers()->max('z') ?? -1) + 1;
+        }
+        
+        if ($config['z_index_strategy'] === 'above_types') {
+            // Above specific layer types
+            $maxZ = $tileMap->layers()
+                ->whereIn('type', $config['affected_types'])
                 ->max('z') ?? -1;
-            
-            $newFloorZ = $maxFloorZ + 1;
+            return $maxZ + 1;
+        }
+        
+        if ($config['z_index_strategy'] === 'above_floor') {
+            // Above floor layers specifically
+            $maxFloorZ = $tileMap->layers()
+                ->where('type', LayerType::Floor)
+                ->max('z') ?? -1;
+            return $maxFloorZ + 1;
+        }
+        
+        // Default fallback
+        return ($tileMap->layers()->max('z') ?? -1) + 1;
+    }
 
-            // Increment z-index of all sky layers by 1 to maintain ordering
-            $tileMap->layers()
-                ->where('type', LayerType::Sky)
-                ->increment('z', 1);
-
-            $layer = Layer::create([
-                'tile_map_id' => $tileMap->id,
-                'name' => $validated['name'] ?? 'Floor Layer ' . ($floorLayerCount + 1),
-                'type' => LayerType::Floor,
-                'width' => $tileMap->width,
-                'height' => $tileMap->height,
-                'x' => $validated['x'] ?? 0,
-                'y' => $validated['y'] ?? 0,
-                'z' => $newFloorZ,
-                'data' => [],
-                'visible' => $validated['visible'] ?? true,
-                'opacity' => $validated['opacity'] ?? 1.0,
-            ]);
-
-            return (new LayerResource($layer))
-                ->response()
-                ->setStatusCode(201);
-        });
+    /**
+     * Shift layers of specified types up by 1
+     */
+    private function shiftLayers(TileMap $tileMap, array $typesToShift): void
+    {
+        $tileMap->layers()
+            ->whereIn('type', $typesToShift)
+            ->increment('z', 1);
     }
 
     /**
@@ -485,6 +574,7 @@ class TileMapController extends Controller
             'floor' => $tileMap->layers()->where('type', LayerType::Floor)->count(),
             'sky' => $tileMap->layers()->where('type', LayerType::Sky)->count(),
             'field_type' => $tileMap->layers()->where('type', LayerType::FieldType)->count(),
+            'object' => $tileMap->layers()->where('type', LayerType::Object)->count(),
         ];
 
         return response()->json([

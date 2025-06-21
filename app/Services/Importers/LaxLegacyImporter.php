@@ -52,19 +52,22 @@ class LaxLegacyImporter implements ImporterInterface
             throw new \InvalidArgumentException("Failed to read file: {$filePath}");
         }
 
-        return $this->parseString($content);
+        return $this->parseString($content, $filePath);
     }
 
     /**
      * Parse raw JavaScript data string and return structured data.
      */
-    public function parseString(string $data): array
+    public function parseString(string $data, string $originalFilePath = ''): array
     {
         // Parse the JavaScript variables
         $mapData = $this->parseJavaScriptVariables($data);
         
+        // Try to parse field type data if available
+        $fieldTypeData = $this->parseFieldTypeFile($originalFilePath);
+        
         // Convert to our standard format
-        return $this->convertToStandardFormat($mapData);
+        return $this->convertToStandardFormat($mapData, $fieldTypeData);
     }
 
     /**
@@ -123,7 +126,7 @@ class LaxLegacyImporter implements ImporterInterface
      */
     public function getDescription(): string
     {
-        return 'Imports legacy JavaScript map files (field_bg, field_layer1, etc.)';
+        return 'Imports legacy JavaScript map files (field_bg, field_layer1, etc.) and field type files (_ft.js)';
     }
 
     /**
@@ -173,6 +176,67 @@ class LaxLegacyImporter implements ImporterInterface
     }
 
     /**
+     * Parse field type file if it exists.
+     */
+    private function parseFieldTypeFile(string $originalFilePath): ?array
+    {
+        if (empty($originalFilePath)) {
+            return null;
+        }
+
+        // Construct the field type file path
+        $pathInfo = pathinfo($originalFilePath);
+        $fieldTypeFilePath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_ft.js';
+
+        // Try to read the field type file
+        $content = null;
+        if (Storage::exists($fieldTypeFilePath)) {
+            $content = Storage::get($fieldTypeFilePath);
+        } elseif (file_exists($fieldTypeFilePath)) {
+            $content = file_get_contents($fieldTypeFilePath);
+        }
+
+        if ($content === false || $content === null) {
+            return null; // Field type file doesn't exist
+        }
+
+        return $this->parseFieldTypeContent($content);
+    }
+
+    /**
+     * Parse field type content from the _ft.js file.
+     */
+    private function parseFieldTypeContent(string $content): array
+    {
+        $fieldTypeData = [
+            'default_x' => 10,
+            'default_y' => 10,
+            'field_types' => []
+        ];
+
+        // Parse default coordinates
+        if (preg_match('/var map_default_x = (\d+);/', $content, $matches)) {
+            $fieldTypeData['default_x'] = (int) $matches[1];
+        }
+
+        if (preg_match('/var map_default_y = (\d+);/', $content, $matches)) {
+            $fieldTypeData['default_y'] = (int) $matches[1];
+        }
+
+        // Parse field type arrays
+        $pattern = '/field_type\[(\d+)\] = new Array\(([^)]+)\);/';
+        if (preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $row = (int) $match[1];
+                $values = array_map('intval', explode(',', $match[2]));
+                $fieldTypeData['field_types'][$row] = $values;
+            }
+        }
+
+        return $fieldTypeData;
+    }
+
+    /**
      * Parse a specific layer array from the JavaScript content.
      */
     private function parseLayerArray(string $content, string $layerName, int $width, int $height): array
@@ -202,7 +266,7 @@ class LaxLegacyImporter implements ImporterInterface
     /**
      * Convert parsed JavaScript data to our standard format.
      */
-    private function convertToStandardFormat(array $mapData): array
+    private function convertToStandardFormat(array $mapData, ?array $fieldTypeData = null): array
     {
         $this->tilesetMapping = [];
 
@@ -230,9 +294,65 @@ class LaxLegacyImporter implements ImporterInterface
         $tilesetUsage = $this->scanTilesetUsage($mapData, $layerMappings);
         $tilesetModels = $this->buildTilesetModels($tilesetUsage);
         $result['layers'] = $this->buildLayerData($mapData, $layerMappings, $tilesetModels);
+        
+        // Add field type layer if data exists
+        if ($fieldTypeData && !empty($fieldTypeData['field_types'])) {
+            $fieldTypeLayer = $this->buildFieldTypeLayer($fieldTypeData, $mapData['width'], $mapData['height']);
+            if ($fieldTypeLayer) {
+                $result['layers'][] = $fieldTypeLayer;
+            }
+        }
+        
         $result['tilesets'] = $this->buildTilesetsArray($tilesetModels);
 
         return $result;
+    }
+
+    /**
+     * Build field type layer from parsed data.
+     */
+    private function buildFieldTypeLayer(array $fieldTypeData, int $width, int $height): ?array
+    {
+        if (empty($fieldTypeData['field_types'])) {
+            return null;
+        }
+
+        $layer = [
+            'name' => 'Field Types',
+            'type' => 'field_type',
+            'x' => 0,
+            'y' => 0,
+            'z' => 10, // Place field types above other layers
+            'width' => $width,
+            'height' => $height,
+            'visible' => true,
+            'opacity' => 1.0,
+            'data' => [],
+        ];
+
+        // Convert field type values according to the mapping
+        // old value: 1 => field_type id 3 (walkable with monsters)
+        // old value: 2 => field_type id 1 (walkable without monsters) 
+        // old value: 3 => field_type id 2 (not walkable)
+        $valueMapping = [
+            1 => 3, // walkable with monsters
+            2 => 1, // walkable without monsters
+            3 => 2, // not walkable
+        ];
+
+        foreach ($fieldTypeData['field_types'] as $row => $rowData) {
+            foreach ($rowData as $col => $oldValue) {
+                if (isset($valueMapping[$oldValue])) {
+                    $layer['data'][] = [
+                        'x' => $col,
+                        'y' => $row,
+                        'fieldType' => $valueMapping[$oldValue],
+                    ];
+                }
+            }
+        }
+
+        return $layer;
     }
 
     private function scanTilesetUsage(array $mapData, array $layerMappings): array

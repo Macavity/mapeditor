@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
-import { type MapLayer } from '@/types/MapLayer';
+import { isFieldTypeLayer, isTileLayer, type FieldTypeTile, type MapLayer, type Tile } from '@/types/MapLayer';
 import { nextTick, onMounted, ref, watch } from 'vue';
 
 interface Props {
@@ -54,13 +54,21 @@ const renderLayer = async () => {
         return;
     }
 
+    if (isTileLayer(props.layer)) {
+        await renderTileLayer(ctx);
+    } else if (isFieldTypeLayer(props.layer)) {
+        await renderFieldTypeLayer(ctx);
+    }
+};
+
+const renderTileLayer = async (ctx: CanvasRenderingContext2D) => {
     // Ensure tilesets are loaded first
     if (tileSetStore.tileSets.length === 0) {
         await tileSetStore.loadTileSets();
     }
 
     // Load all unique tilesets used in this layer
-    const tilesetUuids = [...new Set(props.layer.data.map((tile) => tile.brush.tileset))];
+    const tilesetUuids = [...new Set(props.layer.data.map((tile) => (tile as Tile).brush.tileset))];
     const tilesetImages = new Map<string, HTMLImageElement>();
 
     // Load all tileset images
@@ -90,7 +98,7 @@ const renderLayer = async () => {
     );
 
     // Draw each tile
-    for (const tile of props.layer.data) {
+    for (const tile of props.layer.data as Tile[]) {
         const tilesetImage = tilesetImages.get(tile.brush.tileset);
         if (!tilesetImage) {
             console.warn('No image for tileset:', tile.brush.tileset);
@@ -117,6 +125,40 @@ const renderLayer = async () => {
         // Draw the tile
         ctx.drawImage(tilesetImage, sourceX, sourceY, tileWidth, tileHeight, destX, destY, store.mapMetadata.tileWidth, store.mapMetadata.tileHeight);
     }
+};
+
+const renderFieldTypeLayer = async (ctx: CanvasRenderingContext2D) => {
+    // Ensure field types are loaded
+    if (store.fieldTypes.length === 0) {
+        await store.loadFieldTypes();
+    }
+
+    // Set opacity for field types so background shows through
+    ctx.globalAlpha = 0.5;
+
+    // Draw each field type
+    for (const fieldTypeTile of props.layer.data as FieldTypeTile[]) {
+        // Skip invalid field type tiles
+        if (!fieldTypeTile || typeof fieldTypeTile.fieldType !== 'number') {
+            continue;
+        }
+
+        const fieldType = store.fieldTypes.find((ft) => ft.id === fieldTypeTile.fieldType);
+        if (!fieldType) {
+            continue; // Skip if field type not found
+        }
+
+        // Destination coordinates on the canvas
+        const destX = fieldTypeTile.x * store.mapMetadata.tileWidth;
+        const destY = fieldTypeTile.y * store.mapMetadata.tileHeight;
+
+        // Draw field type as a colored rectangle
+        ctx.fillStyle = fieldType.color;
+        ctx.fillRect(destX, destY, store.mapMetadata.tileWidth, store.mapMetadata.tileHeight);
+    }
+
+    // Reset globalAlpha back to 1.0 for other layers
+    ctx.globalAlpha = 1.0;
 };
 
 // Expose render method for parent component

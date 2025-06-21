@@ -319,17 +319,31 @@ class MapImportService
         $layer->height = (int) ($layerData['height'] ?? $map->height);
         $layer->visible = $layerData['visible'] ?? true;
         $layer->opacity = (float) ($layerData['opacity'] ?? 1.0);
-        $layer->data = array_map(function ($tile) {
-            return new Tile(
-                $tile['x'],
-                $tile['y'],
-                new Brush(
-                    $tile['brush']['tileset'] ?? '',
-                    $tile['brush']['tileX'] ?? 0,
-                    $tile['brush']['tileY'] ?? 0,
-                )
-            );
-        }, $layerData['data'] ?? []);
+        
+        // Handle data based on layer type
+        if ($layer->type === LayerType::FieldType) {
+            // Handle field type data
+            $layer->data = array_map(function ($fieldTypeTile) {
+                return [
+                    'x' => (int) ($fieldTypeTile['x'] ?? 0),
+                    'y' => (int) ($fieldTypeTile['y'] ?? 0),
+                    'fieldType' => (int) ($fieldTypeTile['fieldType'] ?? 1),
+                ];
+            }, $layerData['data'] ?? []);
+        } else {
+            // Handle regular tile data
+            $layer->data = array_map(function ($tile) {
+                return new Tile(
+                    $tile['x'],
+                    $tile['y'],
+                    new Brush(
+                        $tile['brush']['tileset'] ?? '',
+                        $tile['brush']['tileX'] ?? 0,
+                        $tile['brush']['tileY'] ?? 0,
+                    )
+                );
+            }, $layerData['data'] ?? []);
+        }
 
         // Preserve UUID if requested and valid
         if (isset($options['preserve_uuid']) && $options['preserve_uuid'] && isset($layerData['uuid'])) {
@@ -351,6 +365,7 @@ class MapImportService
             'background' => LayerType::Background,
             'floor' => LayerType::Floor,
             'sky' => LayerType::Sky,
+            'object' => LayerType::Object,
             'field_type', 'fieldtype' => LayerType::FieldType,
             default => LayerType::Floor, // Default fallback
         };
@@ -377,15 +392,20 @@ class MapImportService
         // Create or import tilesets first
         $tilesetResults = $this->importTilesets($mapData['tilesets'] ?? [], $options);
         $uuidMap = $tilesetResults['uuid_map'] ?? [];
-        // Rewrite all tile brush tileset UUIDs in layers
+        // Rewrite all tile brush tileset UUIDs in layers (only for non-field-type layers)
         foreach ($mapData['layers'] as &$layer) {
-            foreach ($layer['data'] as &$tile) {
-                $oldUuid = $tile['brush']['tileset'];
-                if (isset($uuidMap[$oldUuid])) {
-                    $tile['brush']['tileset'] = $uuidMap[$oldUuid];
+            $layerType = $layer['type'] ?? 'floor';
+            if ($layerType !== 'field_type') {
+                foreach ($layer['data'] as &$tile) {
+                    if (isset($tile['brush']['tileset'])) {
+                        $oldUuid = $tile['brush']['tileset'];
+                        if (isset($uuidMap[$oldUuid])) {
+                            $tile['brush']['tileset'] = $uuidMap[$oldUuid];
+                        }
+                    }
                 }
+                unset($tile);
             }
-            unset($tile);
         }
         unset($layer);
 

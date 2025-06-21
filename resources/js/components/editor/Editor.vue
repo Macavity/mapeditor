@@ -1,8 +1,14 @@
 <template>
-    <div class="flex flex-col gap-4">
+    <div class="flex h-full flex-col gap-4">
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-semibold">{{ map.name }}</h1>
-            <SaveStatus />
+            <div class="flex items-center gap-4">
+                <SaveStatus />
+                <Link :href="`/maps/${map.uuid}/test`" class="btn btn-secondary flex items-center gap-2">
+                    <Play class="h-4 w-4" />
+                    Test Map
+                </Link>
+            </div>
         </div>
 
         <div class="mb-4">
@@ -27,7 +33,8 @@
                     <EditorMiniMap />
                 </section>
                 <div class="min-h-0 flex-1">
-                    <TileSetBox />
+                    <TileSetBox v-if="isTileLayer" />
+                    <FieldTypeBox v-else-if="isFieldTypeLayer" />
                 </div>
             </aside>
         </div>
@@ -40,14 +47,33 @@ import EditorLayers from '@/components/editor/EditorLayers.vue';
 import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
 import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
 import EditorToolbar from '@/components/editor/EditorToolbar.vue';
+import FieldTypeBox from '@/components/editor/FieldTypeBox.vue';
 import SaveStatus from '@/components/editor/SaveStatus.vue';
 import TileSetBox from '@/components/editor/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
-import { reactive } from 'vue';
+import { MapLayerType } from '@/types/MapLayer';
+import { Link } from '@inertiajs/vue3';
+import { Play } from 'lucide-vue-next';
+import { computed, reactive } from 'vue';
 
 const store = useEditorStore();
 
 const map = reactive(store.mapMetadata);
+
+// Computed properties to determine which sidebar to show
+const activeLayer = computed(() => {
+    if (!store.activeLayer) return null;
+    return store.layers.find((layer) => layer.uuid === store.activeLayer);
+});
+
+const isTileLayer = computed(() => {
+    if (!activeLayer.value) return false;
+    return [MapLayerType.Sky, MapLayerType.Floor, MapLayerType.Background, MapLayerType.Object].includes(activeLayer.value.type);
+});
+
+const isFieldTypeLayer = computed(() => {
+    return activeLayer.value?.type === MapLayerType.FieldType;
+});
 </script>
 
 <style lang="scss">

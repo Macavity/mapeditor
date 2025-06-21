@@ -1,5 +1,8 @@
 name: tests
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches:
@@ -7,8 +10,23 @@ on:
       - main
 
 jobs:
-  ci:
+  test-server:
+    name: Run Laravel Tests
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: mapeditor_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Checkout
@@ -20,12 +38,22 @@ jobs:
           php-version: 8.4
           tools: composer:v2
           coverage: xdebug
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, mysqlnd
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
 
       - name: Install Node Dependencies
         run: npm ci
@@ -45,5 +73,14 @@ jobs:
       - name: Build Assets
         run: npm run build
 
+      - name: Wait for MySQL
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P3306 --silent; do
+            sleep 1
+          done
+
+      - name: Run Migrations
+        run: php artisan migrate --force --env=testing
+
       - name: Tests
-        run: ./vendor/bin/pest
+        run: php artisan test --env=testing

@@ -1,8 +1,10 @@
+import { LayerItemFactory } from '@/factories/LayerItemFactory';
+import { FieldTypeService, type FieldType } from '@/services/FieldTypeService';
 import { MapService } from '@/services/MapService';
 import { useSaveManager } from '@/stores/saveManager';
 import type { BrushSelection, BrushSelectionConfig } from '@/types/BrushSelection';
 import { EditorTool } from '@/types/EditorTool';
-import { MapLayer } from '@/types/MapLayer';
+import { MapLayer, MapLayerType, isFieldTypeLayer, isTileLayer, type FieldTypeTile, type Tile } from '@/types/MapLayer';
 import { defineStore } from 'pinia';
 
 export const useEditorStore = defineStore('editorStore', {
@@ -34,6 +36,9 @@ export const useEditorStore = defineStore('editorStore', {
             backgroundPosition: '0px 0px',
             tilesetUuid: null,
         } as BrushSelection,
+        // Field type state
+        fieldTypes: [] as FieldType[],
+        selectedFieldType: null as FieldType | null,
     }),
     getters: {
         isDrawToolActive: (state) => state.activeTool === EditorTool.DRAW,
@@ -46,11 +51,32 @@ export const useEditorStore = defineStore('editorStore', {
             return state.mapMetadata.height * state.mapMetadata.tileHeight;
         },
         layersSortedByZ: (state) => {
-            return [...state.layers].sort((a, b) => a.z - b.z);
+            // For rendering: field type layers always on top, then by z-index (lowest first for proper layering)
+            return [...state.layers].sort((a, b) => {
+                // Field type layers always come last (rendered on top)
+                if (a.type === MapLayerType.FieldType && b.type !== MapLayerType.FieldType) {
+                    return 1;
+                }
+                if (a.type !== MapLayerType.FieldType && b.type === MapLayerType.FieldType) {
+                    return -1;
+                }
+                // For non-field type layers, sort by z-index (lowest first for proper layering)
+                return a.z - b.z;
+            });
         },
         layersDisplayOrder: (state) => {
-            // For UI display: highest z-index at top of list (reverse order)
-            return [...state.layers].sort((a, b) => b.z - a.z);
+            // For UI display: field type layers always at top, then by z-index (highest at top)
+            return [...state.layers].sort((a, b) => {
+                // Field type layers always come first
+                if (a.type === MapLayerType.FieldType && b.type !== MapLayerType.FieldType) {
+                    return -1;
+                }
+                if (a.type !== MapLayerType.FieldType && b.type === MapLayerType.FieldType) {
+                    return 1;
+                }
+                // For non-field type layers, sort by z-index (highest first)
+                return b.z - a.z;
+            });
         },
         brushTilesWide: (state) => {
             return Math.ceil(state.brushSelection.width / state.mapMetadata.tileWidth);
@@ -159,8 +185,13 @@ export const useEditorStore = defineStore('editorStore', {
                 return;
             }
 
-            if (!this.layers[activeLayerIndex].data) {
-                this.layers[activeLayerIndex].data = [];
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!isTileLayer(activeLayer)) {
+                return; // Can't place tiles on field type layers
+            }
+
+            if (!activeLayer.data) {
+                activeLayer.data = [];
             }
 
             // Place each tile in the brush selection using computed dimensions
@@ -179,7 +210,7 @@ export const useEditorStore = defineStore('editorStore', {
                     const sourceTileY = this.brushSelection.tileY + offsetY;
 
                     // Create tile data
-                    const tileData = {
+                    const tileData: Tile = {
                         x: targetMapX,
                         y: targetMapY,
                         brush: {
@@ -190,27 +221,140 @@ export const useEditorStore = defineStore('editorStore', {
                     };
 
                     // Find existing tile at this position and replace it, or add new tile
-                    const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === targetMapX && tile.y === targetMapY);
+                    const existingTileIndex = activeLayer.data.findIndex((tile) => tile.x === targetMapX && tile.y === targetMapY);
 
                     if (existingTileIndex !== -1) {
                         // Replace existing tile
-                        this.layers[activeLayerIndex].data[existingTileIndex] = tileData;
+                        activeLayer.data[existingTileIndex] = tileData;
                     } else {
                         // Add new tile
-                        this.layers[activeLayerIndex].data.push(tileData);
+                        activeLayer.data.push(tileData);
                     }
                 }
             }
 
-            const saveManager = useSaveManager();
-            saveManager.markAsChanged();
-            saveManager.scheduleAutoSave(async () => {
-                await this.saveAllLayers();
-            });
+            this.markAsChanged();
         },
 
-        eraseTile(mapX: number, mapY: number): boolean {
-            // Only erase if we have an active layer
+        placeFieldType(mapX: number, mapY: number, fieldTypeId: number) {
+            // Only place field types if we have an active layer
+            if (!this.activeLayer) {
+                return;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return;
+            }
+
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!isFieldTypeLayer(activeLayer)) {
+                return; // Can't place field types on tile layers
+            }
+
+            if (!activeLayer.data) {
+                activeLayer.data = [];
+            }
+
+            // Create field type using factory
+            const fieldTypeData = LayerItemFactory.createFieldTypeAtPosition(mapX, mapY, fieldTypeId);
+
+            this.placeItemAtPosition(activeLayer, fieldTypeData, mapX, mapY);
+
+            this.markAsChanged();
+        },
+
+        placeItem(mapX: number, mapY: number, fieldTypeId?: number) {
+            if (!this.activeLayer) {
+                return;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return;
+            }
+
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!activeLayer.data) {
+                activeLayer.data = [];
+            }
+
+            if (isTileLayer(activeLayer)) {
+                // Place tiles
+                if (!this.brushSelection.tilesetUuid || !this.brushSelection.backgroundImage) {
+                    return;
+                }
+
+                // Place each tile in the brush selection using computed dimensions
+                for (let offsetY = 0; offsetY < this.brushTilesHigh; offsetY++) {
+                    for (let offsetX = 0; offsetX < this.brushTilesWide; offsetX++) {
+                        const targetMapX = mapX + offsetX;
+                        const targetMapY = mapY + offsetY;
+
+                        // Check bounds
+                        if (targetMapX >= this.mapMetadata.width || targetMapY >= this.mapMetadata.height) {
+                            continue;
+                        }
+
+                        // Calculate the source tile coordinates in the tileset
+                        const sourceTileX = this.brushSelection.tileX + offsetX;
+                        const sourceTileY = this.brushSelection.tileY + offsetY;
+
+                        // Create tile data
+                        const tileData: Tile = {
+                            x: targetMapX,
+                            y: targetMapY,
+                            brush: {
+                                tileset: this.brushSelection.tilesetUuid,
+                                tileX: sourceTileX,
+                                tileY: sourceTileY,
+                            },
+                        };
+
+                        this.placeItemAtPosition(activeLayer, tileData, targetMapX, targetMapY);
+                    }
+                }
+            } else if (isFieldTypeLayer(activeLayer)) {
+                // Place field type
+                if (fieldTypeId === undefined) {
+                    return;
+                }
+
+                const fieldTypeData: FieldTypeTile = {
+                    x: mapX,
+                    y: mapY,
+                    fieldType: fieldTypeId,
+                };
+
+                this.placeItemAtPosition(activeLayer, fieldTypeData, mapX, mapY);
+            }
+
+            this.markAsChanged();
+        },
+
+        placeItemAtPosition(layer: MapLayer, item: Tile | FieldTypeTile, x: number, y: number) {
+            // Validate the item using the factory
+            if (!LayerItemFactory.isValid(item)) {
+                console.warn('Invalid item provided to placeItemAtPosition:', item);
+                return;
+            }
+
+            const existingIndex = layer.data.findIndex((existingItem) => {
+                // Use factory validation for existing items too
+                if (!LayerItemFactory.isValid(existingItem)) return false;
+                return existingItem.x === x && existingItem.y === y;
+            });
+
+            if (existingIndex !== -1) {
+                // Replace existing item
+                (layer.data as (Tile | FieldTypeTile)[])[existingIndex] = item;
+            } else {
+                // Add new item
+                (layer.data as (Tile | FieldTypeTile)[]).push(item);
+            }
+        },
+
+        eraseItem(mapX: number, mapY: number): boolean {
             if (!this.activeLayer) {
                 return false;
             }
@@ -220,30 +364,31 @@ export const useEditorStore = defineStore('editorStore', {
                 return false;
             }
 
-            if (!this.layers[activeLayerIndex].data) {
-                return false; // No tiles to erase
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!activeLayer.data) {
+                return false; // No items to erase
             }
 
-            // Find existing tile at this position
-            const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((tile) => tile.x === mapX && tile.y === mapY);
+            // Find existing item at this position
+            const existingItemIndex = activeLayer.data.findIndex((item) => {
+                // Add null checks to prevent errors
+                if (!item || typeof item !== 'object') return false;
+                if (typeof item.x !== 'number' || typeof item.y !== 'number') return false;
+                return item.x === mapX && item.y === mapY;
+            });
 
-            if (existingTileIndex !== -1) {
-                // Remove the tile
-                this.layers[activeLayerIndex].data.splice(existingTileIndex, 1);
-                const saveManager = useSaveManager();
-                saveManager.markAsChanged();
-                saveManager.scheduleAutoSave(async () => {
-                    await this.saveAllLayers();
-                });
-                return true; // Tile was erased
+            if (existingItemIndex !== -1) {
+                // Remove the item
+                activeLayer.data.splice(existingItemIndex, 1);
+                this.markAsChanged();
+                return true; // Item was erased
             }
 
-            return false; // No tile to erase
+            return false; // No item to erase
         },
 
-        fillTiles(mapX: number, mapY: number): boolean {
-            // Only fill if we have an active layer and brush selection
-            if (!this.activeLayer || !this.brushSelection.tilesetUuid || !this.brushSelection.backgroundImage) {
+        fillItems(mapX: number, mapY: number, fieldTypeId?: number): boolean {
+            if (!this.activeLayer) {
                 return false;
             }
 
@@ -252,8 +397,41 @@ export const useEditorStore = defineStore('editorStore', {
                 return false;
             }
 
-            if (!this.layers[activeLayerIndex].data) {
-                this.layers[activeLayerIndex].data = [];
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!activeLayer.data) {
+                activeLayer.data = [];
+            }
+
+            if (isTileLayer(activeLayer)) {
+                return this.fillTiles(mapX, mapY);
+            } else if (isFieldTypeLayer(activeLayer)) {
+                if (fieldTypeId === undefined) {
+                    return false;
+                }
+                return this.fillFieldTypes(mapX, mapY, fieldTypeId);
+            }
+
+            return false;
+        },
+
+        fillTiles(mapX: number, mapY: number): boolean {
+            // Only fill if we have brush selection
+            if (!this.brushSelection.tilesetUuid || !this.brushSelection.backgroundImage) {
+                return false;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return false;
+            }
+
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!isTileLayer(activeLayer)) {
+                return false; // Can't fill tiles on field type layers
+            }
+
+            if (!activeLayer.data) {
+                activeLayer.data = [];
             }
 
             // Get the starting tile to match against
@@ -367,7 +545,7 @@ export const useEditorStore = defineStore('editorStore', {
                 const sourceTileX = this.brushSelection.tileX + tilePatternOffsetX;
                 const sourceTileY = this.brushSelection.tileY + tilePatternOffsetY;
 
-                const tileData = {
+                const tileData: Tile = {
                     x: tile.x,
                     y: tile.y,
                     brush: {
@@ -377,23 +555,91 @@ export const useEditorStore = defineStore('editorStore', {
                     },
                 };
 
-                // Find existing tile at this position and replace it, or add new tile
-                const existingTileIndex = this.layers[activeLayerIndex].data.findIndex((t) => t.x === tile.x && t.y === tile.y);
+                this.placeItemAtPosition(activeLayer, tileData, tile.x, tile.y);
+            }
 
-                if (existingTileIndex !== -1) {
-                    // Replace existing tile
-                    this.layers[activeLayerIndex].data[existingTileIndex] = tileData;
-                } else {
-                    // Add new tile
-                    this.layers[activeLayerIndex].data.push(tileData);
+            this.markAsChanged();
+            return true;
+        },
+
+        fillFieldTypes(mapX: number, mapY: number, fieldTypeId: number): boolean {
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return false;
+            }
+
+            const activeLayer = this.layers[activeLayerIndex];
+            if (!isFieldTypeLayer(activeLayer)) {
+                return false; // Can't fill field types on tile layers
+            }
+
+            if (!activeLayer.data) {
+                activeLayer.data = [];
+            }
+
+            // Get the starting field type to match against
+            const startFieldType = this.getFieldTypeAt(mapX, mapY);
+
+            // Use flood fill algorithm to find all connected field types first
+            const visited = new Set<string>();
+            const fieldTypesToFill: { x: number; y: number }[] = [];
+            const queue: { x: number; y: number }[] = [{ x: mapX, y: mapY }];
+
+            while (queue.length > 0) {
+                const current = queue.shift()!;
+                const key = `${current.x},${current.y}`;
+
+                // Skip if already visited or out of bounds
+                if (
+                    visited.has(key) ||
+                    current.x < 0 ||
+                    current.x >= this.mapMetadata.width ||
+                    current.y < 0 ||
+                    current.y >= this.mapMetadata.height
+                ) {
+                    continue;
+                }
+
+                visited.add(key);
+                const currentFieldType = this.getFieldTypeAt(current.x, current.y);
+
+                // Check if current field type matches the start field type
+                const fieldTypesMatch = this.fieldTypesMatch(currentFieldType, startFieldType);
+
+                if (fieldTypesMatch) {
+                    fieldTypesToFill.push({ x: current.x, y: current.y });
+
+                    // Add neighboring field types to queue (4-directional)
+                    queue.push(
+                        { x: current.x + 1, y: current.y }, // Right
+                        { x: current.x - 1, y: current.y }, // Left
+                        { x: current.x, y: current.y + 1 }, // Down
+                        { x: current.x, y: current.y - 1 }, // Up
+                    );
                 }
             }
 
-            const saveManager = useSaveManager();
-            saveManager.markAsChanged();
-            saveManager.scheduleAutoSave(async () => {
-                await this.saveAllLayers();
-            });
+            if (fieldTypesToFill.length === 0) {
+                return false;
+            }
+
+            // Check if fill would have any effect
+            if (startFieldType && startFieldType.fieldType === fieldTypeId) {
+                return false; // No change needed - field type already matches what would be placed
+            }
+
+            // Fill all identified field types
+            for (const fieldType of fieldTypesToFill) {
+                const fieldTypeData: FieldTypeTile = {
+                    x: fieldType.x,
+                    y: fieldType.y,
+                    fieldType: fieldTypeId,
+                };
+
+                this.placeItemAtPosition(activeLayer, fieldTypeData, fieldType.x, fieldType.y);
+            }
+
+            this.markAsChanged();
             return true;
         },
 
@@ -405,14 +651,43 @@ export const useEditorStore = defineStore('editorStore', {
             return tile1.brush.tileset === tile2.brush.tileset && tile1.brush.tileX === tile2.brush.tileX && tile1.brush.tileY === tile2.brush.tileY;
         },
 
-        getTileAt(mapX: number, mapY: number, layerUuid?: string): any | null {
+        getTileAt(mapX: number, mapY: number, layerUuid?: string): Tile | null {
             const targetLayerUuid = layerUuid || this.activeLayer;
             if (!targetLayerUuid) return null;
 
             const layer = this.layers.find((l) => l.uuid === targetLayerUuid);
-            if (!layer?.data) return null;
+            if (!layer?.data || !isTileLayer(layer)) return null;
 
-            return layer.data.find((tile) => tile.x === mapX && tile.y === mapY) || null;
+            const tile = layer.data.find((item) => {
+                // Add null checks to prevent errors
+                if (!item || typeof item !== 'object') return false;
+                if (typeof item.x !== 'number' || typeof item.y !== 'number') return false;
+                return item.x === mapX && item.y === mapY;
+            });
+            return tile && 'brush' in tile ? (tile as Tile) : null;
+        },
+
+        getFieldTypeAt(mapX: number, mapY: number, layerUuid?: string): FieldTypeTile | null {
+            const targetLayerUuid = layerUuid || this.activeLayer;
+            if (!targetLayerUuid) return null;
+
+            const layer = this.layers.find((l) => l.uuid === targetLayerUuid);
+            if (!layer?.data || !isFieldTypeLayer(layer)) return null;
+
+            const fieldType = layer.data.find((item) => {
+                // Add null checks to prevent errors
+                if (!item || typeof item !== 'object') return false;
+                if (typeof item.x !== 'number' || typeof item.y !== 'number') return false;
+                return item.x === mapX && item.y === mapY;
+            });
+            return fieldType && 'fieldType' in fieldType ? fieldType : null;
+        },
+
+        fieldTypesMatch(fieldType1: FieldTypeTile | null, fieldType2: FieldTypeTile | null): boolean {
+            if (!fieldType1 && !fieldType2) return true; // Both empty
+            if (!fieldType1 || !fieldType2) return false; // One empty, one not
+
+            return fieldType1.fieldType === fieldType2.fieldType;
         },
 
         async saveAllLayers() {
@@ -432,10 +707,46 @@ export const useEditorStore = defineStore('editorStore', {
         },
 
         async createSkyLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.Sky, options);
+        },
+
+        async createFloorLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.Floor, options);
+        },
+
+        async createObjectLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.Object, options);
+        },
+
+        async createFieldTypeLayer(options?: { name?: string }) {
+            return this.createLayer(MapLayerType.FieldType, options);
+        },
+
+        /**
+         * Generic layer creation method
+         */
+        async createLayer(layerType: MapLayerType, options?: { name?: string }) {
             if (!this.mapMetadata.uuid) return;
 
             try {
-                const newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
+                let newLayer;
+
+                switch (layerType) {
+                    case MapLayerType.Sky:
+                        newLayer = await MapService.createSkyLayer(this.mapMetadata.uuid, options);
+                        break;
+                    case MapLayerType.Floor:
+                        newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
+                        break;
+                    case MapLayerType.Object:
+                        newLayer = await MapService.createObjectLayer(this.mapMetadata.uuid, options);
+                        break;
+                    case MapLayerType.FieldType:
+                        newLayer = await MapService.createFieldTypeLayer(this.mapMetadata.uuid, options);
+                        break;
+                    default:
+                        throw new Error(`Unknown layer type: ${layerType}`);
+                }
 
                 // Refresh all layers to get updated z-indices
                 this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
@@ -445,26 +756,7 @@ export const useEditorStore = defineStore('editorStore', {
 
                 return newLayer;
             } catch (error) {
-                console.error('Error creating sky layer:', error);
-                throw error;
-            }
-        },
-
-        async createFloorLayer(options?: { name?: string }) {
-            if (!this.mapMetadata.uuid) return;
-
-            try {
-                const newLayer = await MapService.createFloorLayer(this.mapMetadata.uuid, options);
-
-                // Refresh all layers to get updated z-indices (sky layers get shifted up)
-                this.layers = await MapService.getMapLayers(this.mapMetadata.uuid);
-
-                // Activate the new layer
-                this.activeLayer = newLayer.uuid;
-
-                return newLayer;
-            } catch (error) {
-                console.error('Error creating floor layer:', error);
+                console.error(`Error creating ${layerType} layer:`, error);
                 throw error;
             }
         },
@@ -505,6 +797,45 @@ export const useEditorStore = defineStore('editorStore', {
                     error: error instanceof Error ? error.message : 'Failed to delete layer',
                 };
             }
+        },
+
+        // Helper method to mark changes and schedule auto-save
+        markAsChanged() {
+            const saveManager = useSaveManager();
+            saveManager.markAsChanged();
+            saveManager.scheduleAutoSave(async () => {
+                await this.saveAllLayers();
+            });
+        },
+
+        // Field type management methods
+        async loadFieldTypes() {
+            try {
+                this.fieldTypes = await FieldTypeService.getAll();
+                if (this.fieldTypes.length > 0 && !this.selectedFieldType) {
+                    this.selectedFieldType = this.fieldTypes[0];
+                }
+            } catch (error) {
+                console.error('Failed to load field types:', error);
+                throw error;
+            }
+        },
+
+        async refreshFieldTypes() {
+            return this.loadFieldTypes();
+        },
+
+        resetFieldTypes() {
+            this.fieldTypes = [];
+            this.selectedFieldType = null;
+        },
+
+        selectFieldType(fieldType: FieldType) {
+            this.selectedFieldType = fieldType;
+        },
+
+        getSelectedFieldTypeId(): number | null {
+            return this.selectedFieldType?.id ?? null;
         },
     },
 });

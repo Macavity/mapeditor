@@ -10,4 +10,5 @@ enum LayerType: string
     case Floor = 'floor';
     case Sky = 'sky';
     case FieldType = 'field_type';
+    case Object = 'object';
 } 

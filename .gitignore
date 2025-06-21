@@ -42,6 +42,7 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 .env
+!.env.testing
 server/node_modules
 server/dist
 frontend/.vscode

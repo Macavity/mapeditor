@@ -19,6 +19,7 @@ export enum TestId {
     MAP_LIST_TABLE = 'map-list-table',
     MAP_ROW = 'map-row',
     MAP_ROW_NAME = 'map-row-name',
+    MAP_ROW_TEST_BUTTON = 'map-row-test-button',
     MAP_ROW_EDIT_BUTTON = 'map-row-edit-button',
     MAP_ROW_DELETE_BUTTON = 'map-row-delete-button',
     MAP_LIST_EMPTY_STATE = 'map-list-empty-state',

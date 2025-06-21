@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
-use App\Casts\TileArrayCast;
+use App\Casts\LayerDataCast;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -103,6 +103,7 @@ class Layer extends Model
         'data',
         'visible',
         'opacity',
+        'image_path',
     ];
 
     protected $casts = [
@@ -112,7 +113,7 @@ class Layer extends Model
         'z' => 'integer',
         'width' => 'integer',
         'height' => 'integer',
-        'data' => TileArrayCast::class,
+        'data' => LayerDataCast::class,
         'visible' => 'boolean',
         'opacity' => 'float',
         'created_at' => 'datetime',
@@ -137,6 +138,7 @@ class Layer extends Model
         'data', // Array of Tile objects
         'visible',
         'opacity',
+        'image_path',
         'created_at',
         'updated_at',
     ];

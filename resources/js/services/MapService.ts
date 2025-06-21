@@ -1,6 +1,7 @@
 import { MapDto } from '@/dtos/Map.dto';
+import { LayerItemFactory } from '@/factories/LayerItemFactory';
 import api from '@/lib/api';
-import type { MapLayer } from '@/types/MapLayer';
+import { MapLayer, MapLayerType } from '@/types/MapLayer';
 import type { TileMap } from '@/types/TileMap';
 
 export class MapService {
@@ -53,18 +54,10 @@ export class MapService {
     }
 
     static async saveLayers(mapUuid: string, layers: MapLayer[]): Promise<MapLayer[]> {
-        // Ensure each layer's data is properly formatted
+        // Ensure each layer's data is properly validated
         const formattedLayers = layers.map((layer) => ({
             ...layer,
-            data: layer.data.map((tile) => ({
-                x: tile.x,
-                y: tile.y,
-                brush: {
-                    tileset: tile.brush.tileset,
-                    tileX: tile.brush.tileX,
-                    tileY: tile.brush.tileY,
-                },
-            })),
+            data: LayerItemFactory.filterValidItems(layer.data),
         }));
 
         const response = await api.put<{ data: MapLayer[] }>(`${this.BASE_URL}/${mapUuid}/layers`, { layers: formattedLayers });
@@ -87,8 +80,7 @@ export class MapService {
             opacity?: number;
         },
     ): Promise<MapLayer> {
-        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/sky`, options || {});
-        return response.data;
+        return this.createLayer(mapUuid, MapLayerType.Sky, options);
     }
 
     static async createFloorLayer(
@@ -102,7 +94,55 @@ export class MapService {
             opacity?: number;
         },
     ): Promise<MapLayer> {
-        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/floor`, options || {});
+        return this.createLayer(mapUuid, MapLayerType.Floor, options);
+    }
+
+    static async createObjectLayer(
+        mapUuid: string,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        return this.createLayer(mapUuid, MapLayerType.Object, options);
+    }
+
+    static async createFieldTypeLayer(
+        mapUuid: string,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        return this.createLayer(mapUuid, MapLayerType.FieldType, options);
+    }
+
+    /**
+     * Generic layer creation method
+     */
+    private static async createLayer(
+        mapUuid: string,
+        layerType: MapLayerType,
+        options?: {
+            name?: string;
+            x?: number;
+            y?: number;
+            z?: number;
+            visible?: boolean;
+            opacity?: number;
+        },
+    ): Promise<MapLayer> {
+        // Convert enum value to URL format (underscore to hyphen)
+        const urlLayerType = layerType.replace('_', '-');
+        const response = await api.post<MapLayer>(`${this.BASE_URL}/${mapUuid}/layers/${urlLayerType}`, options || {});
         return response.data;
     }
 
@@ -112,6 +152,7 @@ export class MapService {
             floor: number;
             sky: number;
             field_type: number;
+            object: number;
         };
         limits: {
             floor: number;
