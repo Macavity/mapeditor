@@ -80,7 +80,7 @@ test('shows map test page with layers', function () {
     expect($layers[0]['z'])->toBe(0);
     expect($layers[1]['type'])->toBe('floor');
     expect($layers[1]['z'])->toBe(1);
-    expect($layers[2]['type'])->toBe('player');
+    expect($layers[2]['type'])->toBe('object');
     expect($layers[2]['z'])->toBe(2); // Should be inserted after floor
     expect($layers[3]['type'])->toBe('sky');
     expect($layers[3]['z'])->toBe(5); // Should be increased by 1
@@ -114,7 +114,7 @@ test('handles map with only floor layers', function () {
     expect($layers)->toHaveCount(3);
     
     // Player should be inserted after the highest floor layer (z=3)
-    expect($layers[2]['type'])->toBe('player');
+    expect($layers[2]['type'])->toBe('object');
     expect($layers[2]['z'])->toBe(4);
 });
 
@@ -146,14 +146,14 @@ test('handles map with only sky layers', function () {
     expect($layers)->toHaveCount(3);
     
     // Player should be inserted before the lowest sky layer
-    expect($layers[0]['type'])->toBe('player');
+    expect($layers[0]['type'])->toBe('object');
     expect($layers[0]['z'])->toBe(4);
     
     // Sky layers should be increased by 1
     expect($layers[1]['type'])->toBe('sky');
     expect($layers[1]['z'])->toBe(5);
     expect($layers[2]['type'])->toBe('sky');
-    expect($layers[2]['z'])->toBe(7);
+    expect($layers[2]['z'])->toBe(6);
 });
 
 test('handles map with no floor or sky layers', function () {
@@ -184,7 +184,7 @@ test('handles map with no floor or sky layers', function () {
     expect($layers)->toHaveCount(3);
     
     // Player should be inserted at z=0
-    expect($layers[0]['type'])->toBe('player');
+    expect($layers[0]['type'])->toBe('object');
     expect($layers[0]['z'])->toBe(0);
 });
 

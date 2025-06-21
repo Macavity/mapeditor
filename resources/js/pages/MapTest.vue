@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { MapLayer } from '@/types/MapLayer';
+import { isFieldTypeLayer, MapLayer, MapLayerType } from '@/types/MapLayer';
 import { TileMap } from '@/types/TileMap';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, Edit } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ArrowDown, ArrowLeft, ArrowLeft as ArrowLeftIcon, ArrowRight, ArrowUp, Edit } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
     map: TileMap;
@@ -15,6 +15,9 @@ const props = defineProps<{
 
 const error = ref<string | null>(null);
 const isLoading = ref(false);
+
+// Reactive player position
+const playerPos = ref({ x: props.playerPosition.x, y: props.playerPosition.y });
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -37,8 +40,47 @@ const mapStyle = computed(() => ({
     height: `${props.map.height * props.map.tile_height}px`,
 }));
 
+// Viewport size (fixed, or clamp to map size)
+const viewportWidth = computed(() => Math.min(640, props.map.width * props.map.tile_width));
+const viewportHeight = computed(() => Math.min(480, props.map.height * props.map.tile_height));
+
+// Calculate the player's z-index to position it between floor and sky layers
+const playerZIndex = computed(() => {
+    const floorLayers = props.layers.filter((layer) => layer.type === MapLayerType.Floor);
+    const skyLayers = props.layers.filter((layer) => layer.type === MapLayerType.Sky);
+
+    // Find the highest floor layer z-index
+    const highestFloorZ = floorLayers.length > 0 ? Math.max(...floorLayers.map((layer) => layer.z)) : 0;
+
+    // Find the lowest sky layer z-index
+    const lowestSkyZ = skyLayers.length > 0 ? Math.min(...skyLayers.map((layer) => layer.z)) : highestFloorZ + 1;
+
+    // Position player between floor and sky layers
+    return highestFloorZ + 1;
+});
+
+// Calculate the offset to center the player in the viewport
+const mapOffset = computed(() => {
+    // Center of the viewport
+    const centerX = viewportWidth.value / 2;
+    const centerY = viewportHeight.value / 2;
+
+    // Always center the player in the viewport
+    const offsetX = centerX - (playerPos.value.x + 0.5) * props.map.tile_width;
+    const offsetY = centerY - (playerPos.value.y + 0.5) * props.map.tile_height;
+
+    return {
+        transform: `translate(${offsetX}px, ${offsetY}px)`,
+    };
+});
+
 const sortedLayers = computed(() => {
     return [...props.layers].sort((a, b) => a.z - b.z);
+});
+
+// Get field type layer for collision detection
+const fieldTypeLayer = computed(() => {
+    return props.layers.find((layer) => layer.type === MapLayerType.FieldType);
 });
 
 const getLayerStyle = (layer: MapLayer) => ({
@@ -53,13 +95,13 @@ const getLayerStyle = (layer: MapLayer) => ({
 
 const getPlayerStyle = () => ({
     position: 'absolute' as const,
-    left: `${props.playerPosition.x * props.map.tile_width}px`,
-    top: `${props.playerPosition.y * props.map.tile_height}px`,
+    left: `calc(50% - ${props.map.tile_width / 2}px)`,
+    top: `calc(50% - ${props.map.tile_height / 2}px)`,
     width: `${props.map.tile_width}px`,
     height: `${props.map.tile_height}px`,
     backgroundColor: 'red',
     borderRadius: '50%',
-    zIndex: 4,
+    zIndex: playerZIndex.value,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -73,6 +115,78 @@ const getPlayerStyle = () => ({
 const getLayerImageUrl = (layerUuid: string) => {
     return `/layers/${layerUuid}.png`;
 };
+
+// Movement functions
+const canMoveTo = (x: number, y: number): boolean => {
+    // Check map boundaries
+    if (x < 0 || x >= props.map.width || y < 0 || y >= props.map.height) {
+        return false;
+    }
+
+    // Check field type collision (field type 2 = no entry)
+    if (fieldTypeLayer.value && isFieldTypeLayer(fieldTypeLayer.value)) {
+        const fieldTypeTile = fieldTypeLayer.value.data.find((tile: any) => tile.x === x && tile.y === y);
+        if (fieldTypeTile && fieldTypeTile.fieldType === 2) {
+            return false; // Blocked by field type 2 (no entry)
+        }
+    }
+
+    return true;
+};
+
+const movePlayer = (dx: number, dy: number) => {
+    const newX = playerPos.value.x + dx;
+    const newY = playerPos.value.y + dy;
+
+    if (canMoveTo(newX, newY)) {
+        playerPos.value.x = newX;
+        playerPos.value.y = newY;
+    }
+};
+
+const handleKeydown = (event: KeyboardEvent) => {
+    switch (event.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+            event.preventDefault();
+            movePlayer(0, -1);
+            break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+            event.preventDefault();
+            movePlayer(0, 1);
+            break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+            event.preventDefault();
+            movePlayer(-1, 0);
+            break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+            event.preventDefault();
+            movePlayer(1, 0);
+            break;
+    }
+};
+
+// Keyboard event listeners
+onMounted(() => {
+    window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
+});
+
+// Movement buttons
+const moveUp = () => movePlayer(0, -1);
+const moveDown = () => movePlayer(0, 1);
+const moveLeft = () => movePlayer(-1, 0);
+const moveRight = () => movePlayer(1, 0);
 </script>
 
 <template>
@@ -108,49 +222,69 @@ const getLayerImageUrl = (layerUuid: string) => {
                             <div
                                 :class="{
                                     'h-3 w-3 rounded-full': true,
-                                    'bg-blue-500': layer.type === 'background',
-                                    'bg-green-500': layer.type === 'floor',
-                                    'bg-red-500': layer.type === 'player',
-                                    'bg-purple-500': layer.type === 'sky',
-                                    'bg-gray-500': layer.type === 'field_type',
+                                    'bg-blue-500': layer.type === MapLayerType.Background,
+                                    'bg-green-500': layer.type === MapLayerType.Floor,
+                                    'bg-red-500': layer.type === MapLayerType.Object,
+                                    'bg-purple-500': layer.type === MapLayerType.Sky,
+                                    'bg-gray-500': layer.type === MapLayerType.FieldType,
                                 }"
                             ></div>
                             <span class="truncate">{{ layer.name }} (Z: {{ layer.z }})</span>
                         </div>
                     </div>
+                    <!-- Map info sidebar -->
+                    <div class="min-w-[200px] rounded bg-black/70 p-3 text-xs text-white">
+                        <div class="mb-2 font-bold">Map Info</div>
+                        <div>Size: {{ map.width }}×{{ map.height }}</div>
+                        <div>Tile: {{ map.tile_width }}×{{ map.tile_height }}</div>
+                        <div>Total: {{ map.width * map.height }} tiles</div>
+                        <div class="mt-2 font-bold">Player</div>
+                        <div>Position: ({{ playerPos.x }}, {{ playerPos.y }})</div>
+                    </div>
 
-                    <!-- Map -->
+                    <!-- Map viewport (fixed size, relative for centering player) -->
                     <div
                         class="relative overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800"
-                        :style="mapStyle"
+                        :style="{ width: viewportWidth + 'px', height: viewportHeight + 'px' }"
                     >
-                        <!-- Render all layers as images -->
-                        <template v-for="layer in sortedLayers" :key="layer.uuid">
-                            <div v-if="layer.type !== 'player'" :style="getLayerStyle(layer)">
-                                <img
-                                    :src="getLayerImageUrl(layer.uuid)"
-                                    :alt="`${layer.name} layer`"
-                                    class="h-full w-full object-cover"
-                                    :title="`${layer.name} - Z: ${layer.z}`"
-                                    @error="error = `Failed to load layer image for ${layer.name}`"
-                                />
-                            </div>
-
-                            <!-- Player layer -->
-                            <div v-else-if="layer.type === 'player'" :style="getLayerStyle(layer)">
-                                <div :style="getPlayerStyle()" :title="`${layer.name} - Position: (${playerPosition.x}, ${playerPosition.y})`">
-                                    <!-- Player representation -->
-                                    <div>P</div>
+                        <!-- Map layers, shifted to center player -->
+                        <div class="absolute top-0 left-0" :style="[mapStyle, mapOffset]">
+                            <template v-for="layer in sortedLayers" :key="layer.uuid">
+                                <div v-if="layer.type !== MapLayerType.Object" :style="getLayerStyle(layer)">
+                                    <img
+                                        :src="getLayerImageUrl(layer.uuid)"
+                                        :alt="`${layer.name} layer`"
+                                        class="h-full w-full object-cover"
+                                        :title="`${layer.name} - Z: ${layer.z}`"
+                                        @error="error = `Failed to load layer image for ${layer.name}`"
+                                    />
                                 </div>
-                            </div>
-                        </template>
+                            </template>
 
-                        <!-- Map info overlay -->
-                        <div class="absolute right-2 bottom-2 rounded bg-black/70 p-2 text-xs text-white">
-                            <div>Size: {{ map.width }}×{{ map.height }}</div>
-                            <div>Tile: {{ map.tile_width }}×{{ map.tile_height }}</div>
-                            <div>Total: {{ map.width * map.height }} tiles</div>
-                            <div>Player: ({{ playerPosition.x }}, {{ playerPosition.y }})</div>
+                            <!-- Player layer positioned between floor and sky layers -->
+                            <div
+                                :style="{
+                                    position: 'absolute',
+                                    left: `${playerPos.x * props.map.tile_width}px`,
+                                    top: `${playerPos.y * props.map.tile_height}px`,
+                                    width: `${props.map.tile_width}px`,
+                                    height: `${props.map.tile_height}px`,
+                                    zIndex: playerZIndex,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: 'red',
+                                    borderRadius: '50%',
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    fontSize: '12px',
+                                    border: '2px solid white',
+                                    boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                                }"
+                                title="Player"
+                            >
+                                <div>P</div>
+                            </div>
                         </div>
 
                         <!-- Error message -->
@@ -160,6 +294,54 @@ const getLayerImageUrl = (layerUuid: string) => {
                                 <div class="text-sm">{{ error }}</div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Movement Controls -->
+                    <div class="min-w-[120px] rounded bg-black/70 p-3 text-white">
+                        <div class="mb-2 text-center text-xs font-bold">Movement</div>
+                        <div class="grid grid-cols-3 gap-1">
+                            <!-- Top row -->
+                            <div></div>
+                            <button
+                                @click="moveUp"
+                                class="flex h-8 w-8 items-center justify-center rounded bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                                title="Move Up (W/↑)"
+                            >
+                                <ArrowUp class="h-4 w-4" />
+                            </button>
+                            <div></div>
+
+                            <!-- Middle row -->
+                            <button
+                                @click="moveLeft"
+                                class="flex h-8 w-8 items-center justify-center rounded bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                                title="Move Left (A/←)"
+                            >
+                                <ArrowLeftIcon class="h-4 w-4" />
+                            </button>
+                            <div class="flex h-8 w-8 items-center justify-center rounded bg-gray-600">
+                                <div class="h-2 w-2 rounded-full bg-red-500"></div>
+                            </div>
+                            <button
+                                @click="moveRight"
+                                class="flex h-8 w-8 items-center justify-center rounded bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                                title="Move Right (D/→)"
+                            >
+                                <ArrowRight class="h-4 w-4" />
+                            </button>
+
+                            <!-- Bottom row -->
+                            <div></div>
+                            <button
+                                @click="moveDown"
+                                class="flex h-8 w-8 items-center justify-center rounded bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                                title="Move Down (S/↓)"
+                            >
+                                <ArrowDown class="h-4 w-4" />
+                            </button>
+                            <div></div>
+                        </div>
+                        <div class="mt-2 text-center text-xs text-gray-300">Use WASD or arrow keys</div>
                     </div>
                 </div>
             </div>
@@ -173,22 +355,22 @@ const getLayerImageUrl = (layerUuid: string) => {
                         :key="layer.uuid"
                         class="rounded-lg border p-3"
                         :class="{
-                            'border-blue-500 bg-blue-50 dark:bg-blue-950': layer.type === 'background',
-                            'border-green-500 bg-green-50 dark:bg-green-950': layer.type === 'floor',
-                            'border-red-500 bg-red-50 dark:bg-red-950': layer.type === 'player',
-                            'border-purple-500 bg-purple-50 dark:bg-purple-950': layer.type === 'sky',
-                            'border-gray-500 bg-gray-50 dark:bg-gray-950': layer.type === 'field_type',
+                            'border-blue-500 bg-blue-50 dark:bg-blue-950': layer.type === MapLayerType.Background,
+                            'border-green-500 bg-green-50 dark:bg-green-950': layer.type === MapLayerType.Floor,
+                            'border-red-500 bg-red-50 dark:bg-red-950': layer.type === MapLayerType.Object,
+                            'border-purple-500 bg-purple-50 dark:bg-purple-950': layer.type === MapLayerType.Sky,
+                            'border-gray-500 bg-gray-50 dark:bg-gray-950': layer.type === MapLayerType.FieldType,
                         }"
                     >
                         <div class="mb-2 flex items-center gap-2">
                             <div
                                 :class="{
                                     'h-4 w-4 rounded-full': true,
-                                    'bg-blue-500': layer.type === 'background',
-                                    'bg-green-500': layer.type === 'floor',
-                                    'bg-red-500': layer.type === 'player',
-                                    'bg-purple-500': layer.type === 'sky',
-                                    'bg-gray-500': layer.type === 'field_type',
+                                    'bg-blue-500': layer.type === MapLayerType.Background,
+                                    'bg-green-500': layer.type === MapLayerType.Floor,
+                                    'bg-red-500': layer.type === MapLayerType.Object,
+                                    'bg-purple-500': layer.type === MapLayerType.Sky,
+                                    'bg-gray-500': layer.type === MapLayerType.FieldType,
                                 }"
                             ></div>
                             <span class="font-semibold">{{ layer.name }}</span>
@@ -196,7 +378,7 @@ const getLayerImageUrl = (layerUuid: string) => {
                         <div class="text-muted-foreground text-sm">
                             <div>Type: {{ layer.type }}</div>
                             <div>Z-Index: {{ layer.z }}</div>
-                            <div v-if="layer.type !== 'player'">
+                            <div v-if="layer.type !== MapLayerType.Object">
                                 <img
                                     :src="getLayerImageUrl(layer.uuid)"
                                     :alt="`${layer.name} preview`"
@@ -204,7 +386,7 @@ const getLayerImageUrl = (layerUuid: string) => {
                                     @error="error = `Failed to load preview for ${layer.name}`"
                                 />
                             </div>
-                            <div v-else>Player Position: ({{ playerPosition.x }}, {{ playerPosition.y }})</div>
+                            <div v-else>Player Position: ({{ playerPos.x }}, {{ playerPos.y }})</div>
                             <div>Opacity: {{ layer.opacity }}</div>
                         </div>
                     </div>
