@@ -9,7 +9,6 @@ import { computed, onMounted, ref } from 'vue';
 
 const tileSetStore = useTileSetStore();
 const editorStore = useEditorStore();
-const showModal = ref(false);
 const isDropdownOpen = ref(false);
 const activeTilesetContainer = ref<HTMLElement | null>(null);
 
@@ -49,11 +48,6 @@ function selectTileSet(uuid: string) {
 function clearSelectionAndBrush() {
     clearSelection();
     editorStore.clearBrushSelection();
-}
-
-function addTileSet(url: string) {
-    console.log('add', url);
-    showModal.value = false;
 }
 
 function createBrushSelectionConfig(selection: TileSelection): BrushSelectionConfig {

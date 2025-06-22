@@ -58,6 +58,20 @@ jobs:
       - name: Install Node Dependencies
         run: npm ci
 
+      - name: Wait for MySQL
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P3306 --silent; do
+            sleep 1
+          done
+
+      - name: Create Test Database User
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -proot -e "
+            CREATE USER IF NOT EXISTS 'maptest'@'%' IDENTIFIED BY 'maptest';
+            GRANT ALL PRIVILEGES ON mapeditor_test.* TO 'maptest'@'%';
+            FLUSH PRIVILEGES;
+          "
+
       - name: Copy Environment File
         run: cp .env.example .env
 
@@ -72,12 +86,6 @@ jobs:
 
       - name: Build Assets
         run: npm run build
-
-      - name: Wait for MySQL
-        run: |
-          while ! mysqladmin ping -h"127.0.0.1" -P3306 --silent; do
-            sleep 1
-          done
 
       - name: Run Migrations
         run: php artisan migrate --force --env=testing
