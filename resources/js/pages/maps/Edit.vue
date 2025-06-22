@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import Editor from '@/components/editor/Editor.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { AlertTriangle, ArrowLeft } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
+import Editor from './partials/Editor.vue';
 
 const props = defineProps<{
     uuid: string;
@@ -63,10 +63,7 @@ onMounted(() => {
                 </Link>
             </div>
 
-            <!-- Editor State -->
-            <div v-else-if="store.mapMetadata" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border p-4">
-                <Editor />
-            </div>
+            <Editor v-if="!isLoading && !error" />
         </div>
     </AppLayout>
 </template>

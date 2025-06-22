@@ -60,7 +60,7 @@ test('shows map test page with layers', function () {
 
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
-        $page->component('MapTest')
+        $page->component('maps.test')
             ->has('map')
             ->has('layers')
     );

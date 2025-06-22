@@ -19,7 +19,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: mapeditor_test
+          MYSQL_DATABASE: maptest
         ports:
           - 3306:3306
         options: >-
@@ -58,26 +58,34 @@ jobs:
       - name: Install Node Dependencies
         run: npm ci
 
+      - name: Wait for MySQL
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P3306 --silent; do
+            sleep 1
+          done
+
+      - name: Create Test Database User
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -proot -e "
+            CREATE USER IF NOT EXISTS 'maptest'@'%' IDENTIFIED BY 'maptest';
+            GRANT ALL PRIVILEGES ON maptest.* TO 'maptest'@'%';
+            FLUSH PRIVILEGES;
+          "
+
       - name: Copy Environment File
         run: cp .env.example .env
 
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-      - name: Generate Application Key
-        run: php artisan key:generate
+      - name: Generate Testing Application Key
+        run: php artisan key:generate --env=testing
 
       - name: Publish Ziggy Configuration
         run: php artisan ziggy:generate
 
       - name: Build Assets
         run: npm run build
-
-      - name: Wait for MySQL
-        run: |
-          while ! mysqladmin ping -h"127.0.0.1" -P3306 --silent; do
-            sleep 1
-          done
 
       - name: Run Migrations
         run: php artisan migrate --force --env=testing

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AddTileSetModal from '@/components/editor/AddTileSetModal.vue';
 import { useTileSelection } from '@/composables/useTileSelection';
 import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
@@ -10,7 +9,6 @@ import { computed, onMounted, ref } from 'vue';
 
 const tileSetStore = useTileSetStore();
 const editorStore = useEditorStore();
-const showModal = ref(false);
 const isDropdownOpen = ref(false);
 const activeTilesetContainer = ref<HTMLElement | null>(null);
 
@@ -50,11 +48,6 @@ function selectTileSet(uuid: string) {
 function clearSelectionAndBrush() {
     clearSelection();
     editorStore.clearBrushSelection();
-}
-
-function addTileSet(url: string) {
-    console.log('add', url);
-    showModal.value = false;
 }
 
 function createBrushSelectionConfig(selection: TileSelection): BrushSelectionConfig {
@@ -155,8 +148,6 @@ function handleMouseLeave() {
 
 <template>
     <div class="flex h-full max-h-full flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <AddTileSetModal v-if="showModal" :show="showModal" @close="showModal = false" @addTileSet="addTileSet" />
-
         <!-- Header -->
         <div class="border-b border-gray-200 p-4 dark:border-gray-700">
             <h3 class="text-lg font-semibold">Tilesets</h3>

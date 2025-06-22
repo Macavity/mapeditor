@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import CreateMapDialog from '@/components/maps/CreateMapDialog.vue';
-import MapList from '@/components/maps/MapList.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import CreateMapDialog from './partials/CreateMapDialog.vue';
+import MapList from './partials/MapList.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

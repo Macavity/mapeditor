@@ -31,6 +31,22 @@ class LayerDataCast implements CastsAttributes
             }, array_filter($data)); // Remove null values
         }
         
+        // Handle object layers
+        if (isset($attributes['type']) && $attributes['type'] === LayerType::Object->value) {
+            return array_map(function ($objectTile) {
+                // Skip invalid object tiles
+                if (!is_array($objectTile) || !isset($objectTile['x'], $objectTile['y'], $objectTile['objectType'])) {
+                    return null;
+                }
+                
+                return [
+                    'x' => (int) $objectTile['x'],
+                    'y' => (int) $objectTile['y'],
+                    'objectType' => (int) $objectTile['objectType'],
+                ];
+            }, array_filter($data)); // Remove null values
+        }
+        
         // Handle regular tile layers
         return array_map(function ($tile) {
             // Skip invalid tiles
@@ -72,6 +88,28 @@ class LayerDataCast implements CastsAttributes
             }, $value);
 
             return json_encode($fieldTypeTiles);
+        }
+        
+        // Handle object layers
+        if (isset($attributes['type']) && $attributes['type'] === LayerType::Object->value) {
+            $objectTiles = array_map(function ($objectTile) {
+                if (is_array($objectTile)) {
+                    return [
+                        'x' => (int) ($objectTile['x'] ?? 0),
+                        'y' => (int) ($objectTile['y'] ?? 0),
+                        'objectType' => (int) ($objectTile['objectType'] ?? 0),
+                    ];
+                }
+                
+                // Handle object input
+                return [
+                    'x' => (int) ($objectTile->x ?? 0),
+                    'y' => (int) ($objectTile->y ?? 0),
+                    'objectType' => (int) ($objectTile->objectType ?? 0),
+                ];
+            }, $value);
+
+            return json_encode($objectTiles);
         }
         
         // Handle regular tile layers

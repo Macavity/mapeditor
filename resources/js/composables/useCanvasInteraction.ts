@@ -1,9 +1,11 @@
 import { useEditorStore } from '@/stores/editorStore';
+import { useObjectTypeStore } from '@/stores/objectTypeStore';
 import { EditorTool } from '@/types/EditorTool';
-import { isFieldTypeLayer, isTileLayer } from '@/types/MapLayer';
+import { isFieldTypeLayer, isObjectLayer, isTileLayer } from '@/types/MapLayer';
 
 export function useCanvasInteraction() {
     const editorStore = useEditorStore();
+    const objectTypeStore = useObjectTypeStore();
 
     function calculateTilePosition(event: MouseEvent): { tileX: number; tileY: number } | null {
         const target = event.currentTarget as HTMLElement;
@@ -45,6 +47,15 @@ export function useCanvasInteraction() {
         if (!activeLayer || !isFieldTypeLayer(activeLayer)) return false;
 
         return editorStore.isDrawToolActive && editorStore.getSelectedFieldTypeId() !== null;
+    }
+
+    function canPlaceObjects(): boolean {
+        if (!editorStore.activeLayer) return false;
+
+        const activeLayer = editorStore.layers.find((layer) => layer.uuid === editorStore.activeLayer);
+        if (!activeLayer || !isObjectLayer(activeLayer)) return false;
+
+        return editorStore.isDrawToolActive && objectTypeStore.activeObjectType !== undefined;
     }
 
     function canEraseTiles(): boolean {
@@ -93,9 +104,17 @@ export function useCanvasInteraction() {
                     return { success: true, action: 'draw' };
                 }
                 return { success: false, action: 'none' };
+            } else if (isObjectLayer(activeLayer) && canPlaceObjects()) {
+                // Place object using selected object type from store
+                const activeObjectType = objectTypeStore.activeObjectType;
+                if (activeObjectType) {
+                    editorStore.placeObject(position.tileX, position.tileY, activeObjectType.id);
+                    return { success: true, action: 'draw' };
+                }
+                return { success: false, action: 'none' };
             }
-        } else if (editorStore.activeTool === EditorTool.ERASE && canEraseTiles()) {
-            // Erase tile or field type
+        } else if (editorStore.activeTool === EditorTool.ERASE) {
+            // Erase tile, field type, or object
             const itemExists = editorStore.eraseItem(position.tileX, position.tileY);
             return { success: true, action: 'erase', tileExists: itemExists };
         } else if (editorStore.activeTool === EditorTool.FILL) {
@@ -131,6 +150,9 @@ export function useCanvasInteraction() {
         } else if (isFieldTypeLayer(activeLayer)) {
             const fieldType = editorStore.getFieldTypeAt(position.tileX, position.tileY);
             hasTile = !!fieldType;
+        } else if (isObjectLayer(activeLayer)) {
+            const object = editorStore.getObjectAt(position.tileX, position.tileY);
+            hasTile = !!object;
         }
 
         return {
@@ -144,6 +166,7 @@ export function useCanvasInteraction() {
         calculateTilePosition,
         canPlaceTiles,
         canPlaceFieldTypes,
+        canPlaceObjects,
         canEraseTiles,
         canFillTiles,
         canFillFieldTypes,

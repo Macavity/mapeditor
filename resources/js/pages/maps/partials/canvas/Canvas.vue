@@ -5,24 +5,21 @@ import { useEditorStore } from '@/stores/editorStore';
 import type { CursorState } from '@/types/CursorState';
 import { EditorTool } from '@/types/EditorTool';
 import { computed, nextTick, provide, ref } from 'vue';
-import GridOverlay from './GridOverlay.vue';
-import TileCanvas from './TileCanvas.vue';
-import ToolCursor from './ToolCursor.vue';
+import CanvasGrid from './CanvasGrid.vue';
+import CanvasLayer from './CanvasLayer.vue';
+import Cursor from './Cursor.vue';
 
 const store = useEditorStore();
 const { handleCanvasClick } = useCanvasInteraction();
-const tileCanvasRefs = ref<{ [key: string]: InstanceType<typeof TileCanvas> }>({});
-const toolCursorRef = ref<InstanceType<typeof ToolCursor> | null>(null);
+const tileCanvasRefs = ref<{ [key: string]: InstanceType<typeof CanvasLayer> }>({});
+const toolCursorRef = ref<InstanceType<typeof Cursor> | null>(null);
 
-// Feedback state for empty tile clicks
 const showEmptyTileMessage = ref(false);
 const emptyTileMessageTimeout = ref<NodeJS.Timeout | null>(null);
 
-// Centralized cursor state management
 const mapTileWidth = computed(() => store.mapMetadata.tileWidth);
 const mapTileHeight = computed(() => store.mapMetadata.tileHeight);
 
-// Initialize cursor composable - this will be the single source of truth
 const { showCursor, cursorStyle, show, hide, updatePosition } = useCanvasCursor(mapTileWidth, mapTileHeight);
 
 // Provide cursor state to child components
@@ -35,7 +32,7 @@ const cursorState: CursorState = {
 
 provide('cursorState', cursorState);
 
-const setTileCanvasRef = (el: InstanceType<typeof TileCanvas> | null, layerUuid: string) => {
+const setTileCanvasRef = (el: InstanceType<typeof CanvasLayer> | null, layerUuid: string) => {
     if (el) {
         tileCanvasRefs.value[layerUuid] = el;
     }
@@ -109,20 +106,20 @@ const handleMouseLeave = () => {
 <template>
     <div @mousemove="handleMouseMove" @mouseenter="handleMouseEnter" @mouseleave="handleMouseLeave" @click="onCanvasClick" class="relative">
         <!-- Restored tool cursor component with shared state -->
-        <ToolCursor ref="toolCursorRef" />
+        <Cursor ref="toolCursorRef" />
 
         <!-- Tilemap layers container -->
         <div class="relative">
-            <TileCanvas
+            <CanvasLayer
                 v-for="layer in store.layersSortedByZ"
                 :key="layer.uuid"
-                :ref="(el) => setTileCanvasRef(el as InstanceType<typeof TileCanvas>, layer.uuid)"
+                :ref="(el) => setTileCanvasRef(el as InstanceType<typeof CanvasLayer>, layer.uuid)"
                 :layer="layer"
             />
         </div>
 
         <!-- Grid overlay -->
-        <GridOverlay />
+        <CanvasGrid />
 
         <!-- Empty tile feedback message -->
         <div

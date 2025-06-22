@@ -4,7 +4,16 @@ import { MapService } from '@/services/MapService';
 import { useSaveManager } from '@/stores/saveManager';
 import type { BrushSelection, BrushSelectionConfig } from '@/types/BrushSelection';
 import { EditorTool } from '@/types/EditorTool';
-import { MapLayer, MapLayerType, isFieldTypeLayer, isTileLayer, type FieldTypeTile, type Tile } from '@/types/MapLayer';
+import {
+    MapLayer,
+    MapLayerType,
+    isFieldTypeLayer,
+    isObjectLayer,
+    isTileLayer,
+    type FieldTypeTile,
+    type ObjectTile,
+    type Tile,
+} from '@/types/MapLayer';
 import { defineStore } from 'pinia';
 
 export const useEditorStore = defineStore('editorStore', {
@@ -264,6 +273,34 @@ export const useEditorStore = defineStore('editorStore', {
             this.markAsChanged();
         },
 
+        placeObject(mapX: number, mapY: number, objectTypeId: number) {
+            // Only place objects if we have an active layer
+            if (!this.activeLayer) {
+                return;
+            }
+
+            const activeLayerIndex = this.layers.findIndex((layer) => layer.uuid === this.activeLayer);
+            if (activeLayerIndex === -1) {
+                return;
+            }
+
+            const activeLayer = this.layers[activeLayerIndex];
+            if (activeLayer.type !== MapLayerType.Object) {
+                return; // Can only place objects on object layers
+            }
+
+            if (!activeLayer.data) {
+                activeLayer.data = [];
+            }
+
+            // Create object data using factory
+            const objectData = LayerItemFactory.createObjectAtPosition(mapX, mapY, objectTypeId);
+
+            this.placeItemAtPosition(activeLayer, objectData, mapX, mapY);
+
+            this.markAsChanged();
+        },
+
         placeItem(mapX: number, mapY: number, fieldTypeId?: number) {
             if (!this.activeLayer) {
                 return;
@@ -332,7 +369,7 @@ export const useEditorStore = defineStore('editorStore', {
             this.markAsChanged();
         },
 
-        placeItemAtPosition(layer: MapLayer, item: Tile | FieldTypeTile, x: number, y: number) {
+        placeItemAtPosition(layer: MapLayer, item: Tile | FieldTypeTile | ObjectTile, x: number, y: number) {
             // Validate the item using the factory
             if (!LayerItemFactory.isValid(item)) {
                 console.warn('Invalid item provided to placeItemAtPosition:', item);
@@ -347,10 +384,10 @@ export const useEditorStore = defineStore('editorStore', {
 
             if (existingIndex !== -1) {
                 // Replace existing item
-                (layer.data as (Tile | FieldTypeTile)[])[existingIndex] = item;
+                (layer.data as (Tile | FieldTypeTile | ObjectTile)[])[existingIndex] = item;
             } else {
                 // Add new item
-                (layer.data as (Tile | FieldTypeTile)[]).push(item);
+                (layer.data as (Tile | FieldTypeTile | ObjectTile)[]).push(item);
             }
         },
 
@@ -681,6 +718,22 @@ export const useEditorStore = defineStore('editorStore', {
                 return item.x === mapX && item.y === mapY;
             });
             return fieldType && 'fieldType' in fieldType ? fieldType : null;
+        },
+
+        getObjectAt(mapX: number, mapY: number, layerUuid?: string): ObjectTile | null {
+            const targetLayerUuid = layerUuid || this.activeLayer;
+            if (!targetLayerUuid) return null;
+
+            const layer = this.layers.find((l) => l.uuid === targetLayerUuid);
+            if (!layer?.data || !isObjectLayer(layer)) return null;
+
+            const object = layer.data.find((item) => {
+                // Add null checks to prevent errors
+                if (!item || typeof item !== 'object') return false;
+                if (typeof item.x !== 'number' || typeof item.y !== 'number') return false;
+                return item.x === mapX && item.y === mapY;
+            });
+            return object && 'objectType' in object ? object : null;
         },
 
         fieldTypesMatch(fieldType1: FieldTypeTile | null, fieldType2: FieldTypeTile | null): boolean {

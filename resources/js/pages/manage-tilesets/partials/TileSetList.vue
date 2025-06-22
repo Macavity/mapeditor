@@ -61,9 +61,9 @@
 </template>
 
 <script setup lang="ts">
-import ImportTileSetDialog from '@/components/ImportTileSetDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import ImportTileSetDialog from '@/pages/manage-tilesets/partials/ImportTileSetDialog.vue';
 import { useTileSetStore } from '@/stores/tileSetStore';
 import type { PageProps } from '@/types/globals';
 import { router, usePage } from '@inertiajs/vue3';

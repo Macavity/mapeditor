@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,10 +14,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
+import AppLogo from '@/layouts/partials/AppLogo.vue';
+import AppLogoIcon from '@/layouts/partials/AppLogoIcon.vue';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import type { PageProps } from '@/types/globals';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
+import { BookOpen, Box, Folder, LayoutGrid, Menu, Palette, Search } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Props {
@@ -44,6 +44,26 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Maps',
+        href: '/manage-maps',
+        icon: Folder,
+    },
+    {
+        title: 'Tilesets',
+        href: '/manage-tilesets',
+        icon: Folder,
+    },
+    {
+        title: 'Field Types',
+        href: '/manage-field-types',
+        icon: Palette,
+    },
+    {
+        title: 'Object Types',
+        href: '/manage-object-types',
+        icon: Box,
     },
 ];
 

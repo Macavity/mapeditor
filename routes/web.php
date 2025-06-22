@@ -6,33 +6,37 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    return Inertia::render('welcome');
 })->name('home');
 
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('Dashboard');
+        return Inertia::render('dashboard');
     })->name('dashboard');
 
     Route::get('manage-maps', function () {
-        return Inertia::render('ManageMaps');
+        return Inertia::render('manage-maps');
     })->name('manage-maps');
 
     Route::get('manage-tilesets', function () {
-        return Inertia::render('ManageTilesets');
+        return Inertia::render('manage-tilesets');
     })->name('manage-tilesets');
 
     Route::get('manage-field-types', function () {
-        return Inertia::render('ManageFieldTypes');
+        return Inertia::render('manage-field-types');
     })->name('manage-field-types');
 
+    Route::get('manage-object-types', function () {
+        return Inertia::render('manage-object-types');
+    })->name('manage-object-types');
+
     Route::get('settings/api-tokens', function () {
-        return Inertia::render('Settings/ApiTokens');
+        return Inertia::render('settings.api-tokens');
     })->name('settings.api-tokens');
 
     Route::get('maps/{uuid}/edit', function (string $uuid) {
-        return Inertia::render('MapEditor', [
+        return Inertia::render('maps.edit', [
             'uuid' => $uuid
         ]);
     })->name('maps.edit');

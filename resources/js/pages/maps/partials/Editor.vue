@@ -18,23 +18,24 @@
         <div class="flex flex-1 gap-4">
             <!-- Left Sidebar -->
             <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4 transition-all duration-200">
-                <EditorLayers />
-                <EditorMapProperties v-if="store.showProperties" />
+                <SidebarLayerControl />
+                <SidebarProperties v-if="store.showProperties" />
             </aside>
 
             <!-- Main Canvas -->
             <section class="border-sidebar-border/70 dark:border-sidebar-border relative min-h-0 max-w-[calc(100%-40rem)] flex-1 overflow-auto">
-                <CanvasLayers />
+                <Canvas />
             </section>
 
             <!-- Right Sidebar -->
             <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
                 <section v-if="false" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                    <EditorMiniMap />
+                    <SidebarMiniMap />
                 </section>
                 <div class="min-h-0 flex-1">
-                    <TileSetBox v-if="isTileLayer" />
-                    <FieldTypeBox v-else-if="isFieldTypeLayer" />
+                    <SidebarTileSetBox v-if="isTileLayer && !isObjectLayer" />
+                    <SidebarObjectBox v-else-if="isObjectLayer" />
+                    <SidebarFieldTypeBox v-else-if="isFieldTypeLayer" />
                 </div>
             </aside>
         </div>
@@ -42,23 +43,31 @@
 </template>
 
 <script setup lang="ts">
-import CanvasLayers from '@/components/editor/CanvasLayers.vue';
-import EditorLayers from '@/components/editor/EditorLayers.vue';
-import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
-import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
-import EditorToolbar from '@/components/editor/EditorToolbar.vue';
-import FieldTypeBox from '@/components/editor/FieldTypeBox.vue';
-import SaveStatus from '@/components/editor/SaveStatus.vue';
-import TileSetBox from '@/components/editor/TileSetBox.vue';
+import Canvas from '@/pages/maps/partials/canvas/Canvas.vue';
+import EditorToolbar from '@/pages/maps/partials/EditorToolbar.vue';
+import SaveStatus from '@/pages/maps/partials/SaveStatus.vue';
+import SidebarFieldTypeBox from '@/pages/maps/partials/SidebarFieldTypeBox.vue';
+import SidebarLayerControl from '@/pages/maps/partials/SidebarLayerControl.vue';
+import SidebarMiniMap from '@/pages/maps/partials/SidebarMiniMap.vue';
+import SidebarObjectBox from '@/pages/maps/partials/SidebarObjectBox.vue';
+import SidebarProperties from '@/pages/maps/partials/SidebarProperties.vue';
+import SidebarTileSetBox from '@/pages/maps/partials/SidebarTileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
+import { useObjectTypeStore } from '@/stores/objectTypeStore';
 import { MapLayerType } from '@/types/MapLayer';
 import { Link } from '@inertiajs/vue3';
 import { Play } from 'lucide-vue-next';
-import { computed, reactive } from 'vue';
+import { computed, onMounted, reactive } from 'vue';
 
 const store = useEditorStore();
+const objectTypeStore = useObjectTypeStore();
 
 const map = reactive(store.mapMetadata);
+
+// Initialize object type store when editor mounts
+onMounted(async () => {
+    await objectTypeStore.initialize();
+});
 
 // Computed properties to determine which sidebar to show
 const activeLayer = computed(() => {
@@ -68,7 +77,11 @@ const activeLayer = computed(() => {
 
 const isTileLayer = computed(() => {
     if (!activeLayer.value) return false;
-    return [MapLayerType.Sky, MapLayerType.Floor, MapLayerType.Background, MapLayerType.Object].includes(activeLayer.value.type);
+    return [MapLayerType.Sky, MapLayerType.Floor, MapLayerType.Background].includes(activeLayer.value.type);
+});
+
+const isObjectLayer = computed(() => {
+    return activeLayer.value?.type === MapLayerType.Object;
 });
 
 const isFieldTypeLayer = computed(() => {
