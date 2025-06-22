@@ -18,7 +18,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const isDialogOpen = ref(false);
 
 const openImportWizard = () => {
-    router.visit('/manage-maps/import');
+    router.visit('/import');
 };
 </script>
 

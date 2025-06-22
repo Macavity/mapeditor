@@ -19,8 +19,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('manage-maps');
     })->name('manage-maps');
 
-    Route::get('manage-maps/import', function () {
-        return Inertia::render('manage-maps.import');
+    Route::get('import', function () {
+        return Inertia::render('import.ImportWizard');
     })->name('manage-maps.import');
 
     Route::get('manage-tilesets', function () {

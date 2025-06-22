@@ -76,6 +76,63 @@ class MapImportService
     }
 
     /**
+     * Get the appropriate importer for a file and validate it can handle it.
+     */
+    public function getImporterForFile(string $filePath, ?string $format = null): ImporterInterface
+    {
+        // If format is specified, validate it
+        if ($format) {
+            if (!$this->isValidFormat($format)) {
+                throw new \InvalidArgumentException("Unsupported import format: {$format}");
+            }
+            
+            $importer = $this->importers[$format];
+            
+            // Validate the importer can actually handle this file
+            if (!$importer->canHandle($filePath)) {
+                throw new \InvalidArgumentException("File cannot be processed by {$format} importer");
+            }
+            
+            return $importer;
+        }
+
+        // Auto-detect format
+        $detectedFormat = $this->detectFormat($filePath);
+        if (!$detectedFormat) {
+            $supportedFormats = implode(', ', $this->getSupportedFormats());
+            throw new \InvalidArgumentException("Could not detect file format. Supported formats: {$supportedFormats}");
+        }
+
+        return $this->importers[$detectedFormat];
+    }
+
+    /**
+     * Parse a file and return the detected format along with the parsed data.
+     */
+    public function parseFile(string $filePath, ?string $format = null): array
+    {
+        $importer = $this->getImporterForFile($filePath, $format);
+        
+        // Find the format key for this importer
+        $detectedFormat = null;
+        foreach ($this->importers as $fmt => $imp) {
+            if ($imp === $importer) {
+                $detectedFormat = $fmt;
+                break;
+            }
+        }
+        
+        if (!$detectedFormat) {
+            throw new \RuntimeException("Could not determine format for importer");
+        }
+
+        return [
+            'format' => $detectedFormat,
+            'data' => $importer->parse($filePath)
+        ];
+    }
+
+    /**
      * Import a map from file.
      */
     public function importFromFile(string $filePath, string $format, ?User $creator = null, array $options = []): array

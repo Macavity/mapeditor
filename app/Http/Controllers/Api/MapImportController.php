@@ -71,8 +71,21 @@ class MapImportController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:json,tmx,js|max:10240', // 10MB max
+            'file' => 'required|file|max:10240', // 10MB max
         ]);
+
+        // Custom validation for file extensions
+        $validator->after(function ($validator) use ($request) {
+            $file = $request->file('file');
+            if ($file) {
+                $extension = strtolower($file->getClientOriginalExtension());
+                $allowedExtensions = ['json', 'tmx', 'js'];
+                
+                if (!in_array($extension, $allowedExtensions)) {
+                    $validator->errors()->add('file', 'File must be one of: ' . implode(', ', $allowedExtensions));
+                }
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json([
@@ -152,39 +165,10 @@ class MapImportController extends Controller
         }
 
         try {
-            // Auto-detect format if not specified
-            if (!$format) {
-                $format = $this->importService->detectFormat($filePath);
-                if (!$format) {
-                    $supportedFormats = implode(', ', $this->importService->getSupportedFormats());
-                    return response()->json([
-                        'message' => "Could not detect file format. Supported formats: {$supportedFormats}"
-                    ], 422);
-                }
-            }
-
-            // Validate format
-            if (!$this->importService->isValidFormat($format)) {
-                $supportedFormats = implode(', ', $this->importService->getSupportedFormats());
-                return response()->json([
-                    'message' => "Unsupported format: {$format}. Supported formats: {$supportedFormats}"
-                ], 422);
-            }
-
-            // Parse the file using reflection to access private importers
-            $reflection = new \ReflectionClass($this->importService);
-            $importersProperty = $reflection->getProperty('importers');
-            $importersProperty->setAccessible(true);
-            $importers = $importersProperty->getValue($this->importService);
-
-            if (!isset($importers[$format])) {
-                return response()->json([
-                    'message' => "No importer found for format: {$format}"
-                ], 422);
-            }
-
-            $importer = $importers[$format];
-            $mapData = $importer->parse($filePath);
+            // Parse the file using the service
+            $result = $this->importService->parseFile($filePath, $format);
+            $mapData = $result['data'];
+            $detectedFormat = $result['format'];
 
             // Get suggested tilesets for each imported tileset
             $suggestedTilesets = $this->getSuggestedTilesets($mapData['tilesets'] ?? []);
@@ -193,7 +177,7 @@ class MapImportController extends Controller
                 'map_info' => $mapData['map'],
                 'layers' => $mapData['layers'],
                 'tilesets' => $mapData['tilesets'],
-                'detected_format' => $format,
+                'detected_format' => $detectedFormat,
                 'suggested_tilesets' => $suggestedTilesets,
             ]);
 
@@ -272,20 +256,10 @@ class MapImportController extends Controller
         }
 
         try {
-            // Parse the file
-            $reflection = new \ReflectionClass($this->importService);
-            $importersProperty = $reflection->getProperty('importers');
-            $importersProperty->setAccessible(true);
-            $importers = $importersProperty->getValue($this->importService);
-
-            if (!isset($importers[$format])) {
-                return response()->json([
-                    'message' => "No importer found for format: {$format}"
-                ], 422);
-            }
-
-            $importer = $importers[$format];
-            $mapData = $importer->parse($filePath);
+            // Parse the file using the service
+            $result = $this->importService->parseFile($filePath, $format);
+            $mapData = $result['data'];
+            $detectedFormat = $result['format'];
 
             // Update map name
             $mapData['map']['name'] = $mapName;
@@ -300,15 +274,15 @@ class MapImportController extends Controller
                 'auto_create_tilesets' => false, // We handle this manually in the wizard
             ];
 
-            $result = $this->importService->importFromString(
+            $importResult = $this->importService->importFromString(
                 json_encode($mapData),
-                $format,
+                $detectedFormat,
                 Auth::user(),
                 $options
             );
 
-            $map = $result['map'];
-            $tilesetResults = $result['tilesets'];
+            $map = $importResult['map'];
+            $tilesetResults = $importResult['tilesets'];
 
             // Clean up the uploaded file
             Storage::disk('local')->delete($filePath);
