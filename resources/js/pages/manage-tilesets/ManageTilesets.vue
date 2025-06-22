@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import TileSetList from '@/components/TileSetList.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import TileSetList from '@/pages/manage-tilesets/partials/TileSetList.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 

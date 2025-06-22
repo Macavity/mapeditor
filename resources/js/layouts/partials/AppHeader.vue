@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,6 +14,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
+import AppLogo from '@/layouts/partials/AppLogo.vue';
+import AppLogoIcon from '@/layouts/partials/AppLogoIcon.vue';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import type { PageProps } from '@/types/globals';
 import { Link, usePage } from '@inertiajs/vue3';

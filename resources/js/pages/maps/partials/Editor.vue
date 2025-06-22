@@ -42,14 +42,14 @@
 </template>
 
 <script setup lang="ts">
-import CanvasLayers from '@/components/editor/CanvasLayers.vue';
-import EditorLayers from '@/components/editor/EditorLayers.vue';
-import EditorMapProperties from '@/components/editor/EditorMapProperties.vue';
-import EditorMiniMap from '@/components/editor/EditorMiniMap.vue';
-import EditorToolbar from '@/components/editor/EditorToolbar.vue';
-import FieldTypeBox from '@/components/editor/FieldTypeBox.vue';
-import SaveStatus from '@/components/editor/SaveStatus.vue';
-import TileSetBox from '@/components/editor/TileSetBox.vue';
+import CanvasLayers from '@/pages/maps/partials/CanvasLayers.vue';
+import EditorLayers from '@/pages/maps/partials/EditorLayers.vue';
+import EditorMapProperties from '@/pages/maps/partials/EditorMapProperties.vue';
+import EditorMiniMap from '@/pages/maps/partials/EditorMiniMap.vue';
+import EditorToolbar from '@/pages/maps/partials/EditorToolbar.vue';
+import FieldTypeBox from '@/pages/maps/partials/FieldTypeBox.vue';
+import SaveStatus from '@/pages/maps/partials/SaveStatus.vue';
+import TileSetBox from '@/pages/maps/partials/TileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { MapLayerType } from '@/types/MapLayer';
 import { Link } from '@inertiajs/vue3';

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import Editor from '@/components/editor/Editor.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { AlertTriangle, ArrowLeft } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
+import Editor from './partials/Editor.vue';
 
 const props = defineProps<{
     uuid: string;

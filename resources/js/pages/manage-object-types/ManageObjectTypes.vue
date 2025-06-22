@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import ObjectTypeList from '@/components/ObjectTypeList.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
+import ObjectTypeList from './partials/ObjectTypeList.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

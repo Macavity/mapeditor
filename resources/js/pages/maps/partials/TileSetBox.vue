@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AddTileSetModal from '@/components/editor/AddTileSetModal.vue';
 import { useTileSelection } from '@/composables/useTileSelection';
 import { useEditorStore } from '@/stores/editorStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
@@ -7,6 +6,7 @@ import type { BrushSelectionConfig, TileSelection } from '@/types/BrushSelection
 import { isSingleTileSelection } from '@/types/BrushSelection';
 import { ChevronDown } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
+import AddTileSetModal from './AddTileSetModal.vue';
 
 const tileSetStore = useTileSetStore();
 const editorStore = useEditorStore();
