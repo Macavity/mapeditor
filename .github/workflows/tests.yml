@@ -19,7 +19,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: mapeditor_test
+          MYSQL_DATABASE: maptest
         ports:
           - 3306:3306
         options: >-
@@ -68,7 +68,7 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -P 3306 -u root -proot -e "
             CREATE USER IF NOT EXISTS 'maptest'@'%' IDENTIFIED BY 'maptest';
-            GRANT ALL PRIVILEGES ON mapeditor_test.* TO 'maptest'@'%';
+            GRANT ALL PRIVILEGES ON maptest.* TO 'maptest'@'%';
             FLUSH PRIVILEGES;
           "
 
@@ -78,8 +78,8 @@ jobs:
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-      - name: Generate Application Key
-        run: php artisan key:generate
+      - name: Generate Testing Application Key
+        run: php artisan key:generate --env=testing
 
       - name: Publish Ziggy Configuration
         run: php artisan ziggy:generate
