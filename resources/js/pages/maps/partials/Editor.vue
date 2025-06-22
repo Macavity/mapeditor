@@ -53,14 +53,21 @@ import SidebarObjectBox from '@/pages/maps/partials/SidebarObjectBox.vue';
 import SidebarProperties from '@/pages/maps/partials/SidebarProperties.vue';
 import SidebarTileSetBox from '@/pages/maps/partials/SidebarTileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
+import { useObjectTypeStore } from '@/stores/objectTypeStore';
 import { MapLayerType } from '@/types/MapLayer';
 import { Link } from '@inertiajs/vue3';
 import { Play } from 'lucide-vue-next';
-import { computed, reactive } from 'vue';
+import { computed, onMounted, reactive } from 'vue';
 
 const store = useEditorStore();
+const objectTypeStore = useObjectTypeStore();
 
 const map = reactive(store.mapMetadata);
+
+// Initialize object type store when editor mounts
+onMounted(async () => {
+    await objectTypeStore.initialize();
+});
 
 // Computed properties to determine which sidebar to show
 const activeLayer = computed(() => {

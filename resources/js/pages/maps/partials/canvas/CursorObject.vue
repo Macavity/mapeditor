@@ -34,10 +34,8 @@ const objectCursorStyle = computed(() => {
 </script>
 
 <template>
-    <div v-if="showCursor && activeObjectType" class="pointer-events-none absolute z-40" :style="objectCursorStyle">
-        <!-- Optional: Add a small indicator to show it's an object -->
-        <div class="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full border border-gray-300 bg-white">
-            <span class="text-xs font-bold text-gray-700">{{ activeObjectType.name.charAt(0).toUpperCase() }}</span>
-        </div>
+    <div v-if="showCursor && activeObjectType" class="pointer-events-none absolute z-40 flex items-center justify-center" :style="objectCursorStyle">
+        <!-- Letter centered in the square -->
+        <span class="text-xs leading-none font-bold text-white">{{ activeObjectType.name.charAt(0).toUpperCase() }}</span>
     </div>
 </template>

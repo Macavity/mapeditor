@@ -48,7 +48,7 @@ const activeToolComponent = computed(() => {
                 return store.getSelectedFieldTypeId() !== null ? CursorFieldType : null;
             } else if (layer.type === 'object') {
                 // Show object cursor for object layers if we have a selected object type
-                return objectTypeStore.activeObjectType !== null ? CursorObject : null;
+                return objectTypeStore.activeObjectTypeId !== null ? CursorObject : null;
             }
             return null;
         case EditorTool.ERASE:

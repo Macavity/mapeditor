@@ -10,6 +10,7 @@ interface ObjectTypeState {
 }
 
 export const useObjectTypeStore = defineStore('objectTypeStore', {
+    persist: true,
     state: (): ObjectTypeState => ({
         activeObjectTypeId: null,
         objectTypes: [],
@@ -22,6 +23,12 @@ export const useObjectTypeStore = defineStore('objectTypeStore', {
         },
     },
     actions: {
+        async initialize() {
+            // If we have a persisted activeObjectTypeId but no objectTypes loaded, load them
+            if (this.activeObjectTypeId && this.objectTypes.length === 0 && !this.loading) {
+                await this.loadObjectTypes();
+            }
+        },
         activateObjectType(id: number) {
             this.activeObjectTypeId = id;
         },
@@ -35,8 +42,12 @@ export const useObjectTypeStore = defineStore('objectTypeStore', {
                 const response = await axios.get('/api/object-types');
                 this.objectTypes = response.data.data;
 
-                // Set the first object type as active if none is selected
-                if (!this.activeObjectTypeId && this.objectTypes.length > 0) {
+                // Check if the current activeObjectTypeId is still valid
+                const currentActiveExists =
+                    this.activeObjectTypeId && this.objectTypes.find((objectType) => objectType.id === this.activeObjectTypeId);
+
+                // Set the first object type as active if none is selected or if current active is invalid
+                if (!currentActiveExists && this.objectTypes.length > 0) {
                     this.activeObjectTypeId = this.objectTypes[0].id;
                 }
             } catch (error) {

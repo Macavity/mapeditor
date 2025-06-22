@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import SidebarSelectableList from '@/components/ui/SidebarSelectableList.vue';
 import { useObjectTypeStore } from '@/stores/objectTypeStore';
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 
 const objectTypeStore = useObjectTypeStore();
-
-onMounted(() => {
-    if (objectTypeStore.objectTypes.length === 0) {
-        objectTypeStore.loadObjectTypes();
-    }
-});
 
 function selectObjectType(objectType: any) {
     objectTypeStore.activateObjectType(objectType.id);
