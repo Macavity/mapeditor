@@ -47,6 +47,7 @@ const parsedData = ref<{
 const importConfig = ref({
     map_name: '',
     tileset_mappings: {} as Record<string, string>,
+    tileset_images: {} as Record<string, File>,
     preserve_uuid: false,
     field_type_file_path: null as string | null,
 });
@@ -99,10 +100,16 @@ const handleFileParsed = (data: any) => {
     parsedData.value = data;
     importConfig.value.map_name = data.map_info.name || 'Imported Map';
 
-    // Initialize tileset mappings
+    // Initialize tileset mappings based on existing tilesets
     const mappings: Record<string, string> = {};
     data.tilesets.forEach((tileset: any) => {
-        mappings[tileset.uuid] = 'create_new'; // Default to create new
+        if (tileset.existing_tileset?.uuid) {
+            // Auto-map to existing tileset
+            mappings[tileset.original_name] = tileset.existing_tileset.uuid;
+        } else {
+            // Default to create new for tilesets without existing matches
+            mappings[tileset.original_name] = 'create_new';
+        }
     });
     importConfig.value.tileset_mappings = mappings;
 
@@ -135,6 +142,7 @@ const resetWizard = () => {
     importConfig.value = {
         map_name: '',
         tileset_mappings: {},
+        tileset_images: {},
         preserve_uuid: false,
         field_type_file_path: null,
     };

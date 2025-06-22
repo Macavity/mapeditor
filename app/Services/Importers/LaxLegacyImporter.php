@@ -406,7 +406,9 @@ class LaxLegacyImporter implements ImporterInterface
     {
         $tilesetModels = [];
         foreach ($tilesetUsage as $tilesetName => $tileIds) {
-            $existingTileset = TileSet::where('name', $tilesetName)->first();
+            $formattedName = $this->formatTilesetName($tilesetName);
+            $existingTileset = $this->findExistingTileset($tilesetName, $formattedName);
+            
             if ($existingTileset) {
                 $tilesetModels[$tilesetName] = $existingTileset;
             } else {
@@ -812,11 +814,13 @@ class LaxLegacyImporter implements ImporterInterface
             // Check if tileset image exists
             $imageExists = $this->checkTilesetImageExists($tilesetName);
             
+            // Use existing tileset UUID if available, otherwise null for new tilesets
+            $uuid = $existingTileset ? $existingTileset->uuid : null;
+            
             $tilesets[] = [
                 'original_name' => $tilesetName,
                 'formatted_name' => $formattedName,
                 'tile_count' => count($tileIds),
-                'tile_ids' => array_values(array_unique($tileIds)),
                 'max_tile_id' => max($tileIds),
                 'image_exists' => $imageExists,
                 'existing_tileset' => $existingTileset ? [

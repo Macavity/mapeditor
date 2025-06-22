@@ -17,6 +17,7 @@ interface Props {
     importConfig: {
         map_name: string;
         tileset_mappings: Record<string, string>;
+        tileset_images: Record<string, File>;
         preserve_uuid: boolean;
         field_type_file_path: string | null;
     };
@@ -35,10 +36,16 @@ const isImporting = ref(false);
 const performImport = async () => {
     if (!props.uploadedFiles?.mainMapFile || !props.parsedData) return;
 
-    // Check if there are tilesets with missing images
-    const tilesetsWithMissingImages = props.parsedData.tilesets?.filter((t: any) => t._missing_image) || [];
-    if (tilesetsWithMissingImages.length > 0) {
-        const tilesetNames = tilesetsWithMissingImages.map((t: any) => t.name).join(', ');
+    // Check if there are tilesets that need images but don't have them
+    const tilesetsNeedingImages =
+        props.parsedData.tilesets?.filter((t: any) => {
+            const mapping = props.importConfig.tileset_mappings[t.original_name];
+            const effectiveMapping = mapping || t.existing_tileset?.uuid;
+            return effectiveMapping === 'create_new' && t.requires_upload && !props.importConfig.tileset_images[t.original_name];
+        }) || [];
+
+    if (tilesetsNeedingImages.length > 0) {
+        const tilesetNames = tilesetsNeedingImages.map((t: any) => t.formatted_name).join(', ');
         emit('error', `Cannot import map: The following tilesets require image files to be uploaded: ${tilesetNames}`);
         return;
     }
@@ -46,20 +53,29 @@ const performImport = async () => {
     isImporting.value = true;
 
     try {
-        const requestData: any = {
-            file_path: props.uploadedFiles.mainMapFile,
-            format: props.parsedData.detected_format,
-            map_name: props.importConfig.map_name,
-            tileset_mappings: props.importConfig.tileset_mappings,
-            preserve_uuid: props.importConfig.preserve_uuid,
-        };
+        // Create FormData for the request
+        const formData = new FormData();
+        formData.append('file_path', props.uploadedFiles.mainMapFile);
+        formData.append('format', props.parsedData.detected_format);
+        formData.append('map_name', props.importConfig.map_name);
+        formData.append('tileset_mappings', JSON.stringify(props.importConfig.tileset_mappings));
+        formData.append('preserve_uuid', props.importConfig.preserve_uuid.toString());
 
         // Add field type file path if available
         if (props.uploadedFiles.fieldTypeFile) {
-            requestData.field_type_file_path = props.uploadedFiles.fieldTypeFile;
+            formData.append('field_type_file_path', props.uploadedFiles.fieldTypeFile);
         }
 
-        const response = await api.post('/map-import/complete', requestData);
+        // Add tileset images
+        Object.entries(props.importConfig.tileset_images).forEach(([tilesetKey, file]) => {
+            formData.append(`tileset_images[${tilesetKey}]`, file);
+        });
+
+        const response = await api.post('/map-import/complete', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
 
         emit('import-complete', response.data);
     } catch (error: any) {
@@ -103,16 +119,21 @@ performImport();
                     <span class="text-sm font-medium">Tileset Mappings:</span>
                     <div class="space-y-1">
                         <div
-                            v-for="(mapping, importedUuid) in importConfig.tileset_mappings"
-                            :key="importedUuid"
+                            v-for="(mapping, tilesetKey) in importConfig.tileset_mappings"
+                            :key="tilesetKey"
                             class="flex items-center justify-between text-sm"
                         >
                             <span class="text-muted-foreground">
-                                {{ parsedData?.tilesets?.find((t: any) => t.uuid === importedUuid)?.name }}
+                                {{ parsedData?.tilesets?.find((t: any) => t.original_name === tilesetKey)?.formatted_name }}
                             </span>
-                            <Badge :variant="mapping === 'create_new' ? 'default' : 'secondary'">
-                                {{ mapping === 'create_new' ? 'Create New' : 'Use Existing' }}
-                            </Badge>
+                            <div class="flex items-center gap-2">
+                                <Badge :variant="mapping === 'create_new' ? 'default' : 'secondary'">
+                                    {{ mapping === 'create_new' ? 'Create New' : 'Use Existing' }}
+                                </Badge>
+                                <Badge v-if="mapping === 'create_new' && importConfig.tileset_images[tilesetKey]" variant="outline" class="text-xs">
+                                    Image Uploaded
+                                </Badge>
+                            </div>
                         </div>
                     </div>
                 </div>

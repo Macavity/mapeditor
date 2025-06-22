@@ -249,14 +249,22 @@ class MapImportController extends Controller
         tags: ['Map Import'],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(properties: [
-                new OA\Property(property: 'file_path', type: 'string'),
-                new OA\Property(property: 'format', type: 'string'),
-                new OA\Property(property: 'map_name', type: 'string'),
-                new OA\Property(property: 'tileset_mappings', type: 'object'),
-                new OA\Property(property: 'preserve_uuid', type: 'boolean'),
-                new OA\Property(property: 'field_type_file_path', type: 'string', nullable: true),
-            ], required: ['file_path', 'format', 'map_name', 'tileset_mappings'])
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'file_path', type: 'string'),
+                        new OA\Property(property: 'format', type: 'string'),
+                        new OA\Property(property: 'map_name', type: 'string'),
+                        new OA\Property(property: 'tileset_mappings', type: 'string'), // JSON string
+                        new OA\Property(property: 'preserve_uuid', type: 'boolean'),
+                        new OA\Property(property: 'field_type_file_path', type: 'string', nullable: true),
+                        new OA\Property(property: 'tileset_images', type: 'array', items: new OA\Schema(type: 'string', format: 'binary')),
+                    ],
+                    required: ['file_path', 'format', 'map_name', 'tileset_mappings']
+                )
+            )
         ),
         responses: [
             new OA\Response(
@@ -283,10 +291,10 @@ class MapImportController extends Controller
             'file_path' => 'required|string',
             'format' => 'required|string|in:json,tmx,js',
             'map_name' => 'required|string|max:255',
-            'tileset_mappings' => 'required|array',
-            'tileset_mappings.*' => 'required|string|uuid',
+            'tileset_mappings' => 'required|string', // JSON string
             'preserve_uuid' => 'boolean',
             'field_type_file_path' => 'nullable|string',
+            'tileset_images.*' => 'nullable|file|image|max:10240', // 10MB max
         ]);
 
         if ($validator->fails()) {
@@ -299,9 +307,18 @@ class MapImportController extends Controller
         $filePath = $request->input('file_path');
         $format = $request->input('format');
         $mapName = $request->input('map_name');
-        $tilesetMappings = $request->input('tileset_mappings');
+        $tilesetMappingsJson = $request->input('tileset_mappings');
         $preserveUuid = $request->input('preserve_uuid', false);
         $fieldTypeFilePath = $request->input('field_type_file_path');
+        $tilesetImages = $request->file('tileset_images', []);
+
+        // Decode tileset mappings
+        $tilesetMappings = json_decode($tilesetMappingsJson, true);
+        if (!is_array($tilesetMappings)) {
+            return response()->json([
+                'message' => 'Invalid tileset mappings format'
+            ], 422);
+        }
 
         // Verify main file exists
         if (!Storage::disk('local')->exists($filePath)) {
@@ -318,6 +335,9 @@ class MapImportController extends Controller
         }
 
         try {
+            // Upload tileset images first
+            $uploadedTilesetImages = $this->uploadTilesetImages($tilesetImages);
+
             // If this is a JS file and we have a field type file, copy it to the expected location
             if ($format === 'js' && $fieldTypeFilePath) {
                 $this->copyFieldTypeFile($filePath, $fieldTypeFilePath);
@@ -331,14 +351,14 @@ class MapImportController extends Controller
             // Update map name
             $mapData['map']['name'] = $mapName;
 
-            // Apply tileset mappings
-            $this->applyTilesetMappings($mapData, $tilesetMappings);
+            // Apply tileset mappings and uploaded images
+            $this->applyTilesetMappings($mapData, $tilesetMappings, $uploadedTilesetImages);
 
             // Import the map
             $options = [
                 'preserve_uuid' => $preserveUuid,
                 'overwrite' => false,
-                'auto_create_tilesets' => false, // We handle this manually in the wizard
+                'auto_create_tilesets' => true, // Enable tileset creation for wizard
             ];
 
             $importResult = $this->importService->importFromString(
@@ -448,21 +468,41 @@ class MapImportController extends Controller
     /**
      * Apply tileset mappings to the map data
      */
-    private function applyTilesetMappings(array &$mapData, array $tilesetMappings): void
+    private function applyTilesetMappings(array &$mapData, array $tilesetMappings, array $uploadedImages = []): void
     {
-        // Create a mapping from imported UUID to target UUID
+        // Create a mapping from imported original_name to target UUID
         $uuidMapping = [];
-        foreach ($tilesetMappings as $importedUuid => $targetUuid) {
-            if ($targetUuid !== 'create_new') {
-                $uuidMapping[$importedUuid] = $targetUuid;
+        foreach ($tilesetMappings as $originalName => $targetUuid) {
+            // Find the tileset by original_name to get its UUID
+            $importedTileset = null;
+            foreach ($mapData['tilesets'] as $tileset) {
+                if ($tileset['original_name'] === $originalName) {
+                    $importedTileset = $tileset;
+                    break;
+                }
+            }
+            
+            if ($importedTileset) {
+                $importedUuid = $importedTileset['uuid'];
+                if ($targetUuid === 'create_new') {
+                    // Generate a new UUID for tilesets that should be created
+                    $uuidMapping[$importedUuid] = (string) \Illuminate\Support\Str::uuid();
+                } else {
+                    $uuidMapping[$importedUuid] = $targetUuid;
+                }
             }
         }
 
         // Update tileset UUIDs in the map data
         foreach ($mapData['tilesets'] as &$tileset) {
             if (isset($uuidMapping[$tileset['uuid']])) {
+                $originalUuid = $tileset['uuid'];
                 $tileset['uuid'] = $uuidMapping[$tileset['uuid']];
-                $tileset['_existing'] = true; // Mark as existing
+                // Only mark as existing if it's not a 'create_new' mapping
+                $originalName = $tileset['original_name'];
+                if ($tilesetMappings[$originalName] !== 'create_new') {
+                    $tileset['_existing'] = true;
+                }
             }
         }
 
@@ -473,6 +513,20 @@ class MapImportController extends Controller
                     if (isset($tile['brush']['tileset']) && isset($uuidMapping[$tile['brush']['tileset']])) {
                         $tile['brush']['tileset'] = $uuidMapping[$tile['brush']['tileset']];
                     }
+                }
+            }
+        }
+
+        // Apply uploaded images to tilesets that need them
+        foreach ($uploadedImages as $image) {
+            $tilesetKey = $image['tileset_key'];
+            $imagePath = $image['image_path'];
+            
+            // Find the tileset by original name and update its image path
+            foreach ($mapData['tilesets'] as &$tileset) {
+                if ($tileset['original_name'] === $tilesetKey) {
+                    $tileset['image_path'] = $imagePath;
+                    break;
                 }
             }
         }
@@ -529,5 +583,38 @@ class MapImportController extends Controller
         }
         
         return $suggestions;
+    }
+
+    /**
+     * Upload tileset images and return their paths
+     */
+    private function uploadTilesetImages(array $images): array
+    {
+        $uploadedImages = [];
+        
+        foreach ($images as $tilesetKey => $image) {
+            if (!$image || !$image->isValid()) {
+                continue;
+            }
+            
+            $fileName = $image->getClientOriginalName();
+            $extension = $image->getClientOriginalExtension();
+            
+            // Generate a unique filename while preserving the original extension
+            $uniqueName = uniqid() . '.' . $extension;
+            $filePath = 'imports/tilesets/' . $uniqueName;
+            
+            // Store the file with the custom path
+            Storage::disk('local')->put($filePath, file_get_contents($image->getRealPath()));
+
+            $uploadedImages[] = [
+                'tileset_key' => $tilesetKey,
+                'image_path' => $filePath,
+                'file_name' => $fileName,
+                'extension' => $extension
+            ];
+        }
+        
+        return $uploadedImages;
     }
 } 
