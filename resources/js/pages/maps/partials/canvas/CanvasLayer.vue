@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
+import { useObjectTypeStore } from '@/stores/objectTypeStore';
 import { useTileSetStore } from '@/stores/tileSetStore';
-import { isFieldTypeLayer, isTileLayer, type FieldTypeTile, type MapLayer, type Tile } from '@/types/MapLayer';
+import { isFieldTypeLayer, isObjectLayer, isTileLayer, type FieldTypeTile, type MapLayer, type ObjectTile, type Tile } from '@/types/MapLayer';
 import { nextTick, onMounted, ref, watch } from 'vue';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 const props = defineProps<Props>();
 const store = useEditorStore();
 const tileSetStore = useTileSetStore();
+const objectTypeStore = useObjectTypeStore();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
@@ -58,6 +60,8 @@ const renderLayer = async () => {
         await renderTileLayer(ctx);
     } else if (isFieldTypeLayer(props.layer)) {
         await renderFieldTypeLayer(ctx);
+    } else if (isObjectLayer(props.layer)) {
+        await renderObjectLayer(ctx);
     }
 };
 
@@ -159,6 +163,57 @@ const renderFieldTypeLayer = async (ctx: CanvasRenderingContext2D) => {
 
     // Reset globalAlpha back to 1.0 for other layers
     ctx.globalAlpha = 1.0;
+};
+
+const renderObjectLayer = async (ctx: CanvasRenderingContext2D) => {
+    // Ensure object types are loaded
+    if (objectTypeStore.objectTypes.length === 0) {
+        await objectTypeStore.loadObjectTypes();
+    }
+
+    // Draw each object
+    for (const objectTile of props.layer.data as ObjectTile[]) {
+        // Skip invalid object tiles
+        if (!objectTile || typeof objectTile.objectType !== 'number') {
+            continue;
+        }
+
+        const objectType = objectTypeStore.objectTypes.find((ot) => ot.id === objectTile.objectType);
+        if (!objectType) {
+            continue; // Skip if object type not found
+        }
+
+        // Destination coordinates on the canvas
+        const destX = objectTile.x * store.mapMetadata.tileWidth;
+        const destY = objectTile.y * store.mapMetadata.tileHeight;
+
+        // Draw object as a colored circle with border
+        ctx.fillStyle = objectType.color;
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+
+        // Draw circle (slightly smaller than tile size)
+        const radius = Math.min(store.mapMetadata.tileWidth, store.mapMetadata.tileHeight) / 2 - 2;
+        const centerX = destX + store.mapMetadata.tileWidth / 2;
+        const centerY = destY + store.mapMetadata.tileHeight / 2;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw object type name
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const text = objectType.name.charAt(0).toUpperCase();
+        ctx.strokeText(text, centerX, centerY);
+        ctx.fillText(text, centerX, centerY);
+    }
 };
 
 // Expose render method for parent component

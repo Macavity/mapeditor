@@ -19,6 +19,7 @@ class ObjectTypeFactory extends Factory
     {
         return [
             'name' => $this->faker->unique()->word(),
+            'type' => '',
             'color' => $this->faker->hexColor(),
             'description' => $this->faker->optional()->sentence(),
             'is_solid' => $this->faker->boolean(80), // 80% chance of being solid

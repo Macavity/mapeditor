@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editorStore';
+import { useObjectTypeStore } from '@/stores/objectTypeStore';
 import type { CursorState } from '@/types/CursorState';
 import { EditorTool } from '@/types/EditorTool';
 import { isFieldTypeLayer, isTileLayer } from '@/types/MapLayer';
 import { computed, defineAsyncComponent, inject, provide, ref } from 'vue';
 
 const store = useEditorStore();
+const objectTypeStore = useObjectTypeStore();
 
 // Inject shared cursor state from CanvasLayers
 const cursorState = inject<CursorState>('cursorState');
@@ -19,6 +21,7 @@ const CursorBrush = defineAsyncComponent(() => import('./CursorBrush.vue'));
 const CursorErase = defineAsyncComponent(() => import('./CursorErase.vue'));
 const CursorFill = defineAsyncComponent(() => import('./CursorFill.vue'));
 const CursorFieldType = defineAsyncComponent(() => import('./CursorFieldType.vue'));
+const CursorObject = defineAsyncComponent(() => import('./CursorObject.vue'));
 
 // Reference to the active cursor component
 const activeCursorRef = ref<any>(null);
@@ -43,6 +46,9 @@ const activeToolComponent = computed(() => {
             } else if (isFieldTypeLayer(layer)) {
                 // Show field type cursor for field type layers if we have a selected field type
                 return store.getSelectedFieldTypeId() !== null ? CursorFieldType : null;
+            } else if (layer.type === 'object') {
+                // Show object cursor for object layers if we have a selected object type
+                return objectTypeStore.activeObjectType !== null ? CursorObject : null;
             }
             return null;
         case EditorTool.ERASE:

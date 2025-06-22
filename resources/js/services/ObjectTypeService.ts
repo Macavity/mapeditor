@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 export interface ObjectType {
     id: number;
     name: string;
+    type: string;
     color: string;
     description: string | null;
     is_solid: boolean;
@@ -12,6 +13,7 @@ export interface ObjectType {
 
 export interface CreateObjectTypeData {
     name: string;
+    type?: string;
     color: string;
     description?: string;
     is_solid?: boolean;
@@ -19,6 +21,7 @@ export interface CreateObjectTypeData {
 
 export interface UpdateObjectTypeData {
     name: string;
+    type?: string;
     color: string;
     description?: string;
     is_solid?: boolean;

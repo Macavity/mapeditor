@@ -13,6 +13,7 @@ class ObjectType extends Model
 
     protected $fillable = [
         'name',
+        'type',
         'color',
         'description',
         'is_solid',

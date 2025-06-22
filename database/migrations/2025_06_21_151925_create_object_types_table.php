@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('object_types', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
+            $table->string('type')->default('');
             $table->string('color', 7); // Hex color code (e.g., #FF0000)
             $table->text('description')->nullable(); // Optional description
             $table->boolean('is_solid')->default(true); // Whether objects of this type block movement
@@ -25,6 +26,7 @@ return new class extends Migration
         DB::table('object_types')->insert([
             [
                 'name' => 'Player',
+                'type' => 'player',
                 'color' => '#FF0000', // Red
                 'description' => 'Player character that can move around the map',
                 'is_solid' => false,

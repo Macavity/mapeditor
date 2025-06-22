@@ -33,7 +33,8 @@
                     <SidebarMiniMap />
                 </section>
                 <div class="min-h-0 flex-1">
-                    <SidebarTileSetBox v-if="isTileLayer" />
+                    <SidebarTileSetBox v-if="isTileLayer && !isObjectLayer" />
+                    <SidebarObjectBox v-else-if="isObjectLayer" />
                     <SidebarFieldTypeBox v-else-if="isFieldTypeLayer" />
                 </div>
             </aside>
@@ -48,6 +49,7 @@ import SaveStatus from '@/pages/maps/partials/SaveStatus.vue';
 import SidebarFieldTypeBox from '@/pages/maps/partials/SidebarFieldTypeBox.vue';
 import SidebarLayerControl from '@/pages/maps/partials/SidebarLayerControl.vue';
 import SidebarMiniMap from '@/pages/maps/partials/SidebarMiniMap.vue';
+import SidebarObjectBox from '@/pages/maps/partials/SidebarObjectBox.vue';
 import SidebarProperties from '@/pages/maps/partials/SidebarProperties.vue';
 import SidebarTileSetBox from '@/pages/maps/partials/SidebarTileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
@@ -68,7 +70,11 @@ const activeLayer = computed(() => {
 
 const isTileLayer = computed(() => {
     if (!activeLayer.value) return false;
-    return [MapLayerType.Sky, MapLayerType.Floor, MapLayerType.Background, MapLayerType.Object].includes(activeLayer.value.type);
+    return [MapLayerType.Sky, MapLayerType.Floor, MapLayerType.Background].includes(activeLayer.value.type);
+});
+
+const isObjectLayer = computed(() => {
+    return activeLayer.value?.type === MapLayerType.Object;
 });
 
 const isFieldTypeLayer = computed(() => {

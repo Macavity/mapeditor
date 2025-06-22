@@ -32,6 +32,7 @@ class ObjectTypeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:object_types,name',
+            'type' => 'nullable|string|max:255',
             'color' => 'required|string|regex:/^#[0-9A-F]{6}$/i|max:7',
             'description' => 'nullable|string|max:1000',
             'is_solid' => 'boolean',
@@ -66,6 +67,7 @@ class ObjectTypeController extends Controller
                 'max:255',
                 Rule::unique('object_types', 'name')->ignore($objectType->id),
             ],
+            'type' => 'nullable|string|max:255',
             'color' => 'required|string|regex:/^#[0-9A-F]{6}$/i|max:7',
             'description' => 'nullable|string|max:1000',
             'is_solid' => 'boolean',

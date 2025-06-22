@@ -32,6 +32,7 @@
                 <thead class="bg-sidebar-border/5 text-xs uppercase">
                     <tr>
                         <th scope="col" class="px-6 py-3">Name</th>
+                        <th scope="col" class="px-6 py-3">Type</th>
                         <th scope="col" class="px-6 py-3">Color</th>
                         <th scope="col" class="px-6 py-3">Description</th>
                         <th scope="col" class="px-6 py-3">Solid</th>
@@ -42,6 +43,7 @@
                 <tbody>
                     <tr v-for="objectType in objectTypes" :key="objectType.id" class="border-sidebar-border/10 hover:bg-sidebar-border/5 border-b">
                         <td class="px-6 py-4 font-medium">{{ objectType.name }}</td>
+                        <td class="px-6 py-4 text-gray-500">{{ objectType.type || 'No type' }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
                                 <div class="h-6 w-6 rounded border border-gray-300" :style="{ backgroundColor: objectType.color }"></div>
@@ -102,9 +104,12 @@ const formatDate = (dateString: string): string => {
 const editObjectType = (objectType: ObjectType) => {
     // For now, we'll use a simple alert. In a real app, you might want a proper edit dialog
     const newName = prompt('Enter new name:', objectType.name);
-    if (newName && newName !== objectType.name) {
+    const newType = prompt('Enter new type (optional):', objectType.type);
+
+    if (newName && (newName !== objectType.name || newType !== objectType.type)) {
         updateObjectType(objectType.id, {
             name: newName,
+            type: newType || undefined,
             color: objectType.color,
             description: objectType.description || undefined,
             is_solid: objectType.is_solid,
@@ -112,10 +117,11 @@ const editObjectType = (objectType: ObjectType) => {
     }
 };
 
-const updateObjectType = async (id: number, data: { name: string; color: string; description?: string; is_solid?: boolean }) => {
+const updateObjectType = async (id: number, data: { name: string; type?: string; color: string; description?: string; is_solid?: boolean }) => {
     try {
         await ObjectTypeService.update(id, {
             name: data.name,
+            type: data.type,
             color: data.color,
             description: data.description || undefined,
             is_solid: data.is_solid,

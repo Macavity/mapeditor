@@ -13,6 +13,18 @@
             </div>
 
             <div class="space-y-2">
+                <Label for="type">Type (Optional)</Label>
+                <Input
+                    id="type"
+                    v-model="form.type"
+                    type="text"
+                    placeholder="Enter object type category"
+                    :class="{ 'border-red-500': errors.type }"
+                />
+                <InputError v-if="errors.type" :message="errors.type" />
+            </div>
+
+            <div class="space-y-2">
                 <Label for="color">Color</Label>
                 <div class="flex items-center gap-2">
                     <Input id="color" v-model="form.color" type="color" class="h-10 w-20" />
@@ -62,10 +74,11 @@ const emit = defineEmits<{
 }>();
 
 const loading = ref(false);
-const errors = ref<{ name?: string; color?: string }>({});
+const errors = ref<{ name?: string; color?: string; type?: string }>({});
 
 const form = ref({
     name: '',
+    type: '',
     color: '#000000',
     description: '',
     is_solid: true,
@@ -78,6 +91,7 @@ const handleSubmit = async () => {
     try {
         await ObjectTypeService.create({
             name: form.value.name,
+            type: form.value.type || undefined,
             color: form.value.color,
             description: form.value.description || undefined,
             is_solid: form.value.is_solid,
