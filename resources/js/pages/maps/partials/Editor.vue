@@ -18,23 +18,23 @@
         <div class="flex flex-1 gap-4">
             <!-- Left Sidebar -->
             <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4 transition-all duration-200">
-                <EditorLayers />
-                <EditorMapProperties v-if="store.showProperties" />
+                <SidebarLayerControl />
+                <SidebarProperties v-if="store.showProperties" />
             </aside>
 
             <!-- Main Canvas -->
             <section class="border-sidebar-border/70 dark:border-sidebar-border relative min-h-0 max-w-[calc(100%-40rem)] flex-1 overflow-auto">
-                <CanvasLayers />
+                <Canvas />
             </section>
 
             <!-- Right Sidebar -->
             <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
                 <section v-if="false" class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
-                    <EditorMiniMap />
+                    <SidebarMiniMap />
                 </section>
                 <div class="min-h-0 flex-1">
-                    <TileSetBox v-if="isTileLayer" />
-                    <FieldTypeBox v-else-if="isFieldTypeLayer" />
+                    <SidebarTileSetBox v-if="isTileLayer" />
+                    <SidebarFieldTypeBox v-else-if="isFieldTypeLayer" />
                 </div>
             </aside>
         </div>
@@ -42,14 +42,14 @@
 </template>
 
 <script setup lang="ts">
-import CanvasLayers from '@/pages/maps/partials/CanvasLayers.vue';
-import EditorLayers from '@/pages/maps/partials/EditorLayers.vue';
-import EditorMapProperties from '@/pages/maps/partials/EditorMapProperties.vue';
-import EditorMiniMap from '@/pages/maps/partials/EditorMiniMap.vue';
+import Canvas from '@/pages/maps/partials/canvas/Canvas.vue';
 import EditorToolbar from '@/pages/maps/partials/EditorToolbar.vue';
-import FieldTypeBox from '@/pages/maps/partials/FieldTypeBox.vue';
 import SaveStatus from '@/pages/maps/partials/SaveStatus.vue';
-import TileSetBox from '@/pages/maps/partials/TileSetBox.vue';
+import SidebarFieldTypeBox from '@/pages/maps/partials/SidebarFieldTypeBox.vue';
+import SidebarLayerControl from '@/pages/maps/partials/SidebarLayerControl.vue';
+import SidebarMiniMap from '@/pages/maps/partials/SidebarMiniMap.vue';
+import SidebarProperties from '@/pages/maps/partials/SidebarProperties.vue';
+import SidebarTileSetBox from '@/pages/maps/partials/SidebarTileSetBox.vue';
 import { useEditorStore } from '@/stores/editorStore';
 import { MapLayerType } from '@/types/MapLayer';
 import { Link } from '@inertiajs/vue3';

@@ -15,10 +15,10 @@ if (!cursorState) {
 }
 
 // Lazy load tool components only when needed
-const BrushCursor = defineAsyncComponent(() => import('./BrushCursor.vue'));
-const EraseCursor = defineAsyncComponent(() => import('./EraseCursor.vue'));
-const FillCursor = defineAsyncComponent(() => import('./FillCursor.vue'));
-const FieldTypeCursor = defineAsyncComponent(() => import('./FieldTypeCursor.vue'));
+const CursorBrush = defineAsyncComponent(() => import('./CursorBrush.vue'));
+const CursorErase = defineAsyncComponent(() => import('./CursorErase.vue'));
+const CursorFill = defineAsyncComponent(() => import('./CursorFill.vue'));
+const CursorFieldType = defineAsyncComponent(() => import('./CursorFieldType.vue'));
 
 // Reference to the active cursor component
 const activeCursorRef = ref<any>(null);
@@ -39,21 +39,21 @@ const activeToolComponent = computed(() => {
         case EditorTool.DRAW:
             if (isTileLayer(layer)) {
                 // Show brush cursor for tile layers if we have a valid brush selection
-                return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? BrushCursor : null;
+                return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? CursorBrush : null;
             } else if (isFieldTypeLayer(layer)) {
                 // Show field type cursor for field type layers if we have a selected field type
-                return store.getSelectedFieldTypeId() !== null ? FieldTypeCursor : null;
+                return store.getSelectedFieldTypeId() !== null ? CursorFieldType : null;
             }
             return null;
         case EditorTool.ERASE:
-            return EraseCursor;
+            return CursorErase;
         case EditorTool.FILL:
             if (isTileLayer(layer)) {
                 // Show fill cursor for tile layers if we have a valid brush selection
-                return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? FillCursor : null;
+                return store.brushSelection.tilesetUuid && store.brushSelection.backgroundImage ? CursorFill : null;
             } else if (isFieldTypeLayer(layer)) {
                 // Show fill cursor for field type layers if we have a selected field type
-                return store.getSelectedFieldTypeId() !== null ? FillCursor : null;
+                return store.getSelectedFieldTypeId() !== null ? CursorFill : null;
             }
             return null;
         default:
