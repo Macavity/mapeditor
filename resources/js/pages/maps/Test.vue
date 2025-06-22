@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { ToggleButton } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { isFieldTypeLayer, MapLayer, MapLayerType } from '@/types/MapLayer';
+import { isFieldTypeLayer, isFieldTypeTile, isObjectLayer, MapLayer, MapLayerType } from '@/types/MapLayer';
 import { TileMap } from '@/types/TileMap';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowDown, ArrowLeft, ArrowLeft as ArrowLeftIcon, ArrowRight, ArrowUp, Edit } from 'lucide-vue-next';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { ArrowDown, ArrowLeft as ArrowLeftIcon, ArrowRight, ArrowUp, Edit, Grid } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{
     map: TileMap;
@@ -17,6 +18,19 @@ const error = ref<string | null>(null);
 
 // Reactive player position
 const playerPos = ref({ x: props.playerPosition.x, y: props.playerPosition.y });
+
+// Check if player position came from an object layer
+const playerPositionSource = computed(() => {
+    const centerX = Math.floor(props.map.width / 2);
+    const centerY = Math.floor(props.map.height / 2);
+
+    // If position matches center, it likely came from fallback
+    if (playerPos.value.x === centerX && playerPos.value.y === centerY) {
+        return 'center';
+    }
+
+    return 'object-layer';
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -78,6 +92,11 @@ const fieldTypeLayer = computed(() => {
     return props.layers.find((layer) => layer.type === MapLayerType.FieldType);
 });
 
+// Get object layers for display
+const objectLayers = computed(() => {
+    return props.layers.filter((layer) => layer.type === MapLayerType.Object);
+});
+
 const getLayerStyle = (layer: MapLayer) => ({
     zIndex: layer.z,
     opacity: layer.opacity,
@@ -107,6 +126,21 @@ const canMoveTo = (x: number, y: number): boolean => {
         const fieldTypeTile = fieldTypeLayer.value.data.find((tile: any) => tile.x === x && tile.y === y);
         if (fieldTypeTile && fieldTypeTile.fieldType === 2) {
             return false; // Blocked by field type 2 (no entry)
+        }
+    }
+
+    // Check object collision (solid objects block movement)
+    for (const layer of objectLayers.value) {
+        if (isObjectLayer(layer) && layer.data) {
+            const object = layer.data.find((obj) => obj.x === x && obj.y === y);
+            if (object) {
+                // For now, we'll assume objectType 1 (player) is not solid
+                // and other object types are solid. In a real implementation,
+                // you'd want to check the object type's is_solid property
+                if (object.objectType !== 1) {
+                    return false; // Blocked by solid object
+                }
+            }
         }
     }
 
@@ -166,6 +200,62 @@ const moveUp = () => movePlayer(0, -1);
 const moveDown = () => movePlayer(0, 1);
 const moveLeft = () => movePlayer(-1, 0);
 const moveRight = () => movePlayer(1, 0);
+
+// Field type layer debug toggle
+const showFieldTypeLayer = ref(false);
+const fieldTypeOverlayImage = ref<string | null>(null);
+
+// Generate field type overlay image
+const generateFieldTypeOverlay = () => {
+    if (!showFieldTypeLayer.value || !fieldTypeLayer.value || !isFieldTypeLayer(fieldTypeLayer.value)) {
+        fieldTypeOverlayImage.value = null;
+        return;
+    }
+
+    // Only create canvas in browser environment
+    if (typeof document === 'undefined') {
+        fieldTypeOverlayImage.value = null;
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = props.map.width * props.map.tile_width;
+    canvas.height = props.map.height * props.map.tile_height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        fieldTypeOverlayImage.value = null;
+        return;
+    }
+
+    // Draw red overlay for field type 2 tiles
+    fieldTypeLayer.value.data.forEach((tile) => {
+        if (isFieldTypeTile(tile) && tile.fieldType === 2) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+            ctx.lineWidth = 1;
+
+            const x = tile.x * props.map.tile_width;
+            const y = tile.y * props.map.tile_height;
+            const width = props.map.tile_width;
+            const height = props.map.tile_height;
+
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+        }
+    });
+
+    fieldTypeOverlayImage.value = canvas.toDataURL();
+};
+
+// Watch for changes and regenerate overlay
+watch(
+    [showFieldTypeLayer, fieldTypeLayer],
+    () => {
+        generateFieldTypeOverlay();
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
@@ -177,26 +267,37 @@ const moveRight = () => movePlayer(1, 0);
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold">{{ map.name }} - Test Mode</h1>
-                    <p class="text-muted-foreground">Testing map with {{ layers.length }} layers</p>
+                    <p class="text-muted-foreground">
+                        Testing map with {{ layers.length }} layers
+                        <span v-if="playerPositionSource === 'object-layer'" class="font-medium text-green-600">
+                            • Player position from object layer
+                        </span>
+                        <span v-else class="text-gray-500"> • Player position at center (default) </span>
+                    </p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-4">
                     <Link :href="`/maps/${map.uuid}/edit`" class="btn btn-outline flex items-center gap-2">
                         <Edit class="h-4 w-4" />
                         Edit Map
                     </Link>
-                    <Link href="/manage-maps" class="btn btn-primary flex items-center gap-2">
-                        <ArrowLeft class="h-4 w-4" />
-                        Back to Maps
-                    </Link>
                 </div>
             </div>
 
+            <div class="mb-2 flex gap-2">
+                <ToggleButton
+                    :icon="Grid"
+                    :text="showFieldTypeLayer ? 'Hide Field Type Layer' : 'Show Field Type Layer'"
+                    :active="showFieldTypeLayer"
+                    @click="showFieldTypeLayer = !showFieldTypeLayer"
+                />
+            </div>
+
             <!-- Map Container -->
-            <div class="flex flex-1 items-center justify-center">
-                <div class="flex items-center gap-4">
-                    <!-- Layer info sidebar -->
-                    <div class="min-w-[200px] rounded bg-black/70 p-3 text-xs text-white">
-                        <div class="mb-2 font-bold">Layers ({{ layers.length }})</div>
+            <div class="flex flex-1 gap-4">
+                <!-- Left Sidebar -->
+                <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4 transition-all duration-200">
+                    <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                        <div class="mb-2 text-sm font-bold">Layers ({{ layers.length }})</div>
                         <div v-for="layer in sortedLayers" :key="layer.uuid" class="mb-1 flex items-center gap-2">
                             <div
                                 :class="{
@@ -208,64 +309,95 @@ const moveRight = () => movePlayer(1, 0);
                                     'bg-gray-500': layer.type === MapLayerType.FieldType,
                                 }"
                             ></div>
-                            <span class="truncate">{{ layer.name }} (Z: {{ layer.z }})</span>
+                            <span class="truncate text-sm">{{ layer.name }} (Z: {{ layer.z }})</span>
                         </div>
-                    </div>
-                    <!-- Map info sidebar -->
-                    <div class="min-w-[200px] rounded bg-black/70 p-3 text-xs text-white">
-                        <div class="mb-2 font-bold">Map Info</div>
-                        <div>Size: {{ map.width }}×{{ map.height }}</div>
-                        <div>Tile: {{ map.tile_width }}×{{ map.tile_height }}</div>
-                        <div>Total: {{ map.width * map.height }} tiles</div>
-                        <div class="mt-2 font-bold">Player</div>
-                        <div>Position: ({{ playerPos.x }}, {{ playerPos.y }})</div>
-                    </div>
+                    </section>
 
-                    <!-- Map viewport (fixed size, relative for centering player) -->
-                    <div
-                        class="relative overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800"
-                        :style="{ width: viewportWidth + 'px', height: viewportHeight + 'px' }"
-                    >
-                        <!-- Map layers, shifted to center player -->
-                        <div class="absolute top-0 left-0" :style="[mapStyle, mapOffset]">
-                            <template v-for="layer in sortedLayers" :key="layer.uuid">
+                    <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                        <div class="mb-2 text-sm font-bold">Map Info</div>
+                        <div class="space-y-1 text-sm">
+                            <div>Size: {{ map.width }}×{{ map.height }}</div>
+                            <div>Tile: {{ map.tile_width }}×{{ map.tile_height }}</div>
+                            <div>Total: {{ map.width * map.height }} tiles</div>
+                        </div>
+                    </section>
+
+                    <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                        <div class="mb-2 text-sm font-bold">Player</div>
+                        <div class="space-y-1 text-sm">
+                            <div>Position: ({{ playerPos.x }}, {{ playerPos.y }})</div>
+                            <div class="text-muted-foreground">
+                                Source: {{ playerPositionSource === 'object-layer' ? 'Object Layer' : 'Center (default)' }}
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+
+                <!-- Main Map Viewport -->
+                <section class="border-sidebar-border/70 dark:border-sidebar-border relative min-h-0 max-w-[calc(100%-40rem)] flex-1 overflow-auto">
+                    <div class="flex h-full items-center justify-center">
+                        <!-- Map viewport (fixed size, relative for centering player) -->
+                        <div
+                            class="relative overflow-hidden rounded-lg border-2 border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800"
+                            :style="{ width: viewportWidth + 'px', height: viewportHeight + 'px' }"
+                        >
+                            <!-- Map layers, shifted to center player -->
+                            <div class="absolute top-0 left-0" :style="[mapStyle, mapOffset]">
+                                <template v-for="layer in sortedLayers" :key="layer.uuid">
+                                    <div
+                                        v-if="layer.type !== MapLayerType.Object && layer.type !== MapLayerType.FieldType"
+                                        class="absolute top-0 left-0 h-full w-full"
+                                        :style="getLayerStyle(layer)"
+                                    >
+                                        <img
+                                            :src="getLayerImageUrl(layer.uuid)"
+                                            :alt="`${layer.name} layer`"
+                                            class="h-full w-full object-cover"
+                                            :title="`${layer.name} - Z: ${layer.z}`"
+                                            @error="error = `Failed to load layer image for ${layer.name}`"
+                                        />
+                                    </div>
+                                </template>
+
+                                <!-- Field Type Layer Debug Overlay -->
                                 <div
-                                    v-if="layer.type !== MapLayerType.Object"
-                                    class="absolute top-0 left-0 h-full w-full"
-                                    :style="getLayerStyle(layer)"
+                                    v-if="showFieldTypeLayer && fieldTypeLayer && fieldTypeOverlayImage"
+                                    class="pointer-events-none absolute top-0 left-0 h-full w-full"
+                                    style="z-index: 100"
                                 >
                                     <img
-                                        :src="getLayerImageUrl(layer.uuid)"
-                                        :alt="`${layer.name} layer`"
+                                        :src="fieldTypeOverlayImage"
+                                        :alt="'Field Type Overlay'"
                                         class="h-full w-full object-cover"
-                                        :title="`${layer.name} - Z: ${layer.z}`"
-                                        @error="error = `Failed to load layer image for ${layer.name}`"
+                                        :title="'Field Type Overlay'"
                                     />
                                 </div>
-                            </template>
 
-                            <!-- Player layer positioned between floor and sky layers -->
-                            <div
-                                class="absolute flex items-center justify-center rounded-full border-2 border-white bg-red-500 text-xs font-bold text-white shadow-lg"
-                                :style="getPlayerStyle()"
-                                title="Player"
-                            >
-                                <div>P</div>
+                                <!-- Player layer positioned between floor and sky layers -->
+                                <div
+                                    class="absolute flex items-center justify-center rounded-full border-2 border-white bg-red-500 text-xs font-bold text-white shadow-lg"
+                                    :style="getPlayerStyle()"
+                                    title="Player"
+                                >
+                                    <div>P</div>
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Error message -->
-                        <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-red-500/90 text-white">
-                            <div class="text-center">
-                                <div class="mb-2 font-bold">Error Loading Map</div>
-                                <div class="text-sm">{{ error }}</div>
+                            <!-- Error message -->
+                            <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-red-500/90 text-white">
+                                <div class="text-center">
+                                    <div class="mb-2 font-bold">Error Loading Map</div>
+                                    <div class="text-sm">{{ error }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </section>
 
-                    <!-- Movement Controls -->
-                    <div class="min-w-[120px] rounded bg-black/70 p-3 text-white">
-                        <div class="mb-2 text-center text-xs font-bold">Movement</div>
+                <!-- Right Sidebar -->
+                <aside class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
+                    <section class="border-sidebar-border/70 dark:border-sidebar-border rounded-xl border p-4">
+                        <div class="mb-2 text-center text-sm font-bold">Movement</div>
                         <div class="grid grid-cols-3 gap-1">
                             <!-- Top row -->
                             <div></div>
@@ -308,56 +440,9 @@ const moveRight = () => movePlayer(1, 0);
                             </button>
                             <div></div>
                         </div>
-                        <div class="mt-2 text-center text-xs text-gray-300">Use WASD or arrow keys</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Layer Details -->
-            <div class="bg-card rounded-lg p-4">
-                <h3 class="mb-3 text-lg font-semibold">Layer Details</h3>
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <div
-                        v-for="layer in sortedLayers"
-                        :key="layer.uuid"
-                        class="rounded-lg border p-3"
-                        :class="{
-                            'border-blue-500 bg-blue-50 dark:bg-blue-950': layer.type === MapLayerType.Background,
-                            'border-green-500 bg-green-50 dark:bg-green-950': layer.type === MapLayerType.Floor,
-                            'border-red-500 bg-red-50 dark:bg-red-950': layer.type === MapLayerType.Object,
-                            'border-purple-500 bg-purple-50 dark:bg-purple-950': layer.type === MapLayerType.Sky,
-                            'border-gray-500 bg-gray-50 dark:bg-gray-950': layer.type === MapLayerType.FieldType,
-                        }"
-                    >
-                        <div class="mb-2 flex items-center gap-2">
-                            <div
-                                :class="{
-                                    'h-4 w-4 rounded-full': true,
-                                    'bg-blue-500': layer.type === MapLayerType.Background,
-                                    'bg-green-500': layer.type === MapLayerType.Floor,
-                                    'bg-red-500': layer.type === MapLayerType.Object,
-                                    'bg-purple-500': layer.type === MapLayerType.Sky,
-                                    'bg-gray-500': layer.type === MapLayerType.FieldType,
-                                }"
-                            ></div>
-                            <span class="font-semibold">{{ layer.name }}</span>
-                        </div>
-                        <div class="text-muted-foreground text-sm">
-                            <div>Type: {{ layer.type }}</div>
-                            <div>Z-Index: {{ layer.z }}</div>
-                            <div v-if="layer.type !== MapLayerType.Object">
-                                <img
-                                    :src="getLayerImageUrl(layer.uuid)"
-                                    :alt="`${layer.name} preview`"
-                                    class="mt-2 h-16 w-full rounded border object-cover"
-                                    @error="error = `Failed to load preview for ${layer.name}`"
-                                />
-                            </div>
-                            <div v-else>Player Position: ({{ playerPos.x }}, {{ playerPos.y }})</div>
-                            <div>Opacity: {{ layer.opacity }}</div>
-                        </div>
-                    </div>
-                </div>
+                        <div class="text-muted-foreground mt-2 text-center text-xs">Use WASD or arrow keys</div>
+                    </section>
+                </aside>
             </div>
         </div>
     </AppLayout>

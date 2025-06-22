@@ -63,10 +63,7 @@ onMounted(() => {
                 </Link>
             </div>
 
-            <!-- Editor State -->
-            <div v-else-if="store.mapMetadata" class="border-sidebar-border/70 dark:border-sidebar-border relative flex-1 rounded-xl border p-4">
-                <Editor />
-            </div>
+            <Editor v-if="!isLoading && !error" />
         </div>
     </AppLayout>
 </template>

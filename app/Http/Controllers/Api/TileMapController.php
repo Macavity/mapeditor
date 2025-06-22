@@ -423,18 +423,36 @@ class TileMapController extends Controller
             'data' => 'required|array',
         ]);
 
-        // Only validate tile data structure if array is not empty
+        // Only validate data structure if array is not empty
         if (!empty($validated['data'])) {
-            $tileValidation = $request->validate([
-                'data.*.x' => 'required|integer|min:0',
-                'data.*.y' => 'required|integer|min:0',
-                'data.*.brush' => 'required|array',
-                'data.*.brush.tileset' => 'required|string',
-                'data.*.brush.tileX' => 'required|integer|min:0',
-                'data.*.brush.tileY' => 'required|integer|min:0',
-            ]);
-            
-            $validated = array_merge($validated, $tileValidation);
+            if ($layer->type === LayerType::FieldType) {
+                // Validate field type data
+                $fieldTypeValidation = $request->validate([
+                    'data.*.x' => 'required|integer|min:0',
+                    'data.*.y' => 'required|integer|min:0',
+                    'data.*.fieldType' => 'required|integer|min:0',
+                ]);
+                $validated = array_merge($validated, $fieldTypeValidation);
+            } elseif ($layer->type === LayerType::Object) {
+                // Validate object data
+                $objectValidation = $request->validate([
+                    'data.*.x' => 'required|integer|min:0',
+                    'data.*.y' => 'required|integer|min:0',
+                    'data.*.objectType' => 'required|integer|min:0',
+                ]);
+                $validated = array_merge($validated, $objectValidation);
+            } else {
+                // Validate tile data
+                $tileValidation = $request->validate([
+                    'data.*.x' => 'required|integer|min:0',
+                    'data.*.y' => 'required|integer|min:0',
+                    'data.*.brush' => 'required|array',
+                    'data.*.brush.tileset' => 'required|string',
+                    'data.*.brush.tileX' => 'required|integer|min:0',
+                    'data.*.brush.tileY' => 'required|integer|min:0',
+                ]);
+                $validated = array_merge($validated, $tileValidation);
+            }
         }
 
         $layer->update(['data' => $validated['data']]);

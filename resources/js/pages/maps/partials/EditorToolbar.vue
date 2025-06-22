@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ToggleButton } from '@/components/ui/button';
 import { useEditorStore } from '@/stores/editorStore';
 import { EditorTool } from '@/types/EditorTool';
 import { Eraser, Grid, Layers, Paintbrush, PaintBucket } from 'lucide-vue-next';
@@ -10,33 +11,9 @@ const store = useEditorStore();
     <div class="flex items-center gap-4" role="toolbar">
         <!-- Toggle Buttons -->
         <div class="flex gap-2" role="group">
-            <button
-                type="button"
-                @click="store.toggleGrid()"
-                class="flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
-                :class="[
-                    store.showGrid
-                        ? 'bg-secondary text-secondary-foreground border-secondary'
-                        : 'border-secondary text-secondary hover:bg-secondary/10',
-                ]"
-            >
-                <Grid class="h-4 w-4" />
-                Show Grid
-            </button>
+            <ToggleButton :icon="Grid" text="Show Grid" :active="store.showGrid" @click="store.toggleGrid()" />
 
-            <button
-                type="button"
-                @click="store.toggleProperties()"
-                class="flex items-center gap-2 rounded-lg border px-4 py-2 transition-colors"
-                :class="[
-                    store.showProperties
-                        ? 'bg-secondary text-secondary-foreground border-secondary'
-                        : 'border-secondary text-secondary hover:bg-secondary/10',
-                ]"
-            >
-                <Layers class="h-4 w-4" />
-                Show Properties
-            </button>
+            <ToggleButton :icon="Layers" text="Show Properties" :active="store.showProperties" @click="store.toggleProperties()" />
         </div>
 
         <!-- Tools -->

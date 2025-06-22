@@ -171,6 +171,9 @@ const renderObjectLayer = async (ctx: CanvasRenderingContext2D) => {
         await objectTypeStore.loadObjectTypes();
     }
 
+    // Set opacity for field types so background shows through
+    ctx.globalAlpha = 0.5;
+
     // Draw each object
     for (const objectTile of props.layer.data as ObjectTile[]) {
         // Skip invalid object tiles
@@ -189,8 +192,6 @@ const renderObjectLayer = async (ctx: CanvasRenderingContext2D) => {
 
         // Draw object as a colored circle with border
         ctx.fillStyle = objectType.color;
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
 
         // Draw circle (slightly smaller than tile size)
         const radius = Math.min(store.mapMetadata.tileWidth, store.mapMetadata.tileHeight) / 2 - 2;
@@ -198,22 +199,25 @@ const renderObjectLayer = async (ctx: CanvasRenderingContext2D) => {
         const centerY = destY + store.mapMetadata.tileHeight / 2;
 
         ctx.beginPath();
+        ctx.globalAlpha = 0.5;
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
 
         // Draw object type name
+        ctx.globalAlpha = 1.0;
         ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1;
-        ctx.font = '10px Arial';
+        ctx.lineWidth = 2;
+        ctx.font = '11px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const text = objectType.name.charAt(0).toUpperCase();
-        ctx.strokeText(text, centerX, centerY);
         ctx.fillText(text, centerX, centerY);
     }
+
+    // Reset globalAlpha back to 1.0 for other layers
+    ctx.globalAlpha = 1.0;
 };
 
 // Expose render method for parent component

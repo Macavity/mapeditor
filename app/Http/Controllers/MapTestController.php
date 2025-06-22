@@ -20,17 +20,19 @@ class MapTestController extends Controller
     {
         $tileMap = TileMap::where('uuid', $uuid)
             ->with(['layers' => function ($query) {
-                $query->where('visible', true)
-                    ->orderBy('z', 'asc');
+                $query->where(function ($q) {
+                    $q->where('visible', true)
+                      ->orWhere('type', 'field_type'); // Always include field type layers for collision detection
+                })
+                ->orderBy('z', 'asc');
             }])
             ->firstOrFail();
 
         // Get all visible layers
         $layers = $tileMap->layers->toArray();
 
-        // Calculate center tile position for player
-        $centerTileX = (int) floor($tileMap->width / 2);
-        $centerTileY = (int) floor($tileMap->height / 2);
+        // Find player object in object layers
+        $playerPosition = $this->findPlayerObjectPosition($layers, $tileMap);
 
         // Determine the highest floor layer z-index and lowest sky layer z-index
         $highestFloorZ = 0;
@@ -209,10 +211,58 @@ class MapTestController extends Controller
                 'tile_height' => $tileMap->tile_height,
             ],
             'layers' => $adjustedLayers,
-            'playerPosition' => [
+            'playerPosition' => $playerPosition,
+        ]);
+    }
+
+    /**
+     * Find the player object position in object layers
+     * 
+     * This method looks for objects with type 'player' in object layers.
+     * The player object type is identified by having the 'type' field set to 'player'
+     * in the object_types table. If no player object is found, it falls back to
+     * the center position of the map.
+     * 
+     * @param array $layers Array of layer data
+     * @param TileMap $tileMap The tile map instance
+     * @return array Player position with x and y coordinates
+     */
+    private function findPlayerObjectPosition(array $layers, TileMap $tileMap): array
+    {
+        // Calculate center tile position as fallback
+        $centerTileX = (int) floor($tileMap->width / 2);
+        $centerTileY = (int) floor($tileMap->height / 2);
+
+        // Get object types to find the player object type ID
+        $playerObjectType = \App\Models\ObjectType::where('type', 'player')->first();
+        
+        if (!$playerObjectType) {
+            // Fallback to center position if no player object type found
+            return [
                 'x' => $centerTileX,
                 'y' => $centerTileY,
-            ],
-        ]);
+            ];
+        }
+
+        // Look for object layers with player objects
+        foreach ($layers as $layer) {
+            if ($layer['type'] === 'object' && isset($layer['data']) && is_array($layer['data'])) {
+                foreach ($layer['data'] as $object) {
+                    // Check if this is a player object by matching the object type ID
+                    if (isset($object['objectType']) && $object['objectType'] === $playerObjectType->id) {
+                        return [
+                            'x' => (int) $object['x'],
+                            'y' => (int) $object['y'],
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Fallback to center position if no player object found
+        return [
+            'x' => $centerTileX,
+            'y' => $centerTileY,
+        ];
     }
 }
