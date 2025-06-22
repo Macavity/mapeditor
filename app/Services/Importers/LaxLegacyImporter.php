@@ -11,10 +11,12 @@ class LaxLegacyImporter implements ImporterInterface
 {
     private array $tilesetMapping = [];
     private string $tilesetDirectory;
+    private bool $skipTilesetValidation;
 
-    public function __construct(string $tilesetDirectory = 'tilesets')
+    public function __construct(string $tilesetDirectory = 'tilesets', bool $skipTilesetValidation = false)
     {
         $this->tilesetDirectory = $tilesetDirectory;
+        $this->skipTilesetValidation = $skipTilesetValidation;
     }
 
     /**
@@ -35,6 +37,15 @@ class LaxLegacyImporter implements ImporterInterface
     }
 
     /**
+     * Set whether to skip tileset validation (for wizard parsing).
+     */
+    public function setSkipTilesetValidation(bool $skip): self
+    {
+        $this->skipTilesetValidation = $skip;
+        return $this;
+    }
+
+    /**
      * Parse a legacy JavaScript map file and return structured data.
      */
     public function parse(string $filePath): array
@@ -52,6 +63,9 @@ class LaxLegacyImporter implements ImporterInterface
             throw new \InvalidArgumentException("Failed to read file: {$filePath}");
         }
 
+        // Handle encoding issues gracefully
+        $content = $this->fixEncoding($content);
+
         return $this->parseString($content, $filePath);
     }
 
@@ -60,6 +74,9 @@ class LaxLegacyImporter implements ImporterInterface
      */
     public function parseString(string $data, string $originalFilePath = ''): array
     {
+        // Handle encoding issues gracefully
+        $data = $this->fixEncoding($data);
+
         // Parse the JavaScript variables
         $mapData = $this->parseJavaScriptVariables($data);
         
@@ -101,6 +118,10 @@ class LaxLegacyImporter implements ImporterInterface
                    strpos($sample, 'var width =') !== false &&
                    strpos($sample, 'field_bg') !== false;
         } catch (\Exception $e) {
+            \Log::error("LaxLegacyImporter::canHandle - Exception", [
+                'filePath' => $filePath,
+                'exception' => $e->getMessage()
+            ]);
             return false;
         }
     }
@@ -406,35 +427,53 @@ class LaxLegacyImporter implements ImporterInterface
                     }
                 }
                 if (!$imageFile) {
-                    throw new \Exception("Tileset image file not found: {$tilesetName}");
+                    if ($this->skipTilesetValidation) {
+                        // For wizard parsing, create minimal tileset data without image validation
+                        $maxTileId = max($tileIds);
+                        $tilesetModels[$tilesetName] = [
+                            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                            'name' => $tilesetName,
+                            'image_width' => 0, // Will be set when image is uploaded
+                            'image_height' => 0, // Will be set when image is uploaded
+                            'tile_width' => 32, // Default assumption
+                            'tile_height' => 32, // Default assumption
+                            'tiles_per_row' => 0, // Will be calculated when image is uploaded
+                            'image_path' => "tilesets/{$tilesetName}.png",
+                            '_missing_image' => true,
+                            '_requires_upload' => true,
+                        ];
+                    } else {
+                        throw new \Exception("Tileset image file not found: {$tilesetName}");
+                    }
+                } else {
+                    $imgInfo = @getimagesize($imageFile);
+                    if (!$imgInfo) {
+                        throw new \Exception("Could not read image size for tileset: {$tilesetName}");
+                    }
+                    $imageWidth = $imgInfo[0];
+                    $imageHeight = $imgInfo[1];
+                    if ($imageWidth <= 0 || $imageHeight <= 0) {
+                        throw new \Exception("Invalid image dimensions for tileset: {$tilesetName}");
+                    }
+                    $tileWidth = 32;
+                    $tileHeight = 32;
+                    $tilesPerRow = (int) ($imageWidth / $tileWidth);
+                    if ($tilesPerRow <= 0) {
+                        throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
+                    }
+                    $maxTileId = max($tileIds);
+                    $tilesPerCol = (int) ceil($maxTileId / $tilesPerRow);
+                    $tilesetModels[$tilesetName] = [
+                        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                        'name' => $tilesetName,
+                        'image_width' => $imageWidth,
+                        'image_height' => $imageHeight,
+                        'tile_width' => $tileWidth,
+                        'tile_height' => $tileHeight,
+                        'tiles_per_row' => $tilesPerRow,
+                        'image_path' => "tilesets/{$tilesetName}.png",
+                    ];
                 }
-                $imgInfo = @getimagesize($imageFile);
-                if (!$imgInfo) {
-                    throw new \Exception("Could not read image size for tileset: {$tilesetName}");
-                }
-                $imageWidth = $imgInfo[0];
-                $imageHeight = $imgInfo[1];
-                if ($imageWidth <= 0 || $imageHeight <= 0) {
-                    throw new \Exception("Invalid image dimensions for tileset: {$tilesetName}");
-                }
-                $tileWidth = 32;
-                $tileHeight = 32;
-                $tilesPerRow = (int) ($imageWidth / $tileWidth);
-                if ($tilesPerRow <= 0) {
-                    throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
-                }
-                $maxTileId = max($tileIds);
-                $tilesPerCol = (int) ceil($maxTileId / $tilesPerRow);
-                $tilesetModels[$tilesetName] = [
-                    'uuid' => (string) \Illuminate\Support\Str::uuid(),
-                    'name' => $tilesetName,
-                    'image_width' => $imageWidth,
-                    'image_height' => $imageHeight,
-                    'tile_width' => $tileWidth,
-                    'tile_height' => $tileHeight,
-                    'tiles_per_row' => $tilesPerRow,
-                    'image_path' => "tilesets/{$tilesetName}.png",
-                ];
             }
         }
         return $tilesetModels;
@@ -658,5 +697,179 @@ class LaxLegacyImporter implements ImporterInterface
     {
         // Keep the original name format for legacy tilesets
         return $tilesetName;
+    }
+
+    /**
+     * Parse a map file for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
+     */
+    public function parseForWizard(string $filePath): array
+    {
+        // Try to read from Laravel storage first, then fallback to filesystem
+        if (Storage::exists($filePath)) {
+            $content = Storage::get($filePath);
+        } elseif (file_exists($filePath)) {
+            $content = file_get_contents($filePath);
+        } else {
+            throw new \InvalidArgumentException("File not found: {$filePath}");
+        }
+
+        if ($content === false) {
+            throw new \InvalidArgumentException("Failed to read file: {$filePath}");
+        }
+
+        // Handle encoding issues gracefully
+        $content = $this->fixEncoding($content);
+
+        return $this->parseStringForWizard($content, $filePath);
+    }
+
+    /**
+     * Fix encoding issues in the content.
+     */
+    private function fixEncoding(string $content): string
+    {
+        // Check if content is valid UTF-8
+        if (mb_check_encoding($content, 'UTF-8')) {
+            return $content;
+        }
+
+        // Try to detect the encoding
+        $detectedEncoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'ISO-8859-15', 'Windows-1252'], true);
+        
+        if ($detectedEncoding && $detectedEncoding !== 'UTF-8') {
+            // Convert to UTF-8
+            $converted = mb_convert_encoding($content, 'UTF-8', $detectedEncoding);
+            
+            // Verify the conversion worked
+            if (mb_check_encoding($converted, 'UTF-8')) {
+                return $converted;
+            }
+        }
+
+        // If all else fails, try to fix common encoding issues
+        $fixed = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+        if ($fixed !== false) {
+            return $fixed;
+        }
+
+        // Last resort: remove invalid characters
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $content);
+    }
+
+    /**
+     * Parse raw JavaScript data string for the wizard, returning basic information and tileset usage.
+     */
+    public function parseStringForWizard(string $data, string $originalFilePath = ''): array
+    {
+        // Handle encoding issues gracefully
+        $data = $this->fixEncoding($data);
+
+        // Parse the JavaScript variables
+        $mapData = $this->parseJavaScriptVariables($data);
+        
+        // Try to parse field type data if available
+        $fieldTypeData = $this->parseFieldTypeFile($originalFilePath);
+        
+        // Scan for tileset usage without building models
+        $tilesetUsage = $this->scanTilesetUsage($mapData, [
+            'field_bg' => ['type' => 'background', 'z' => 0],
+            'field_layer1' => ['type' => 'tile', 'z' => 1],
+            'field_layer2' => ['type' => 'tile', 'z' => 2],
+            'field_layer4' => ['type' => 'tile', 'z' => 4],
+            'field_layer5' => ['type' => 'tile', 'z' => 5],
+        ]);
+
+        // Build basic tileset information with suggestions
+        $tilesets = $this->buildTilesetSuggestions($tilesetUsage);
+
+        return [
+            'map_info' => [
+                'name' => $mapData['name'],
+                'width' => $mapData['width'],
+                'height' => $mapData['height'],
+                'external_creator' => $mapData['external_creator'],
+                'has_field_types' => !empty($fieldTypeData),
+            ],
+            'tilesets' => $tilesets,
+            'field_type_file' => $this->getFieldTypeFilePath($originalFilePath),
+        ];
+    }
+
+    /**
+     * Build tileset suggestions based on usage data.
+     */
+    private function buildTilesetSuggestions(array $tilesetUsage): array
+    {
+        $tilesets = [];
+        
+        foreach ($tilesetUsage as $tilesetName => $tileIds) {
+            $formattedName = $this->formatTilesetName($tilesetName);
+            
+            // Try to find existing tileset by name
+            $existingTileset = $this->findExistingTileset($tilesetName, $formattedName);
+            
+            // Check if tileset image exists
+            $imageExists = $this->checkTilesetImageExists($tilesetName);
+            
+            $tilesets[] = [
+                'original_name' => $tilesetName,
+                'formatted_name' => $formattedName,
+                'tile_count' => count($tileIds),
+                'tile_ids' => array_values(array_unique($tileIds)),
+                'max_tile_id' => max($tileIds),
+                'image_exists' => $imageExists,
+                'existing_tileset' => $existingTileset ? [
+                    'uuid' => $existingTileset->uuid,
+                    'name' => $existingTileset->name,
+                    'image_path' => $existingTileset->image_path,
+                ] : null,
+                'requires_upload' => !$imageExists && !$existingTileset,
+            ];
+        }
+        
+        return $tilesets;
+    }
+
+    /**
+     * Check if a tileset image file exists.
+     */
+    private function checkTilesetImageExists(string $tilesetName): bool
+    {
+        $basename = $tilesetName . '.png';
+        $searchDirs = [
+            isset($this->tilesetDirectory)
+                ? (str_starts_with($this->tilesetDirectory, '/')
+                    ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
+                    : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename))
+                : null,
+            base_path('tests/static/tilesets/' . $basename),
+        ];
+        
+        foreach (array_filter($searchDirs) as $src) {
+            if (file_exists($src)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Get the field type file path if it exists.
+     */
+    private function getFieldTypeFilePath(string $originalFilePath): ?string
+    {
+        if (empty($originalFilePath)) {
+            return null;
+        }
+
+        $fieldTypePath = preg_replace('/\.js$/', '_ft.js', $originalFilePath);
+        
+        if (Storage::exists($fieldTypePath)) {
+            return $fieldTypePath;
+        }
+        
+        return null;
     }
 } 

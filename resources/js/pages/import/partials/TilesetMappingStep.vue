@@ -87,6 +87,20 @@ const getSimilarityColor = (similarity: number) => {
 
 <template>
     <div class="space-y-6">
+        <!-- Warning for missing tileset images -->
+        <div v-if="parsedData?.tilesets?.some((t: any) => t._missing_image)" class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <div class="flex items-start gap-2">
+                <AlertTriangle class="mt-0.5 h-4 w-4 text-yellow-600" />
+                <div class="text-sm">
+                    <p class="font-medium text-yellow-900">Tileset Images Required</p>
+                    <p class="mt-1 text-yellow-700">
+                        Some tilesets require their image files to be uploaded before the map can be imported. You'll need to upload the tileset
+                        images before proceeding with the import.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Instructions -->
         <Card>
             <CardHeader>
@@ -125,6 +139,8 @@ const getSimilarityColor = (similarity: number) => {
                             <Palette class="h-4 w-4" />
                             <span class="font-medium">{{ importedTileset.name }}</span>
                             <Badge variant="outline" class="text-xs"> {{ importedTileset.tile_width }}×{{ importedTileset.tile_height }} </Badge>
+                            <Badge v-if="importedTileset._missing_image" variant="destructive" class="text-xs"> Missing Image </Badge>
+                            <Badge v-if="importedTileset._requires_upload" variant="secondary" class="text-xs"> Requires Upload </Badge>
                         </div>
                         <Badge :class="getTilesetMappingStatus(importedTileset).color" class="text-xs">
                             <component :is="getTilesetMappingStatus(importedTileset).icon" class="mr-1 h-3 w-3" />

@@ -8,12 +8,17 @@ import { CheckCircle, Download, Map, Palette } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 interface Props {
-    uploadedFile: { path: string; name: string } | null;
+    uploadedFiles: {
+        files: Array<{ path: string; name: string; extension: string }>;
+        mainMapFile: string | null;
+        fieldTypeFile: string | null;
+    } | null;
     parsedData: any;
     importConfig: {
         map_name: string;
         tileset_mappings: Record<string, string>;
         preserve_uuid: boolean;
+        field_type_file_path: string | null;
     };
     isImporting: boolean;
 }
@@ -28,18 +33,33 @@ const emit = defineEmits<{
 const isImporting = ref(false);
 
 const performImport = async () => {
-    if (!props.uploadedFile || !props.parsedData) return;
+    if (!props.uploadedFiles?.mainMapFile || !props.parsedData) return;
+
+    // Check if there are tilesets with missing images
+    const tilesetsWithMissingImages = props.parsedData.tilesets?.filter((t: any) => t._missing_image) || [];
+    if (tilesetsWithMissingImages.length > 0) {
+        const tilesetNames = tilesetsWithMissingImages.map((t: any) => t.name).join(', ');
+        emit('error', `Cannot import map: The following tilesets require image files to be uploaded: ${tilesetNames}`);
+        return;
+    }
 
     isImporting.value = true;
 
     try {
-        const response = await api.post('/map-import/complete', {
-            file_path: props.uploadedFile.path,
+        const requestData: any = {
+            file_path: props.uploadedFiles.mainMapFile,
             format: props.parsedData.detected_format,
             map_name: props.importConfig.map_name,
             tileset_mappings: props.importConfig.tileset_mappings,
             preserve_uuid: props.importConfig.preserve_uuid,
-        });
+        };
+
+        // Add field type file path if available
+        if (props.uploadedFiles.fieldTypeFile) {
+            requestData.field_type_file_path = props.uploadedFiles.fieldTypeFile;
+        }
+
+        const response = await api.post('/map-import/complete', requestData);
 
         emit('import-complete', response.data);
     } catch (error: any) {
@@ -88,7 +108,7 @@ performImport();
                             class="flex items-center justify-between text-sm"
                         >
                             <span class="text-muted-foreground">
-                                {{ parsedData?.tilesets?.find((t) => t.uuid === importedUuid)?.name }}
+                                {{ parsedData?.tilesets?.find((t: any) => t.uuid === importedUuid)?.name }}
                             </span>
                             <Badge :variant="mapping === 'create_new' ? 'default' : 'secondary'">
                                 {{ mapping === 'create_new' ? 'Create New' : 'Use Existing' }}

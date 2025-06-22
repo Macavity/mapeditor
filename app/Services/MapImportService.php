@@ -107,11 +107,43 @@ class MapImportService
     }
 
     /**
-     * Parse a file and return the detected format along with the parsed data.
+     * Parse a file for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
      */
-    public function parseFile(string $filePath, ?string $format = null): array
+    public function parseFileForWizard(string $filePath, ?string $format = null): array
     {
         $importer = $this->getImporterForFile($filePath, $format);
+        
+        // Find the format key for this importer
+        $detectedFormat = null;
+        foreach ($this->importers as $fmt => $imp) {
+            if ($imp === $importer) {
+                $detectedFormat = $fmt;
+                break;
+            }
+        }
+        
+        if (!$detectedFormat) {
+            throw new \RuntimeException("Could not determine format for importer");
+        }
+
+        return [
+            'format' => $detectedFormat,
+            'data' => $importer->parseForWizard($filePath)
+        ];
+    }
+
+    /**
+     * Parse a file and return the detected format along with the parsed data.
+     */
+    public function parseFile(string $filePath, ?string $format = null, bool $skipTilesetValidation = false): array
+    {
+        $importer = $this->getImporterForFile($filePath, $format);
+        
+        // Configure importer with skip validation option for wizard parsing
+        if ($importer instanceof LaxLegacyImporter && $skipTilesetValidation) {
+            $importer->setSkipTilesetValidation(true);
+        }
         
         // Find the format key for this importer
         $detectedFormat = null;

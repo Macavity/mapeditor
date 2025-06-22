@@ -25,6 +25,26 @@ interface ImporterInterface
     public function parseString(string $data): array;
 
     /**
+     * Parse a map file for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
+     *
+     * @param string $filePath Path to the file to parse
+     * @return array Basic map info and tileset usage data
+     * @throws \InvalidArgumentException If the file cannot be parsed
+     */
+    public function parseForWizard(string $filePath): array;
+
+    /**
+     * Parse raw data string for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
+     *
+     * @param string $data Raw data string to parse
+     * @return array Basic map info and tileset usage data
+     * @throws \InvalidArgumentException If the data cannot be parsed
+     */
+    public function parseStringForWizard(string $data): array;
+
+    /**
      * Check if this importer can handle the given file.
      *
      * @param string $filePath Path to the file to check

@@ -7,16 +7,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { api } from '@/lib/api';
-import { FileText, Info, Layers, Map, Palette } from 'lucide-vue-next';
+import { AlertTriangle, FileText, Info, Layers, Map, Palette } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 interface Props {
-    uploadedFile: { path: string; name: string } | null;
+    uploadedFiles: {
+        files: Array<{ path: string; name: string; extension: string }>;
+        mainMapFile: string | null;
+        fieldTypeFile: string | null;
+    } | null;
     isParsing: boolean;
     importConfig: {
         map_name: string;
         tileset_mappings: Record<string, string>;
         preserve_uuid: boolean;
+        field_type_file_path: string | null;
     };
 }
 
@@ -36,14 +41,21 @@ const updateImportConfig = (updates: Partial<typeof props.importConfig>) => {
 };
 
 const parseFile = async () => {
-    if (!props.uploadedFile) return;
+    if (!props.uploadedFiles?.mainMapFile) return;
 
     isParsing.value = true;
 
     try {
-        const response = await api.post('/map-import/parse', {
-            file_path: props.uploadedFile.path,
-        });
+        const requestData: any = {
+            file_path: props.uploadedFiles.mainMapFile,
+        };
+
+        // Add field type file path if available
+        if (props.uploadedFiles.fieldTypeFile) {
+            requestData.field_type_file_path = props.uploadedFiles.fieldTypeFile;
+        }
+
+        const response = await api.post('/map-import/parse', requestData);
 
         parsedData.value = response.data;
         emit('file-parsed', response.data);
@@ -57,9 +69,9 @@ const parseFile = async () => {
 
 // Auto-parse when component mounts
 watch(
-    () => props.uploadedFile,
-    (file) => {
-        if (file && !parsedData.value) {
+    () => props.uploadedFiles,
+    (files) => {
+        if (files?.mainMapFile && !parsedData.value) {
             parseFile();
         }
     },
@@ -110,8 +122,16 @@ const getLayerTypeColor = (type: string) => {
             <CardContent>
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium">File Name:</span>
-                        <span class="text-muted-foreground text-sm">{{ uploadedFile?.name }}</span>
+                        <span class="text-sm font-medium">Main Map File:</span>
+                        <span class="text-muted-foreground text-sm">{{
+                            uploadedFiles?.files.find((f) => f.path === uploadedFiles?.mainMapFile)?.name
+                        }}</span>
+                    </div>
+                    <div v-if="uploadedFiles?.fieldTypeFile" class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Field Type File:</span>
+                        <span class="text-muted-foreground text-sm">{{
+                            uploadedFiles?.files.find((f) => f.path === uploadedFiles?.fieldTypeFile)?.name
+                        }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-sm font-medium">Detected Format:</span>
@@ -222,8 +242,24 @@ const getLayerTypeColor = (type: string) => {
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-medium">{{ tileset.name }}</span>
                                 <Badge variant="outline" class="text-xs"> {{ tileset.tile_width }}×{{ tileset.tile_height }} </Badge>
+                                <Badge v-if="tileset._missing_image" variant="destructive" class="text-xs"> Missing Image </Badge>
+                                <Badge v-if="tileset._requires_upload" variant="secondary" class="text-xs"> Requires Upload </Badge>
                             </div>
                             <span class="text-muted-foreground text-xs"> {{ tileset.tile_count }} tiles </span>
+                        </div>
+                    </div>
+
+                    <!-- Warning for missing tileset images -->
+                    <div v-if="parsedData.tilesets.some((t: any) => t._missing_image)" class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                        <div class="flex items-start gap-2">
+                            <AlertTriangle class="mt-0.5 h-4 w-4 text-yellow-600" />
+                            <div class="text-sm">
+                                <p class="font-medium text-yellow-900">Tileset Images Required</p>
+                                <p class="mt-1 text-yellow-700">
+                                    Some tilesets require their image files to be uploaded before the map can be imported. You'll need to upload the
+                                    tileset images in the next step.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,7 +278,7 @@ const getLayerTypeColor = (type: string) => {
 
         <!-- Retry Button -->
         <div v-if="!parsedData && !isParsing" class="text-center">
-            <Button @click="parseFile" :disabled="!uploadedFile">
+            <Button @click="parseFile" :disabled="!uploadedFiles?.mainMapFile">
                 <FileText class="mr-2 h-4 w-4" />
                 Parse File
             </Button>

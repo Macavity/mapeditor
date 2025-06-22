@@ -42,20 +42,21 @@ class MapImportController extends Controller
                 schema: new OA\Schema(
                     type: 'object',
                     properties: [
-                        new OA\Property(property: 'file', type: 'string', format: 'binary'),
+                        new OA\Property(property: 'files', type: 'array', items: new OA\Schema(type: 'string', format: 'binary')),
                     ],
-                    required: ['file']
+                    required: ['files']
                 )
             )
         ),
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'File uploaded successfully',
+                description: 'Files uploaded successfully',
                 content: new OA\JsonContent(properties: [
                     new OA\Property(property: 'message', type: 'string'),
-                    new OA\Property(property: 'file_path', type: 'string'),
-                    new OA\Property(property: 'file_name', type: 'string'),
+                    new OA\Property(property: 'files', type: 'array'),
+                    new OA\Property(property: 'main_map_file', type: 'string'),
+                    new OA\Property(property: 'field_type_file', type: 'string'),
                 ])
             ),
             new OA\Response(
@@ -71,18 +72,22 @@ class MapImportController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|max:10240', // 10MB max
+            'files' => 'required|array|min:1',
+            'files.*' => 'required|file|max:10240', // 10MB max per file
         ]);
 
         // Custom validation for file extensions
         $validator->after(function ($validator) use ($request) {
-            $file = $request->file('file');
-            if ($file) {
-                $extension = strtolower($file->getClientOriginalExtension());
-                $allowedExtensions = ['json', 'tmx', 'js'];
-                
-                if (!in_array($extension, $allowedExtensions)) {
-                    $validator->errors()->add('file', 'File must be one of: ' . implode(', ', $allowedExtensions));
+            $files = $request->file('files');
+            if ($files) {
+                foreach ($files as $file) {
+                    $extension = strtolower($file->getClientOriginalExtension());
+                    $allowedExtensions = ['json', 'tmx', 'js'];
+                    
+                    if (!in_array($extension, $allowedExtensions)) {
+                        $validator->errors()->add('files', 'All files must be one of: ' . implode(', ', $allowedExtensions));
+                        break;
+                    }
                 }
             }
         });
@@ -94,14 +99,46 @@ class MapImportController extends Controller
             ], 422);
         }
 
-        $file = $request->file('file');
-        $fileName = $file->getClientOriginalName();
-        $filePath = $file->store('imports', 'local');
+        $files = $request->file('files');
+        $uploadedFiles = [];
+        $mainMapFile = null;
+        $fieldTypeFile = null;
+
+        foreach ($files as $file) {
+            $fileName = $file->getClientOriginalName();
+            $extension = $file->getClientOriginalExtension();
+            
+            // Generate a unique filename while preserving the original extension
+            $uniqueName = uniqid() . '.' . $extension;
+            $filePath = 'imports/' . $uniqueName;
+            
+            // Store the file with the custom path
+            Storage::disk('local')->put($filePath, file_get_contents($file->getRealPath()));
+
+            $uploadedFiles[] = [
+                'file_path' => $filePath,
+                'file_name' => $fileName,
+                'extension' => $extension
+            ];
+
+            // Identify main map file and field type file
+            if ($extension === 'js') {
+                if (str_ends_with($fileName, '_ft.js')) {
+                    $fieldTypeFile = $filePath;
+                } else {
+                    $mainMapFile = $filePath;
+                }
+            } else {
+                // For non-JS files, treat as main map file
+                $mainMapFile = $filePath;
+            }
+        }
 
         return response()->json([
-            'message' => 'File uploaded successfully',
-            'file_path' => $filePath,
-            'file_name' => $fileName,
+            'message' => 'Files uploaded successfully',
+            'files' => $uploadedFiles,
+            'main_map_file' => $mainMapFile,
+            'field_type_file' => $fieldTypeFile,
         ]);
     }
 
@@ -117,6 +154,7 @@ class MapImportController extends Controller
             content: new OA\JsonContent(properties: [
                 new OA\Property(property: 'file_path', type: 'string'),
                 new OA\Property(property: 'format', type: 'string', nullable: true),
+                new OA\Property(property: 'field_type_file_path', type: 'string', nullable: true),
             ], required: ['file_path'])
         ),
         responses: [
@@ -145,6 +183,7 @@ class MapImportController extends Controller
         $validator = Validator::make($request->all(), [
             'file_path' => 'required|string',
             'format' => 'nullable|string|in:json,tmx,js',
+            'field_type_file_path' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -156,29 +195,42 @@ class MapImportController extends Controller
 
         $filePath = $request->input('file_path');
         $format = $request->input('format');
+        $fieldTypeFilePath = $request->input('field_type_file_path');
 
-        // Verify file exists
+        // Verify main file exists
         if (!Storage::disk('local')->exists($filePath)) {
             return response()->json([
                 'message' => 'File not found'
             ], 422);
         }
 
+        // Verify field type file exists if provided
+        if ($fieldTypeFilePath && !Storage::disk('local')->exists($fieldTypeFilePath)) {
+            return response()->json([
+                'message' => 'Field type file not found'
+            ], 422);
+        }
+
         try {
-            // Parse the file using the service
-            $result = $this->importService->parseFile($filePath, $format);
-            $mapData = $result['data'];
+            // Parse the file using the wizard-optimized service method
+            $result = $this->importService->parseFileForWizard($filePath, $format);
+            $wizardData = $result['data'];
             $detectedFormat = $result['format'];
 
-            // Get suggested tilesets for each imported tileset
-            $suggestedTilesets = $this->getSuggestedTilesets($mapData['tilesets'] ?? []);
+            // If this is a JS file and we have a field type file, copy it to the expected location
+            if ($detectedFormat === 'js' && $fieldTypeFilePath) {
+                $this->copyFieldTypeFile($filePath, $fieldTypeFilePath);
+            }
+
+            // Get suggested tilesets for each tileset that requires upload
+            $suggestedTilesets = $this->getSuggestedTilesetsForWizard($wizardData['tilesets']);
 
             return response()->json([
-                'map_info' => $mapData['map'],
-                'layers' => $mapData['layers'],
-                'tilesets' => $mapData['tilesets'],
+                'map_info' => $wizardData['map_info'],
+                'tilesets' => $wizardData['tilesets'],
                 'detected_format' => $detectedFormat,
                 'suggested_tilesets' => $suggestedTilesets,
+                'field_type_file' => $wizardData['field_type_file'],
             ]);
 
         } catch (\Exception $e) {
@@ -203,6 +255,7 @@ class MapImportController extends Controller
                 new OA\Property(property: 'map_name', type: 'string'),
                 new OA\Property(property: 'tileset_mappings', type: 'object'),
                 new OA\Property(property: 'preserve_uuid', type: 'boolean'),
+                new OA\Property(property: 'field_type_file_path', type: 'string', nullable: true),
             ], required: ['file_path', 'format', 'map_name', 'tileset_mappings'])
         ),
         responses: [
@@ -233,6 +286,7 @@ class MapImportController extends Controller
             'tileset_mappings' => 'required|array',
             'tileset_mappings.*' => 'required|string|uuid',
             'preserve_uuid' => 'boolean',
+            'field_type_file_path' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -247,15 +301,28 @@ class MapImportController extends Controller
         $mapName = $request->input('map_name');
         $tilesetMappings = $request->input('tileset_mappings');
         $preserveUuid = $request->input('preserve_uuid', false);
+        $fieldTypeFilePath = $request->input('field_type_file_path');
 
-        // Verify file exists
+        // Verify main file exists
         if (!Storage::disk('local')->exists($filePath)) {
             return response()->json([
                 'message' => 'File not found'
             ], 422);
         }
 
+        // Verify field type file exists if provided
+        if ($fieldTypeFilePath && !Storage::disk('local')->exists($fieldTypeFilePath)) {
+            return response()->json([
+                'message' => 'Field type file not found'
+            ], 422);
+        }
+
         try {
+            // If this is a JS file and we have a field type file, copy it to the expected location
+            if ($format === 'js' && $fieldTypeFilePath) {
+                $this->copyFieldTypeFile($filePath, $fieldTypeFilePath);
+            }
+
             // Parse the file using the service
             $result = $this->importService->parseFile($filePath, $format);
             $mapData = $result['data'];
@@ -284,8 +351,11 @@ class MapImportController extends Controller
             $map = $importResult['map'];
             $tilesetResults = $importResult['tilesets'];
 
-            // Clean up the uploaded file
+            // Clean up the uploaded files
             Storage::disk('local')->delete($filePath);
+            if ($fieldTypeFilePath) {
+                Storage::disk('local')->delete($fieldTypeFilePath);
+            }
 
             return response()->json([
                 'message' => 'Map imported successfully',
@@ -301,41 +371,49 @@ class MapImportController extends Controller
     }
 
     /**
-     * Get suggested tilesets for imported tilesets based on name similarity
+     * Get suggested tilesets for wizard tileset data.
      */
-    private function getSuggestedTilesets(array $importedTilesets): array
+    private function getSuggestedTilesetsForWizard(array $wizardTilesets): array
     {
         $suggestions = [];
-        $allTilesets = TileSet::all();
-
-        foreach ($importedTilesets as $importedTileset) {
-            $importedName = strtolower($importedTileset['name'] ?? '');
-            $suggestions[$importedTileset['uuid']] = [];
-
-            foreach ($allTilesets as $existingTileset) {
-                $existingName = strtolower($existingTileset->name);
+        
+        foreach ($wizardTilesets as $wizardTileset) {
+            if (!$wizardTileset['requires_upload']) {
+                continue; // Skip tilesets that don't need upload
+            }
+            
+            $originalName = $wizardTileset['original_name'];
+            $formattedName = $wizardTileset['formatted_name'];
+            
+            // Get all existing tilesets for comparison
+            $existingTilesets = TileSet::all();
+            $similarTilesets = [];
+            
+            foreach ($existingTilesets as $existingTileset) {
+                $similarity = max(
+                    $this->calculateNameSimilarity($originalName, $existingTileset->name),
+                    $this->calculateNameSimilarity($formattedName, $existingTileset->name)
+                );
                 
-                // Calculate similarity score
-                $similarity = $this->calculateNameSimilarity($importedName, $existingName);
-                
-                if ($similarity > 0.3) { // Threshold for suggestions
-                    $suggestions[$importedTileset['uuid']][] = [
+                if ($similarity > 0.3) { // Lower threshold for wizard suggestions
+                    $similarTilesets[] = [
                         'uuid' => $existingTileset->uuid,
                         'name' => $existingTileset->name,
                         'similarity' => $similarity,
+                        'image_path' => $existingTileset->image_path,
                     ];
                 }
             }
-
+            
             // Sort by similarity (highest first)
-            usort($suggestions[$importedTileset['uuid']], function($a, $b) {
+            usort($similarTilesets, function ($a, $b) {
                 return $b['similarity'] <=> $a['similarity'];
             });
-
-            // Limit to top 5 suggestions
-            $suggestions[$importedTileset['uuid']] = array_slice($suggestions[$importedTileset['uuid']], 0, 5);
+            
+            // Take top 3 suggestions
+            $suggestions[$originalName] = array_slice($similarTilesets, 0, 3);
         }
-
+        
         return $suggestions;
     }
 
@@ -398,5 +476,58 @@ class MapImportController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * Copy field type file to the location expected by the LaxLegacyImporter
+     */
+    private function copyFieldTypeFile(string $mainFilePath, string $fieldTypeFilePath): void
+    {
+        // Get the directory and filename of the main file
+        $pathInfo = pathinfo($mainFilePath);
+        $expectedFieldTypePath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_ft.js';
+        
+        // Copy the field type file to the expected location
+        $fieldTypeContent = Storage::disk('local')->get($fieldTypeFilePath);
+        Storage::disk('local')->put($expectedFieldTypePath, $fieldTypeContent);
+    }
+
+    /**
+     * Get suggested tilesets for each imported tileset.
+     */
+    private function getSuggestedTilesets(array $importedTilesets): array
+    {
+        $suggestions = [];
+        $allTilesets = TileSet::all();
+
+        foreach ($importedTilesets as $importedTileset) {
+            $importedName = strtolower($importedTileset['name'] ?? '');
+            $suggestions[$importedTileset['uuid']] = [];
+            
+            foreach ($allTilesets as $existingTileset) {
+                $existingName = strtolower($existingTileset->name);
+                
+                // Calculate similarity score
+                $similarity = $this->calculateNameSimilarity($importedName, $existingName);
+                
+                if ($similarity > 0.3) { // Threshold for suggestions
+                    $suggestions[$importedTileset['uuid']][] = [
+                        'uuid' => $existingTileset->uuid,
+                        'name' => $existingTileset->name,
+                        'similarity' => $similarity,
+                    ];
+                }
+            }
+            
+            // Sort by similarity (highest first)
+            usort($suggestions[$importedTileset['uuid']], function($a, $b) {
+                return $b['similarity'] <=> $a['similarity'];
+            });
+            
+            // Limit to top 5 suggestions
+            $suggestions[$importedTileset['uuid']] = array_slice($suggestions[$importedTileset['uuid']], 0, 5);
+        }
+        
+        return $suggestions;
     }
 } 

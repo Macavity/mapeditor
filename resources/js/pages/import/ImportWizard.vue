@@ -28,9 +28,10 @@ const currentStep = ref(1);
 const totalSteps = 4;
 
 // File upload state
-const uploadedFile = ref<{
-    path: string;
-    name: string;
+const uploadedFiles = ref<{
+    files: Array<{ path: string; name: string; extension: string }>;
+    mainMapFile: string | null;
+    fieldTypeFile: string | null;
 } | null>(null);
 
 // Parsed data state
@@ -47,6 +48,7 @@ const importConfig = ref({
     map_name: '',
     tileset_mappings: {} as Record<string, string>,
     preserve_uuid: false,
+    field_type_file_path: null as string | null,
 });
 
 // Import result state
@@ -69,7 +71,7 @@ const progress = computed(() => (currentStep.value / totalSteps) * 100);
 const canProceedToNext = computed(() => {
     switch (currentStep.value) {
         case 1:
-            return uploadedFile.value !== null;
+            return uploadedFiles.value !== null;
         case 2:
             return parsedData.value !== null && importConfig.value.map_name.trim() !== '';
         case 3:
@@ -82,8 +84,13 @@ const canProceedToNext = computed(() => {
 const canGoBack = computed(() => currentStep.value > 1);
 
 // Methods
-const handleFileUploaded = (fileData: { path: string; name: string }) => {
-    uploadedFile.value = fileData;
+const handleFilesUploaded = (fileData: {
+    files: Array<{ path: string; name: string; extension: string }>;
+    mainMapFile: string | null;
+    fieldTypeFile: string | null;
+}) => {
+    uploadedFiles.value = fileData;
+    importConfig.value.field_type_file_path = fileData.fieldTypeFile;
     error.value = null;
     nextStep();
 };
@@ -123,12 +130,13 @@ const previousStep = () => {
 
 const resetWizard = () => {
     currentStep.value = 1;
-    uploadedFile.value = null;
+    uploadedFiles.value = null;
     parsedData.value = null;
     importConfig.value = {
         map_name: '',
         tileset_mappings: {},
         preserve_uuid: false,
+        field_type_file_path: null,
     };
     importResult.value = null;
     error.value = null;
@@ -206,14 +214,14 @@ const stepComponents: Record<number, any> = {
             <div class="flex-1 overflow-auto">
                 <component
                     :is="stepComponents[currentStep]"
-                    :uploaded-file="uploadedFile"
+                    :uploaded-files="uploadedFiles"
                     :parsed-data="parsedData"
                     :import-config="importConfig"
                     :import-result="importResult"
                     :is-uploading="isUploading"
                     :is-parsing="isParsing"
                     :is-importing="isImporting"
-                    @file-uploaded="handleFileUploaded"
+                    @files-uploaded="handleFilesUploaded"
                     @file-parsed="handleFileParsed"
                     @import-complete="handleImportComplete"
                     @error="error = $event"
