@@ -183,19 +183,6 @@ class TileMapController extends Controller
     )]
     public function show(TileMap $tileMap): JsonResponse
     {
-        $usedTilesets = collect([]);
-        foreach ($tileMap->layers as $layer) {
-            if (is_a($layer, MapLayer::class)) {
-                foreach ($layer->objects as $object) {
-                    $tileIndex = floor(round($object->y / $this->tileSize[1]) * $this->numberOfTilesX + round($object->x / $this->tileSize[0]) % $this->numberOfTilesX);
-
-                    if ($mapTiles[$tileIndex]['id'] && !$usedTilesets->has($mapTiles[$tileIndex]['tileset_id'])) {
-                        $usedTilesets = $usedTilesets->push([$mapTiles[$tileIndex]['tileset_id']]);
-                    }
-                }
-            }
-        }
-
         return (new TileMapResource($tileMap->load(['creator'])))
             ->response()
             ->setStatusCode(200);

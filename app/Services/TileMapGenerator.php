@@ -123,7 +123,7 @@ class TileMapGenerator
     private function createMapDirectory(TileMap $tileMap): string
     {
         $baseDirectory = self::MAPS_BASE_DIRECTORY . "/{$tileMap->id}";
-        Storage::makeDirectory($baseDirectory, self::DIRECTORY_PERMISSIONS, true, true);
+        Storage::makeDirectory($baseDirectory);
         
         return $baseDirectory;
     }

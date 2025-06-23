@@ -62,11 +62,9 @@ class TileSetService
         // Fallback to tileset name
         $basename = $tilesetName . '.png';
         $searchDirs = [
-            isset($this->tilesetDirectory)
-                ? (str_starts_with($this->tilesetDirectory, '/')
-                    ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
-                    : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename))
-                : null,
+            str_starts_with($this->tilesetDirectory, '/')
+                ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
+                : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename),
             base_path('tests/static/tilesets/' . $basename),
         ];
         
@@ -86,11 +84,9 @@ class TileSetService
     {
         $basename = $tilesetName . '.png';
         $searchDirs = [
-            isset($this->tilesetDirectory)
-                ? (str_starts_with($this->tilesetDirectory, '/')
-                    ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
-                    : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename))
-                : null,
+            str_starts_with($this->tilesetDirectory, '/')
+                ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
+                : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename),
             base_path('tests/static/tilesets/' . $basename),
         ];
         

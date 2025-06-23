@@ -7,6 +7,7 @@ namespace App\Services\Importers;
 use App\Models\TileSet;
 use App\Services\TileSetService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class LaxLegacyImporter implements ImporterInterface
 {
@@ -96,7 +97,7 @@ class LaxLegacyImporter implements ImporterInterface
                    strpos($sample, 'var width =') !== false &&
                    strpos($sample, 'field_bg') !== false;
         } catch (\Exception $e) {
-            \Log::error("LaxLegacyImporter::canHandle - Exception", [
+            Log::error("LaxLegacyImporter::canHandle - Exception", [
                 'filePath' => $filePath,
                 'exception' => $e->getMessage()
             ]);
