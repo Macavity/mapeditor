@@ -38,7 +38,7 @@ class MapGenerate extends Command
 
         $mapId = $this->argument('id');
 
-        if(!is_int($mapId)) {
+        if(!is_numeric($mapId)) {
             $map = $mapRepository->findByUuid($mapId);
             $mapId = $map->id;
         }

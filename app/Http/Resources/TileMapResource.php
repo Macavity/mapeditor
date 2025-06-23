@@ -42,7 +42,7 @@ class TileMapResource extends JsonResource
     /**
      * Aggregate used tiles per tileset across all layers.
      *
-     * @return array<string, array<int, array<string, int>>>
+     * @return array<string, int<1, max>>
      */
     protected function getTilesetUsage(): array
     {

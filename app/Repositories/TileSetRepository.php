@@ -146,4 +146,34 @@ class TileSetRepository
     {
         return TileSet::whereNull('image_path')->get();
     }
+
+    /**
+     * Create a tileset from wizard upload with proper type safety.
+     */
+    public function createFromWizardUpload(
+        string $name,
+        string $imagePath,
+        int $imageWidth,
+        int $imageHeight,
+        int $tileWidth = 32,
+        int $tileHeight = 32,
+        int $firstGid = 1,
+        int $margin = 0,
+        int $spacing = 0
+    ): TileSet {
+        $tileCount = intval($imageWidth / $tileWidth) * intval($imageHeight / $tileHeight);
+        
+        return $this->create([
+            'name' => $name,
+            'image_path' => $imagePath,
+            'image_width' => $imageWidth,
+            'image_height' => $imageHeight,
+            'tile_width' => $tileWidth,
+            'tile_height' => $tileHeight,
+            'tile_count' => $tileCount,
+            'first_gid' => $firstGid,
+            'margin' => $margin,
+            'spacing' => $spacing,
+        ]);
+    }
 } 

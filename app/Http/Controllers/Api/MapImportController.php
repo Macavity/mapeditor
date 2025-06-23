@@ -10,6 +10,7 @@ use App\Http\Resources\TileSetResource;
 use App\Models\TileMap;
 use App\Models\TileSet;
 use App\Services\MapImportService;
+use App\Services\TileSetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 use Illuminate\Support\Facades\Log;
+use App\Repositories\TileSetRepository;
 
 #[OA\Tag(
     name: 'Map Import',
@@ -26,7 +28,9 @@ use Illuminate\Support\Facades\Log;
 class MapImportController extends Controller
 {
     public function __construct(
-        private MapImportService $importService
+        private MapImportService $importService,
+        private TileSetService $tilesetService,
+        private TileSetRepository $tilesetRepository
     ) {}
 
     /**
@@ -337,7 +341,7 @@ class MapImportController extends Controller
 
             // 1. Save all uploaded tileset images to public/tilesets/ with their original filenames
             foreach ($tilesetImages as $tilesetKey => $imageFile) {
-                if ($imageFile && $imageFile->isValid()) {
+                if ($imageFile->isValid()) {
                     $filename = $imageFile->getClientOriginalName();
                     $path = 'tilesets/' . $filename;
                     Storage::disk('public')->put($path, file_get_contents($imageFile->getRealPath()));
@@ -351,7 +355,7 @@ class MapImportController extends Controller
                     // Check if we have an uploaded image for this tileset
                     $hasImage = false;
                     foreach ($tilesetImages as $tilesetKey => $imageFile) {
-                        if ($tilesetKey === $tilesetName && $imageFile && $imageFile->isValid()) {
+                        if ($tilesetKey === $tilesetName && $imageFile->isValid()) {
                             $hasImage = true;
                             break;
                         }
@@ -362,31 +366,23 @@ class MapImportController extends Controller
                         $filename = $tilesetImages[$tilesetName]->getClientOriginalName();
                         $imagePath = 'tilesets/' . $filename;
                         
-                        // Get image dimensions
-                        $imageInfo = getimagesize(Storage::disk('public')->path($imagePath));
-                        if ($imageInfo) {
-                            $imageWidth = $imageInfo[0];
-                            $imageHeight = $imageInfo[1];
-                            $tileWidth = 32; // Default assumption
-                            $tileHeight = 32; // Default assumption
-                            $tilesPerRow = intval($imageWidth / $tileWidth);
-                            $tileCount = $tilesPerRow * intval($imageHeight / $tileHeight);
-                            
-                            $tileset = TileSet::create([
-                                'name' => $tilesetName,
-                                'image_path' => $imagePath,
-                                'image_width' => $imageWidth,
-                                'image_height' => $imageHeight,
-                                'tile_width' => $tileWidth,
-                                'tile_height' => $tileHeight,
-                                'tile_count' => $tileCount,
-                                'first_gid' => 1,
-                                'margin' => 0,
-                                'spacing' => 0,
-                            ]);
-                            
-                            $wizardCreatedTilesets[] = $tileset;
-                        }
+                        // Use TileSetService to parse image dimensions
+                        $imageInfo = $this->tilesetService->parseTilesetFromImage(
+                            Storage::disk('public')->path($imagePath),
+                            32, // Default tile width
+                            32  // Default tile height
+                        );
+                        
+                        $tileset = $this->tilesetRepository->createFromWizardUpload(
+                            name: $tilesetName,
+                            imagePath: $imagePath,
+                            imageWidth: $imageInfo['image_width'],
+                            imageHeight: $imageInfo['image_height'],
+                            tileWidth: $imageInfo['tile_width'],
+                            tileHeight: $imageInfo['tile_height']
+                        );
+                        
+                        $wizardCreatedTilesets[] = $tileset;
                     }
                 }
             }

@@ -45,7 +45,7 @@ class ImportMapCommand extends Command
         $creatorEmail = $this->option('creator');
         $preserveUuid = $this->option('preserve-uuid');
         $overwrite = $this->option('overwrite');
-        $autoCreateTilesets = $this->option('auto-create-tilesets') ?? true;
+        $autoCreateTilesets = $this->option('auto-create-tilesets');
         $dryRun = $this->option('dry-run');
         $tilesetDirectory = $this->option('tilesets');
 

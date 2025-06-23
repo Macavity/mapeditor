@@ -23,8 +23,8 @@ use Illuminate\Support\Str;
 class MapImportService
 {
     private array $importers = [];
-    private TileSetService $tilesetService;
     private TileSetRepository $tilesetRepository;
+    private TileSetService $tilesetService;
 
     public function __construct(TileSetService $tilesetService, TileSetRepository $tilesetRepository)
     {
@@ -267,9 +267,12 @@ class MapImportService
                 $existingTileset = $this->tilesetRepository->findByUuid($tilesetData['uuid']);
             }
             
-            // 2. Try to find by name (case-insensitive)
+            // 2. Try to find by name using TileSetService
             if (!$existingTileset && isset($tilesetData['name'])) {
-                $existingTileset = $this->tilesetRepository->findByName($tilesetData['name']);
+                $existingTileset = $this->tilesetService->findExistingTileset(
+                    $tilesetData['name'], 
+                    $this->tilesetService->formatTilesetName($tilesetData['name'])
+                );
             }
             
             // 3. Try to find by image_path (basename, case-insensitive)
@@ -320,7 +323,7 @@ class MapImportService
     private function createMissingTileset(array $tilesetData, array $options = []): TileSet
     {
         $tileset = new TileSet();
-        $tileset->uuid = $tilesetData['uuid'] ?? (string) Str::uuid();
+        $tileset->uuid = $tilesetData['uuid'] ?? $this->tilesetService->generateTilesetUuid($tilesetData['name'] ?? 'Imported Tileset');
         $tileset->name = $tilesetData['name'] ?? 'Imported Tileset';
         $tileset->image_width = (int) ($tilesetData['image_width'] ?? 0);
         $tileset->image_height = (int) ($tilesetData['image_height'] ?? 0);
@@ -361,6 +364,17 @@ class MapImportService
                 throw new \RuntimeException("Tileset image file not found: {$originalImagePath}");
             }
             $tileset->image_path = $storagePath;
+            
+            // Use TileSetService to parse image dimensions if not provided
+            if ($tileset->image_width === 0 || $tileset->image_height === 0) {
+                $imageInfo = $this->tilesetService->parseTilesetFromImage(
+                    Storage::disk('public')->path($storagePath),
+                    $tileset->tile_width,
+                    $tileset->tile_height
+                );
+                $tileset->image_width = $imageInfo['image_width'];
+                $tileset->image_height = $imageInfo['image_height'];
+            }
         } else {
             $tileset->image_path = null;
         }

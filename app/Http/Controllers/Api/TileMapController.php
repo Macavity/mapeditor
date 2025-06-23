@@ -505,7 +505,7 @@ class TileMapController extends Controller
             $newZ = $this->calculateZIndex($tileMap, $config);
             
             // Shift other layers if needed
-            if (isset($config['shift_types']) && !empty($config['shift_types'])) {
+            if (isset($config['shift_types'])) {
                 $this->shiftLayers($tileMap, $config['shift_types']);
             }
 

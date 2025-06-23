@@ -107,7 +107,7 @@ class MapDisplayService
     public function prepareMapListRow(TileMap $map, array $layerStats): array
     {
         // Prioritize database creator, fall back to external creator, then 'Unknown'
-        $creatorName = $map->creator?->name ?? $map->external_creator ?? 'Unknown';
+        $creatorName = $map->creator->name ?? $map->external_creator ?? 'Unknown';
         
         return [
             $this->formatUuid($map->uuid),

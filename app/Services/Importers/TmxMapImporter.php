@@ -376,14 +376,14 @@ class TmxMapImporter implements ImporterInterface
     private function parseTilesetForWizard(\SimpleXMLElement $tilesetXml): array
     {
         $attributes = $tilesetXml->attributes();
-        $name = (string) ($attributes['name'] ?? 'Unknown Tileset');
+        $name = (string) ($attributes['name'] ?? 'Unnamed Tileset');
         $formattedName = $this->tilesetService->formatTilesetName($name);
         
         // Get image source if available
         $imageSource = null;
         $imageElement = $tilesetXml->image;
         if ($imageElement) {
-            $imageSource = (string) $imageElement->attributes()['source'] ?? null;
+            $imageSource = (string) $imageElement->attributes()['source'];
         }
         
         // Check if tileset image exists
