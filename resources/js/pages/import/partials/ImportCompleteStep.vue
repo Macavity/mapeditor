@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { api } from '@/lib/api';
-import { CheckCircle, Download, Map, Palette } from 'lucide-vue-next';
+import { AlertTriangle, CheckCircle, Download, Map, Palette } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 interface Props {
@@ -18,7 +18,6 @@ interface Props {
         map_name: string;
         tileset_mappings: Record<string, string>;
         tileset_images: Record<string, File>;
-        preserve_uuid: boolean;
         field_type_file_path: string | null;
     };
     isImporting: boolean;
@@ -32,6 +31,8 @@ const emit = defineEmits<{
 }>();
 
 const isImporting = ref(false);
+const importSuccess = ref(false);
+const importError = ref<string | null>(null);
 
 const performImport = async () => {
     if (!props.uploadedFiles?.mainMapFile || !props.parsedData) return;
@@ -51,6 +52,8 @@ const performImport = async () => {
     }
 
     isImporting.value = true;
+    importError.value = null;
+    importSuccess.value = false;
 
     try {
         // Create FormData for the request
@@ -59,7 +62,6 @@ const performImport = async () => {
         formData.append('format', props.parsedData.detected_format);
         formData.append('map_name', props.importConfig.map_name);
         formData.append('tileset_mappings', JSON.stringify(props.importConfig.tileset_mappings));
-        formData.append('preserve_uuid', props.importConfig.preserve_uuid.toString());
 
         // Add field type file path if available
         if (props.uploadedFiles.fieldTypeFile) {
@@ -77,9 +79,11 @@ const performImport = async () => {
             },
         });
 
+        importSuccess.value = true;
         emit('import-complete', response.data);
     } catch (error: any) {
         const message = error.response?.data?.message || 'Failed to import map';
+        importError.value = message;
         emit('error', message);
     } finally {
         isImporting.value = false;
@@ -137,11 +141,6 @@ performImport();
                         </div>
                     </div>
                 </div>
-
-                <div class="flex items-center space-x-2">
-                    <Checkbox :checked="importConfig.preserve_uuid" disabled />
-                    <span class="text-muted-foreground text-sm"> Preserve original UUIDs: {{ importConfig.preserve_uuid ? 'Yes' : 'No' }} </span>
-                </div>
             </CardContent>
         </Card>
 
@@ -169,8 +168,29 @@ performImport();
             </CardContent>
         </Card>
 
+        <!-- Import Error -->
+        <Card v-else-if="importError">
+            <CardHeader>
+                <CardTitle class="flex items-center gap-2 text-red-600">
+                    <AlertTriangle class="h-5 w-5" />
+                    Import Failed
+                </CardTitle>
+                <CardDescription> There was an error during the import process. </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+                        <p class="text-red-800">{{ importError }}</p>
+                    </div>
+                    <div class="text-muted-foreground text-sm">
+                        <p>Please check the error message above and try again. You can go back to the previous steps to fix any issues.</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
         <!-- Import Complete -->
-        <Card v-else>
+        <Card v-else-if="importSuccess">
             <CardHeader>
                 <CardTitle class="flex items-center gap-2 text-green-600">
                     <CheckCircle class="h-5 w-5" />
@@ -231,7 +251,11 @@ performImport();
                 <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                 Importing...
             </Button>
-            <Button v-else @click="performImport" class="w-full">
+            <Button v-else-if="importError" @click="performImport" class="w-full">
+                <Download class="mr-2 h-4 w-4" />
+                Retry Import
+            </Button>
+            <Button v-else-if="!importSuccess" @click="performImport" class="w-full">
                 <Download class="mr-2 h-4 w-4" />
                 Import Map
             </Button>

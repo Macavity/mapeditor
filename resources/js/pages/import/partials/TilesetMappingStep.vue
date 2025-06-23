@@ -44,23 +44,12 @@ const emit = defineEmits<{
 const existingTilesets = ref<any[]>([]);
 const isLoadingTilesets = ref(false);
 const fileInputs = ref<Record<string, HTMLInputElement>>({});
+const dragStates = ref<Record<string, boolean>>({});
 
-const updateTilesetMapping = (importedUuid: string, targetUuid: string) => {
+const updateTilesetMapping = (tilesetKey: string, mapping: string) => {
     const newMappings = { ...props.importConfig.tileset_mappings };
-    newMappings[importedUuid] = targetUuid;
-
-    // If switching away from 'create_new', remove any uploaded image
-    if (targetUuid !== 'create_new') {
-        const newImages = { ...props.importConfig.tileset_images };
-        delete newImages[importedUuid];
-        emit('update:import-config', {
-            ...props.importConfig,
-            tileset_mappings: newMappings,
-            tileset_images: newImages,
-        });
-    } else {
-        emit('update:import-config', { ...props.importConfig, tileset_mappings: newMappings });
-    }
+    newMappings[tilesetKey] = mapping;
+    emit('update:import-config', { ...props.importConfig, tileset_mappings: newMappings });
 };
 
 const handleTilesetImageUpload = (tilesetKey: string, event: Event) => {
@@ -85,6 +74,43 @@ const handleTilesetImageUpload = (tilesetKey: string, event: Event) => {
         newImages[tilesetKey] = file;
         emit('update:import-config', { ...props.importConfig, tileset_images: newImages });
     }
+};
+
+const handleTilesetImageDrop = (tilesetKey: string, event: DragEvent) => {
+    event.preventDefault();
+    dragStates.value[tilesetKey] = false;
+
+    if (event.dataTransfer?.files) {
+        const file = event.dataTransfer.files[0];
+        if (file) {
+            // Validate file type
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                emit('error', 'Invalid file type. Please upload a PNG, JPEG, GIF, or WebP image.');
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                emit('error', 'File too large. Please upload an image smaller than 10MB.');
+                return;
+            }
+
+            const newImages = { ...props.importConfig.tileset_images };
+            newImages[tilesetKey] = file;
+            emit('update:import-config', { ...props.importConfig, tileset_images: newImages });
+        }
+    }
+};
+
+const handleTilesetImageDragOver = (tilesetKey: string, event: DragEvent) => {
+    event.preventDefault();
+    dragStates.value[tilesetKey] = true;
+};
+
+const handleTilesetImageDragLeave = (tilesetKey: string, event: DragEvent) => {
+    event.preventDefault();
+    dragStates.value[tilesetKey] = false;
 };
 
 const removeTilesetImage = (tilesetKey: string) => {
@@ -302,11 +328,31 @@ const canProceedWithImport = () => {
 
                         <!-- Image Upload Interface -->
                         <div v-if="!props.importConfig.tileset_images[importedTileset.original_name]" class="space-y-2">
-                            <div class="rounded-lg border-2 border-dashed border-gray-300 p-4 text-center">
-                                <Upload class="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                                <p class="mb-2 text-sm text-gray-600">Upload tileset image</p>
-                                <p class="mb-3 text-xs text-gray-500">PNG, JPEG, GIF, or WebP (max 10MB)</p>
-                                <Button variant="outline" size="sm" @click="triggerFileInput(importedTileset.original_name)"> Choose File </Button>
+                            <div
+                                :class="[
+                                    'rounded-lg border-2 border-dashed p-6 text-center transition-colors',
+                                    dragStates[importedTileset.original_name]
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-gray-300 hover:border-gray-400',
+                                ]"
+                                @dragover="handleTilesetImageDragOver(importedTileset.original_name, $event)"
+                                @dragleave="handleTilesetImageDragLeave(importedTileset.original_name, $event)"
+                                @drop="handleTilesetImageDrop(importedTileset.original_name, $event)"
+                            >
+                                <Upload class="mx-auto mb-3 h-8 w-8 text-gray-400" />
+                                <div class="space-y-2">
+                                    <p class="text-sm font-medium text-gray-700">
+                                        Drop tileset image here, or
+                                        <button
+                                            type="button"
+                                            class="text-primary hover:underline"
+                                            @click="triggerFileInput(importedTileset.original_name)"
+                                        >
+                                            browse
+                                        </button>
+                                    </p>
+                                    <p class="text-xs text-gray-500">PNG, JPEG, GIF, or WebP (max 10MB)</p>
+                                </div>
                                 <input
                                     :ref="
                                         (el) => {
@@ -407,6 +453,29 @@ const canProceedWithImport = () => {
                             {{ Object.values(importConfig.tileset_mappings).filter((m) => m !== 'create_new').length }}
                         </span>
                     </div>
+                </div>
+            </CardContent>
+        </Card>
+
+        <!-- Proceed Message -->
+        <Card v-if="canProceedWithImport()">
+            <CardContent class="flex items-center gap-3 py-4">
+                <CheckCircle class="h-5 w-5 text-green-600" />
+                <div class="flex-1">
+                    <p class="font-medium text-green-900">Ready to Import!</p>
+                    <p class="text-sm text-green-700">All tileset mappings are complete and required images have been uploaded.</p>
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card v-else>
+            <CardContent class="flex items-center gap-3 py-4">
+                <AlertTriangle class="h-5 w-5 text-orange-600" />
+                <div class="flex-1">
+                    <p class="font-medium text-orange-900">Complete Required Actions</p>
+                    <p class="text-sm text-orange-700">
+                        Please ensure all tilesets are mapped and upload any required tileset images before proceeding with the import.
+                    </p>
                 </div>
             </CardContent>
         </Card>

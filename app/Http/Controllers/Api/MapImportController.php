@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
+use Illuminate\Support\Facades\Log;
 
 #[OA\Tag(
     name: 'Map Import',
@@ -258,7 +259,6 @@ class MapImportController extends Controller
                         new OA\Property(property: 'format', type: 'string'),
                         new OA\Property(property: 'map_name', type: 'string'),
                         new OA\Property(property: 'tileset_mappings', type: 'string'), // JSON string
-                        new OA\Property(property: 'preserve_uuid', type: 'boolean'),
                         new OA\Property(property: 'field_type_file_path', type: 'string', nullable: true),
                         new OA\Property(property: 'tileset_images', type: 'array', items: new OA\Schema(type: 'string', format: 'binary')),
                     ],
@@ -292,7 +292,6 @@ class MapImportController extends Controller
             'format' => 'required|string|in:json,tmx,js',
             'map_name' => 'required|string|max:255',
             'tileset_mappings' => 'required|string', // JSON string
-            'preserve_uuid' => 'boolean',
             'field_type_file_path' => 'nullable|string',
             'tileset_images.*' => 'nullable|file|image|max:10240', // 10MB max
         ]);
@@ -308,7 +307,6 @@ class MapImportController extends Controller
         $format = $request->input('format');
         $mapName = $request->input('map_name');
         $tilesetMappingsJson = $request->input('tileset_mappings');
-        $preserveUuid = $request->input('preserve_uuid', false);
         $fieldTypeFilePath = $request->input('field_type_file_path');
         $tilesetImages = $request->file('tileset_images', []);
 
@@ -335,37 +333,34 @@ class MapImportController extends Controller
         }
 
         try {
-            // Upload tileset images first
-            $uploadedTilesetImages = $this->uploadTilesetImages($tilesetImages);
-
             // If this is a JS file and we have a field type file, copy it to the expected location
             if ($format === 'js' && $fieldTypeFilePath) {
                 $this->copyFieldTypeFile($filePath, $fieldTypeFilePath);
             }
 
-            // Parse the file using the service
-            $result = $this->importService->parseFile($filePath, $format);
-            $mapData = $result['data'];
-            $detectedFormat = $result['format'];
+            // Upload tileset images to public storage
+            $uploadedTilesetImages = $this->uploadTilesetImages($tilesetImages);
+            
+            // Debug: Log what was uploaded
+            Log::info('Uploaded tileset images:', $uploadedTilesetImages);
 
-            // Update map name
-            $mapData['map']['name'] = $mapName;
-
-            // Apply tileset mappings and uploaded images
-            $this->applyTilesetMappings($mapData, $tilesetMappings, $uploadedTilesetImages);
-
-            // Import the map
-            $options = [
-                'preserve_uuid' => $preserveUuid,
-                'overwrite' => false,
-                'auto_create_tilesets' => true, // Enable tileset creation for wizard
+            // Read the file content
+            $fileContent = Storage::disk('local')->get($filePath);
+            
+            // Prepare import options
+            $importOptions = [
+                'auto_create_tilesets' => true,
+                'map_name' => $mapName,
+                'tileset_mappings' => $tilesetMappings,
+                'uploaded_tileset_images' => $uploadedTilesetImages,
             ];
 
+            // Use the MapImportService to handle the complete import
             $importResult = $this->importService->importFromString(
-                json_encode($mapData),
-                $detectedFormat,
+                $fileContent,
+                $format,
                 Auth::user(),
-                $options
+                $importOptions
             );
 
             $map = $importResult['map'];
@@ -391,230 +386,101 @@ class MapImportController extends Controller
     }
 
     /**
-     * Get suggested tilesets for wizard tileset data.
-     */
-    private function getSuggestedTilesetsForWizard(array $wizardTilesets): array
-    {
-        $suggestions = [];
-        
-        foreach ($wizardTilesets as $wizardTileset) {
-            if (!$wizardTileset['requires_upload']) {
-                continue; // Skip tilesets that don't need upload
-            }
-            
-            $originalName = $wizardTileset['original_name'];
-            $formattedName = $wizardTileset['formatted_name'];
-            
-            // Get all existing tilesets for comparison
-            $existingTilesets = TileSet::all();
-            $similarTilesets = [];
-            
-            foreach ($existingTilesets as $existingTileset) {
-                $similarity = max(
-                    $this->calculateNameSimilarity($originalName, $existingTileset->name),
-                    $this->calculateNameSimilarity($formattedName, $existingTileset->name)
-                );
-                
-                if ($similarity > 0.3) { // Lower threshold for wizard suggestions
-                    $similarTilesets[] = [
-                        'uuid' => $existingTileset->uuid,
-                        'name' => $existingTileset->name,
-                        'similarity' => $similarity,
-                        'image_path' => $existingTileset->image_path,
-                    ];
-                }
-            }
-            
-            // Sort by similarity (highest first)
-            usort($similarTilesets, function ($a, $b) {
-                return $b['similarity'] <=> $a['similarity'];
-            });
-            
-            // Take top 3 suggestions
-            $suggestions[$originalName] = array_slice($similarTilesets, 0, 3);
-        }
-        
-        return $suggestions;
-    }
-
-    /**
-     * Calculate similarity between two strings using various methods
-     */
-    private function calculateNameSimilarity(string $str1, string $str2): float
-    {
-        // Remove common words and normalize
-        $commonWords = ['tileset', 'tile', 'set', 'map', 'the', 'a', 'an', 'and', 'or', 'but'];
-        $str1 = str_replace($commonWords, '', $str1);
-        $str2 = str_replace($commonWords, '', $str2);
-        
-        $str1 = trim(preg_replace('/\s+/', ' ', $str1));
-        $str2 = trim(preg_replace('/\s+/', ' ', $str2));
-
-        if (empty($str1) || empty($str2)) {
-            return 0.0;
-        }
-
-        // Use multiple similarity metrics
-        $levenshtein = 1 - (levenshtein($str1, $str2) / max(strlen($str1), strlen($str2)));
-        $similarText = similar_text($str1, $str2, $percent) / 100;
-        
-        // Check if one contains the other
-        $contains = (strpos($str1, $str2) !== false || strpos($str2, $str1) !== false) ? 0.8 : 0.0;
-        
-        // Average the scores
-        return ($levenshtein + $similarText + $contains) / 3;
-    }
-
-    /**
-     * Apply tileset mappings to the map data
-     */
-    private function applyTilesetMappings(array &$mapData, array $tilesetMappings, array $uploadedImages = []): void
-    {
-        // Create a mapping from imported original_name to target UUID
-        $uuidMapping = [];
-        foreach ($tilesetMappings as $originalName => $targetUuid) {
-            // Find the tileset by original_name to get its UUID
-            $importedTileset = null;
-            foreach ($mapData['tilesets'] as $tileset) {
-                if ($tileset['original_name'] === $originalName) {
-                    $importedTileset = $tileset;
-                    break;
-                }
-            }
-            
-            if ($importedTileset) {
-                $importedUuid = $importedTileset['uuid'];
-                if ($targetUuid === 'create_new') {
-                    // Generate a new UUID for tilesets that should be created
-                    $uuidMapping[$importedUuid] = (string) \Illuminate\Support\Str::uuid();
-                } else {
-                    $uuidMapping[$importedUuid] = $targetUuid;
-                }
-            }
-        }
-
-        // Update tileset UUIDs in the map data
-        foreach ($mapData['tilesets'] as &$tileset) {
-            if (isset($uuidMapping[$tileset['uuid']])) {
-                $originalUuid = $tileset['uuid'];
-                $tileset['uuid'] = $uuidMapping[$tileset['uuid']];
-                // Only mark as existing if it's not a 'create_new' mapping
-                $originalName = $tileset['original_name'];
-                if ($tilesetMappings[$originalName] !== 'create_new') {
-                    $tileset['_existing'] = true;
-                }
-            }
-        }
-
-        // Update brush tileset references in layers
-        foreach ($mapData['layers'] as &$layer) {
-            if (isset($layer['data']) && is_array($layer['data'])) {
-                foreach ($layer['data'] as &$tile) {
-                    if (isset($tile['brush']['tileset']) && isset($uuidMapping[$tile['brush']['tileset']])) {
-                        $tile['brush']['tileset'] = $uuidMapping[$tile['brush']['tileset']];
-                    }
-                }
-            }
-        }
-
-        // Apply uploaded images to tilesets that need them
-        foreach ($uploadedImages as $image) {
-            $tilesetKey = $image['tileset_key'];
-            $imagePath = $image['image_path'];
-            
-            // Find the tileset by original name and update its image path
-            foreach ($mapData['tilesets'] as &$tileset) {
-                if ($tileset['original_name'] === $tilesetKey) {
-                    $tileset['image_path'] = $imagePath;
-                    break;
-                }
-            }
-        }
-    }
-
-    /**
-     * Copy field type file to the location expected by the LaxLegacyImporter
+     * Copy field type file to the expected location for JS imports.
      */
     private function copyFieldTypeFile(string $mainFilePath, string $fieldTypeFilePath): void
     {
-        // Get the directory and filename of the main file
-        $pathInfo = pathinfo($mainFilePath);
-        $expectedFieldTypePath = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_ft.js';
+        $mainFileDir = dirname($mainFilePath);
+        $fieldTypeFileName = basename($fieldTypeFilePath);
+        $targetPath = $mainFileDir . '/' . $fieldTypeFileName;
         
-        // Copy the field type file to the expected location
-        $fieldTypeContent = Storage::disk('local')->get($fieldTypeFilePath);
-        Storage::disk('local')->put($expectedFieldTypePath, $fieldTypeContent);
+        if (!Storage::disk('local')->exists($targetPath)) {
+            $fieldTypeContent = Storage::disk('local')->get($fieldTypeFilePath);
+            Storage::disk('local')->put($targetPath, $fieldTypeContent);
+        }
     }
 
     /**
-     * Get suggested tilesets for each imported tileset.
+     * Upload tileset images to public storage.
      */
-    private function getSuggestedTilesets(array $importedTilesets): array
+    private function uploadTilesetImages(array $tilesetImages): array
+    {
+        $uploadedImages = [];
+        
+        foreach ($tilesetImages as $tilesetKey => $imageFile) {
+            if ($imageFile && $imageFile->isValid()) {
+                $filename = $imageFile->getClientOriginalName();
+                $path = 'tilesets/' . $filename;
+                
+                // Store in public disk
+                Storage::disk('public')->put($path, file_get_contents($imageFile->getRealPath()));
+                
+                $uploadedImages[] = [
+                    'tileset_key' => $tilesetKey,
+                    'image_path' => $path,
+                    'filename' => $filename
+                ];
+            }
+        }
+        
+        return $uploadedImages;
+    }
+
+    /**
+     * Get suggested tilesets for each imported tileset based on name similarity.
+     */
+    private function getSuggestedTilesetsForWizard(array $tilesets): array
     {
         $suggestions = [];
-        $allTilesets = TileSet::all();
+        $existingTilesets = TileSet::all();
 
-        foreach ($importedTilesets as $importedTileset) {
-            $importedName = strtolower($importedTileset['name'] ?? '');
-            $suggestions[$importedTileset['uuid']] = [];
-            
-            foreach ($allTilesets as $existingTileset) {
-                $existingName = strtolower($existingTileset->name);
-                
-                // Calculate similarity score
-                $similarity = $this->calculateNameSimilarity($importedName, $existingName);
-                
-                if ($similarity > 0.3) { // Threshold for suggestions
-                    $suggestions[$importedTileset['uuid']][] = [
+        foreach ($tilesets as $tileset) {
+            $tilesetKey = $tileset['original_name'] ?? $tileset['name'];
+            $suggestions[$tilesetKey] = [];
+
+            foreach ($existingTilesets as $existingTileset) {
+                $similarity = $this->calculateNameSimilarity(
+                    $tileset['name'] ?? '',
+                    $existingTileset->name
+                );
+
+                if ($similarity > 0.3) { // Only include if similarity is above 30%
+                    $suggestions[$tilesetKey][] = [
                         'uuid' => $existingTileset->uuid,
                         'name' => $existingTileset->name,
-                        'similarity' => $similarity,
+                        'similarity' => $similarity
                     ];
                 }
             }
-            
-            // Sort by similarity (highest first)
-            usort($suggestions[$importedTileset['uuid']], function($a, $b) {
+
+            // Sort by similarity (highest first) and limit to top 5
+            usort($suggestions[$tilesetKey], function ($a, $b) {
                 return $b['similarity'] <=> $a['similarity'];
             });
-            
-            // Limit to top 5 suggestions
-            $suggestions[$importedTileset['uuid']] = array_slice($suggestions[$importedTileset['uuid']], 0, 5);
+            $suggestions[$tilesetKey] = array_slice($suggestions[$tilesetKey], 0, 5);
         }
-        
+
         return $suggestions;
     }
 
     /**
-     * Upload tileset images and return their paths
+     * Calculate similarity between two strings using Levenshtein distance.
      */
-    private function uploadTilesetImages(array $images): array
+    private function calculateNameSimilarity(string $str1, string $str2): float
     {
-        $uploadedImages = [];
-        
-        foreach ($images as $tilesetKey => $image) {
-            if (!$image || !$image->isValid()) {
-                continue;
-            }
-            
-            $fileName = $image->getClientOriginalName();
-            $extension = $image->getClientOriginalExtension();
-            
-            // Generate a unique filename while preserving the original extension
-            $uniqueName = uniqid() . '.' . $extension;
-            $filePath = 'imports/tilesets/' . $uniqueName;
-            
-            // Store the file with the custom path
-            Storage::disk('local')->put($filePath, file_get_contents($image->getRealPath()));
+        $str1 = strtolower(trim($str1));
+        $str2 = strtolower(trim($str2));
 
-            $uploadedImages[] = [
-                'tileset_key' => $tilesetKey,
-                'image_path' => $filePath,
-                'file_name' => $fileName,
-                'extension' => $extension
-            ];
+        if ($str1 === $str2) {
+            return 1.0;
         }
-        
-        return $uploadedImages;
+
+        $maxLength = max(strlen($str1), strlen($str2));
+        if ($maxLength === 0) {
+            return 0.0;
+        }
+
+        $distance = levenshtein($str1, $str2);
+        return 1 - ($distance / $maxLength);
     }
 } 

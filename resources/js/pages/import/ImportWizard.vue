@@ -48,7 +48,6 @@ const importConfig = ref({
     map_name: '',
     tileset_mappings: {} as Record<string, string>,
     tileset_images: {} as Record<string, File>,
-    preserve_uuid: false,
     field_type_file_path: null as string | null,
 });
 
@@ -76,7 +75,22 @@ const canProceedToNext = computed(() => {
         case 2:
             return parsedData.value !== null && importConfig.value.map_name.trim() !== '';
         case 3:
-            return Object.keys(importConfig.value.tileset_mappings).length > 0;
+            // Check if all tilesets are mapped and required images are uploaded
+            if (!parsedData.value?.tilesets || Object.keys(importConfig.value.tileset_mappings).length === 0) {
+                return false;
+            }
+
+            // Check if all tilesets that require uploads have images
+            return parsedData.value.tilesets.every((tileset: any) => {
+                const mapping = importConfig.value.tileset_mappings[tileset.original_name];
+
+                // If creating new and requires upload, must have image
+                if (mapping === 'create_new' && tileset.requires_upload) {
+                    return importConfig.value.tileset_images[tileset.original_name];
+                }
+
+                return true;
+            });
         default:
             return true;
     }
@@ -143,7 +157,6 @@ const resetWizard = () => {
         map_name: '',
         tileset_mappings: {},
         tileset_images: {},
-        preserve_uuid: false,
         field_type_file_path: null,
     };
     importResult.value = null;
@@ -244,6 +257,7 @@ const stepComponents: Record<number, any> = {
 
                 <div class="flex gap-2">
                     <Button v-if="currentStep < totalSteps" variant="outline" @click="resetWizard"> Start Over </Button>
+                    <Button v-if="currentStep === 3 && canProceedToNext" variant="default" @click="nextStep"> Proceed with Import </Button>
                     <Button v-if="currentStep === totalSteps && importResult" variant="default" @click="goToImportedMap"> Open Imported Map </Button>
                 </div>
             </div>

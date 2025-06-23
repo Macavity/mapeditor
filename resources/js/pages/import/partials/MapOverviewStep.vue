@@ -2,7 +2,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -20,7 +19,6 @@ interface Props {
     importConfig: {
         map_name: string;
         tileset_mappings: Record<string, string>;
-        preserve_uuid: boolean;
         field_type_file_path: string | null;
     };
 }
@@ -162,15 +160,6 @@ const getLayerTypeColor = (type: string) => {
                         placeholder="Enter map name"
                         @input="updateImportConfig({ map_name: ($event.target as HTMLInputElement).value })"
                     />
-                </div>
-
-                <div class="flex items-center space-x-2">
-                    <Checkbox
-                        id="preserve-uuid"
-                        :checked="importConfig.preserve_uuid"
-                        @update:checked="updateImportConfig({ preserve_uuid: $event })"
-                    />
-                    <Label for="preserve-uuid" class="text-sm"> Preserve original UUIDs (may cause conflicts if map already exists) </Label>
                 </div>
             </CardContent>
         </Card>
