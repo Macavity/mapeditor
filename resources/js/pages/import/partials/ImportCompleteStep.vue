@@ -30,7 +30,7 @@ const emit = defineEmits<{
     error: [message: string];
 }>();
 
-const isImporting = ref(false);
+const localIsImporting = ref(false);
 const importSuccess = ref(false);
 const importError = ref<string | null>(null);
 
@@ -51,7 +51,7 @@ const performImport = async () => {
         return;
     }
 
-    isImporting.value = true;
+    localIsImporting.value = true;
     importError.value = null;
     importSuccess.value = false;
 
@@ -86,7 +86,7 @@ const performImport = async () => {
         importError.value = message;
         emit('error', message);
     } finally {
-        isImporting.value = false;
+        localIsImporting.value = false;
     }
 };
 
@@ -145,7 +145,7 @@ performImport();
         </Card>
 
         <!-- Import Progress -->
-        <Card v-if="isImporting">
+        <Card v-if="localIsImporting">
             <CardHeader>
                 <CardTitle class="flex items-center gap-2">
                     <Download class="h-5 w-5" />
@@ -247,7 +247,7 @@ performImport();
 
         <!-- Action Buttons -->
         <div class="flex justify-center">
-            <Button v-if="isImporting" disabled class="w-full">
+            <Button v-if="localIsImporting" disabled class="w-full">
                 <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                 Importing...
             </Button>

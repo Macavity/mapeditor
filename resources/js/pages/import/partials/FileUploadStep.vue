@@ -31,23 +31,6 @@ const dragOver = ref(false);
 const supportedFormats = ['json', 'tmx', 'js'];
 const maxFileSize = 10 * 1024 * 1024; // 10MB
 
-const mainMapFile = computed(() => {
-    return selectedFiles.value.find((file) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        if (extension === 'js') {
-            return !file.name.endsWith('_ft.js');
-        }
-        return true;
-    });
-});
-
-const fieldTypeFile = computed(() => {
-    return selectedFiles.value.find((file) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        return extension === 'js' && file.name.endsWith('_ft.js');
-    });
-});
-
 const hasLegacyFiles = computed(() => {
     return selectedFiles.value.some((file) => {
         const extension = file.name.split('.').pop()?.toLowerCase();

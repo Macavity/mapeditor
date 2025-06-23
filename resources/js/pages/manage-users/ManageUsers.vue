@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem, User } from '@/types';
-import type { PageProps } from '@/types/globals';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { AlertTriangle, Edit, Plus, Shield, ShieldOff, Trash2 } from 'lucide-vue-next';
 
 interface Props {
@@ -20,8 +19,7 @@ interface Props {
     };
 }
 
-const props = defineProps<Props>();
-const page = usePage<PageProps>();
+defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

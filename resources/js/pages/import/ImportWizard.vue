@@ -59,8 +59,6 @@ const importResult = ref<{
 
 // Loading states
 const isUploading = ref(false);
-const isParsing = ref(false);
-const isImporting = ref(false);
 
 // Error state
 const error = ref<string | null>(null);
@@ -240,8 +238,6 @@ const stepComponents: Record<number, any> = {
                     :import-config="importConfig"
                     :import-result="importResult"
                     :is-uploading="isUploading"
-                    :is-parsing="isParsing"
-                    :is-importing="isImporting"
                     @files-uploaded="handleFilesUploaded"
                     @file-parsed="handleFileParsed"
                     @import-complete="handleImportComplete"

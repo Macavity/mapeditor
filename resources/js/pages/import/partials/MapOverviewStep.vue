@@ -15,7 +15,6 @@ interface Props {
         mainMapFile: string | null;
         fieldTypeFile: string | null;
     } | null;
-    isParsing: boolean;
     importConfig: {
         map_name: string;
         tileset_mappings: Record<string, string>;
@@ -32,7 +31,7 @@ const emit = defineEmits<{
 }>();
 
 const parsedData = ref<any>(null);
-const isParsing = ref(false);
+const localIsParsing = ref(false);
 
 const updateImportConfig = (updates: Partial<typeof props.importConfig>) => {
     emit('update:import-config', { ...props.importConfig, ...updates });
@@ -41,7 +40,7 @@ const updateImportConfig = (updates: Partial<typeof props.importConfig>) => {
 const parseFile = async () => {
     if (!props.uploadedFiles?.mainMapFile) return;
 
-    isParsing.value = true;
+    localIsParsing.value = true;
 
     try {
         const requestData: any = {
@@ -61,7 +60,7 @@ const parseFile = async () => {
         const message = error.response?.data?.message || 'Failed to parse file';
         emit('error', message);
     } finally {
-        isParsing.value = false;
+        localIsParsing.value = false;
     }
 };
 
@@ -156,7 +155,7 @@ const getLayerTypeColor = (type: string) => {
                     <Label for="map-name">Map Name</Label>
                     <Input
                         id="map-name"
-                        v-model="importConfig.map_name"
+                        :value="importConfig.map_name"
                         placeholder="Enter map name"
                         @input="updateImportConfig({ map_name: ($event.target as HTMLInputElement).value })"
                     />
@@ -256,7 +255,7 @@ const getLayerTypeColor = (type: string) => {
         </Card>
 
         <!-- Loading State -->
-        <Card v-if="isParsing">
+        <Card v-if="localIsParsing">
             <CardContent class="flex items-center justify-center py-8">
                 <div class="flex items-center gap-2">
                     <div class="border-primary h-4 w-4 animate-spin rounded-full border-b-2"></div>
@@ -266,7 +265,7 @@ const getLayerTypeColor = (type: string) => {
         </Card>
 
         <!-- Retry Button -->
-        <div v-if="!parsedData && !isParsing" class="text-center">
+        <div v-if="!parsedData && !localIsParsing" class="text-center">
             <Button @click="parseFile" :disabled="!uploadedFiles?.mainMapFile">
                 <FileText class="mr-2 h-4 w-4" />
                 Parse File

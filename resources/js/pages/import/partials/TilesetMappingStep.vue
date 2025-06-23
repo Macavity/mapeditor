@@ -16,7 +16,6 @@ interface Props {
         tileset_mappings: Record<string, string>;
         tileset_images: Record<string, File>;
     };
-    isImporting: boolean;
 }
 
 interface ImportedTileset {
@@ -133,6 +132,7 @@ const loadExistingTilesets = async () => {
         const response = await api.get('/tile-sets');
         existingTilesets.value = response.data.data;
     } catch (error: any) {
+        console.error(error);
         emit('error', 'Failed to load existing tilesets');
     } finally {
         isLoadingTilesets.value = false;
