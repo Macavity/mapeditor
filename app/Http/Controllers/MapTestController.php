@@ -14,6 +14,8 @@ class MapTestController extends Controller
 {
     public function show(string $uuid): Response
     {
+        $user = auth()->user();
+        
         $tileMap = TileMap::where('uuid', $uuid)
             ->with(['layers' => function ($query) {
                 $query->where(function ($q) {

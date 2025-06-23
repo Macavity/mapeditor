@@ -89,9 +89,15 @@ class TileMapController extends Controller
     )]
     public function index(): JsonResponse
     {
-        $tileMaps = TileMap::with(['creator', 'layers'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = Auth::user();
+        $query = TileMap::with(['creator', 'layers']);
+
+        // If user is not admin, only show their own maps
+        if (!$user->isAdmin()) {
+            $query->where('creator_id', $user->id);
+        }
+
+        $tileMaps = $query->orderBy('created_at', 'desc')->get();
 
         return TileMapResource::collection($tileMaps)
             ->response()
@@ -237,6 +243,13 @@ class TileMapController extends Controller
     )]
     public function update(Request $request, TileMap $tileMap): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can update this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'width' => 'sometimes|integer|min:1',
@@ -257,6 +270,13 @@ class TileMapController extends Controller
      */
     public function destroy(TileMap $tileMap): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can delete this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         $tileMap->delete();
 
         return response()->json(null, 204);
@@ -298,6 +318,13 @@ class TileMapController extends Controller
      */
     public function updateLayers(Request $request, TileMap $tileMap): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can modify this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'layers' => 'required|array',
             'layers.*.uuid' => 'required|string|exists:layers,uuid',
@@ -364,6 +391,13 @@ class TileMapController extends Controller
      */
     public function updateLayer(Request $request, TileMap $tileMap, Layer $layer): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can modify this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         // Ensure the layer belongs to the tile map
         if ($layer->tile_map_id !== $tileMap->id) {
             return response()->json(['error' => 'Layer does not belong to this tile map'], 404);
@@ -401,6 +435,13 @@ class TileMapController extends Controller
      */
     public function updateLayerData(Request $request, TileMap $tileMap, Layer $layer): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can modify this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         // Ensure the layer belongs to the tile map
         if ($layer->tile_map_id !== $tileMap->id) {
             return response()->json(['error' => 'Layer does not belong to this tile map'], 404);
@@ -495,6 +536,13 @@ class TileMapController extends Controller
      */
     private function createLayer(Request $request, TileMap $tileMap, LayerType $layerType): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can modify this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate(self::LAYER_VALIDATION_RULES);
         $config = self::LAYER_CONFIGS[$layerType->value];
         
@@ -592,6 +640,13 @@ class TileMapController extends Controller
      */
     public function deleteLayer(TileMap $tileMap, Layer $layer): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user can modify this map (admin or creator)
+        if (!$user->isAdmin() && $tileMap->creator_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         // Ensure the layer belongs to the tile map
         if ($layer->tile_map_id !== $tileMap->id) {
             return response()->json(['error' => 'Layer does not belong to this tile map'], 404);
