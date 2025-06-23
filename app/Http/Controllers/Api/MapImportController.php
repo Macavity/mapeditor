@@ -257,12 +257,11 @@ class MapImportController extends Controller
                     properties: [
                         new OA\Property(property: 'file_path', type: 'string'),
                         new OA\Property(property: 'format', type: 'string'),
-                        new OA\Property(property: 'map_name', type: 'string'),
                         new OA\Property(property: 'tileset_mappings', type: 'string'), // JSON string
                         new OA\Property(property: 'field_type_file_path', type: 'string', nullable: true),
                         new OA\Property(property: 'tileset_images', type: 'array', items: new OA\Schema(type: 'string', format: 'binary')),
                     ],
-                    required: ['file_path', 'format', 'map_name', 'tileset_mappings']
+                    required: ['file_path', 'format', 'tileset_mappings']
                 )
             )
         ),
@@ -290,7 +289,6 @@ class MapImportController extends Controller
         $validator = Validator::make($request->all(), [
             'file_path' => 'required|string',
             'format' => 'required|string|in:json,tmx,js',
-            'map_name' => 'required|string|max:255',
             'tileset_mappings' => 'required|string', // JSON string
             'field_type_file_path' => 'nullable|string',
             'tileset_images.*' => 'nullable|file|image|max:10240', // 10MB max
@@ -305,7 +303,6 @@ class MapImportController extends Controller
 
         $filePath = $request->input('file_path');
         $format = $request->input('format');
-        $mapName = $request->input('map_name');
         $tilesetMappingsJson = $request->input('tileset_mappings');
         $fieldTypeFilePath = $request->input('field_type_file_path');
         $tilesetImages = $request->file('tileset_images', []);
@@ -338,44 +335,92 @@ class MapImportController extends Controller
                 $this->copyFieldTypeFile($filePath, $fieldTypeFilePath);
             }
 
-            // Upload tileset images to public storage
-            $uploadedTilesetImages = $this->uploadTilesetImages($tilesetImages);
-            
-            // Debug: Log what was uploaded
-            Log::info('Uploaded tileset images:', $uploadedTilesetImages);
+            // 1. Save all uploaded tileset images to public/tilesets/ with their original filenames
+            foreach ($tilesetImages as $tilesetKey => $imageFile) {
+                if ($imageFile && $imageFile->isValid()) {
+                    $filename = $imageFile->getClientOriginalName();
+                    $path = 'tilesets/' . $filename;
+                    Storage::disk('public')->put($path, file_get_contents($imageFile->getRealPath()));
+                }
+            }
 
-            // Read the file content
+            // 2. Create tilesets for 'create_new' mappings before import
+            $wizardCreatedTilesets = [];
+            foreach ($tilesetMappings as $tilesetName => $mapping) {
+                if ($mapping === 'create_new') {
+                    // Check if we have an uploaded image for this tileset
+                    $hasImage = false;
+                    foreach ($tilesetImages as $tilesetKey => $imageFile) {
+                        if ($tilesetKey === $tilesetName && $imageFile && $imageFile->isValid()) {
+                            $hasImage = true;
+                            break;
+                        }
+                    }
+                    
+                    if ($hasImage) {
+                        // Create a minimal tileset record so the import service can find it
+                        $filename = $tilesetImages[$tilesetName]->getClientOriginalName();
+                        $imagePath = 'tilesets/' . $filename;
+                        
+                        // Get image dimensions
+                        $imageInfo = getimagesize(Storage::disk('public')->path($imagePath));
+                        if ($imageInfo) {
+                            $imageWidth = $imageInfo[0];
+                            $imageHeight = $imageInfo[1];
+                            $tileWidth = 32; // Default assumption
+                            $tileHeight = 32; // Default assumption
+                            $tilesPerRow = intval($imageWidth / $tileWidth);
+                            $tileCount = $tilesPerRow * intval($imageHeight / $tileHeight);
+                            
+                            $tileset = TileSet::create([
+                                'name' => $tilesetName,
+                                'image_path' => $imagePath,
+                                'image_width' => $imageWidth,
+                                'image_height' => $imageHeight,
+                                'tile_width' => $tileWidth,
+                                'tile_height' => $tileHeight,
+                                'tile_count' => $tileCount,
+                                'first_gid' => 1,
+                                'margin' => 0,
+                                'spacing' => 0,
+                            ]);
+                            
+                            $wizardCreatedTilesets[] = $tileset;
+                        }
+                    }
+                }
+            }
+
+            // 3. Read the file content
             $fileContent = Storage::disk('local')->get($filePath);
-            
-            // Prepare import options
-            $importOptions = [
-                'auto_create_tilesets' => true,
-                'map_name' => $mapName,
-                'tileset_mappings' => $tilesetMappings,
-                'uploaded_tileset_images' => $uploadedTilesetImages,
-            ];
 
-            // Use the MapImportService to handle the complete import
+            // 4. Use the standard MapImportService to handle the complete import
             $importResult = $this->importService->importFromString(
                 $fileContent,
                 $format,
                 Auth::user(),
-                $importOptions
+                ['auto_create_tilesets' => true]
             );
 
             $map = $importResult['map'];
             $tilesetResults = $importResult['tilesets'];
 
-            // Clean up the uploaded files
+            // 5. Clean up the uploaded files
             Storage::disk('local')->delete($filePath);
             if ($fieldTypeFilePath) {
                 Storage::disk('local')->delete($fieldTypeFilePath);
             }
 
+            // Combine tilesets created by the wizard with those created by the import service
+            $allCreatedTilesets = array_merge(
+                $wizardCreatedTilesets,
+                $tilesetResults['created'] ?? []
+            );
+
             return response()->json([
                 'message' => 'Map imported successfully',
                 'map' => new TileMapResource($map),
-                'created_tilesets' => collect($tilesetResults['created'] ?? [])->map(fn($ts) => new TileSetResource($ts)),
+                'created_tilesets' => collect($allCreatedTilesets)->map(fn($ts) => new TileSetResource($ts)),
             ]);
 
         } catch (\Exception $e) {
@@ -398,32 +443,6 @@ class MapImportController extends Controller
             $fieldTypeContent = Storage::disk('local')->get($fieldTypeFilePath);
             Storage::disk('local')->put($targetPath, $fieldTypeContent);
         }
-    }
-
-    /**
-     * Upload tileset images to public storage.
-     */
-    private function uploadTilesetImages(array $tilesetImages): array
-    {
-        $uploadedImages = [];
-        
-        foreach ($tilesetImages as $tilesetKey => $imageFile) {
-            if ($imageFile && $imageFile->isValid()) {
-                $filename = $imageFile->getClientOriginalName();
-                $path = 'tilesets/' . $filename;
-                
-                // Store in public disk
-                Storage::disk('public')->put($path, file_get_contents($imageFile->getRealPath()));
-                
-                $uploadedImages[] = [
-                    'tileset_key' => $tilesetKey,
-                    'image_path' => $path,
-                    'filename' => $filename
-                ];
-            }
-        }
-        
-        return $uploadedImages;
     }
 
     /**

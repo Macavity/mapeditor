@@ -147,11 +147,6 @@ class MapImportService
     {
         $importer = $this->getImporterForFile($filePath, $format);
         
-        // Configure importer with skip validation option for wizard parsing
-        if ($importer instanceof LaxLegacyImporter && $skipTilesetValidation) {
-            $importer->setSkipTilesetValidation(true);
-        }
-        
         // Find the format key for this importer
         $detectedFormat = null;
         foreach ($this->importers as $fmt => $imp) {

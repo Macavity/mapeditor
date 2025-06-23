@@ -377,7 +377,7 @@ class TmxMapImporter implements ImporterInterface
     {
         $attributes = $tilesetXml->attributes();
         $name = (string) ($attributes['name'] ?? 'Unknown Tileset');
-        $formattedName = $this->formatTilesetName($name);
+        $formattedName = $this->tilesetService->formatTilesetName($name);
         
         // Get image source if available
         $imageSource = null;
@@ -406,13 +406,5 @@ class TmxMapImporter implements ImporterInterface
             ] : null,
             'requires_upload' => !$imageExists && !$existingTileset,
         ];
-    }
-
-    /**
-     * Format tileset name for consistency.
-     */
-    private function formatTilesetName(string $tilesetName): string
-    {
-        return ucwords(str_replace(['_', '-'], ' ', $tilesetName));
     }
 } 

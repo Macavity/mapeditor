@@ -10,12 +10,8 @@ use Illuminate\Support\Facades\Storage;
 
 class LaxLegacyImporter implements ImporterInterface
 {
-    private array $tilesetMapping = [];
-    private TileSetService $tilesetService;
-
-    public function __construct(TileSetService $tilesetService)
+    public function __construct(private TileSetService $tilesetService)
     {
-        $this->tilesetService = $tilesetService;
     }
 
     /**
@@ -24,23 +20,6 @@ class LaxLegacyImporter implements ImporterInterface
     public function setTilesetDirectory(string $directory): self
     {
         $this->tilesetService->setTilesetDirectory($directory);
-        return $this;
-    }
-
-    /**
-     * Get the current tileset directory.
-     */
-    public function getTilesetDirectory(): string
-    {
-        return $this->tilesetService->getTilesetDirectory();
-    }
-
-    /**
-     * Set whether to skip tileset validation (for wizard parsing).
-     */
-    public function setSkipTilesetValidation(bool $skip): self
-    {
-        // This is now handled by the TileSetService
         return $this;
     }
 
@@ -288,8 +267,6 @@ class LaxLegacyImporter implements ImporterInterface
      */
     private function convertToStandardFormat(array $mapData, ?array $fieldTypeData = null): array
     {
-        $this->tilesetMapping = [];
-
         $result = [
             'map' => [
                 'name' => $mapData['name'] ?: 'Legacy Map',

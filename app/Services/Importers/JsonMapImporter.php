@@ -231,7 +231,7 @@ class JsonMapImporter implements ImporterInterface
         
         foreach ($tilesets as $tileset) {
             $originalName = $tileset['name'] ?? 'Unknown';
-            $formattedName = $this->formatTilesetName($originalName);
+            $formattedName = $this->tilesetService->formatTilesetName($originalName);
             
             // Check if tileset image exists
             $imageExists = $this->tilesetService->checkTilesetImageExists($originalName);
@@ -256,13 +256,5 @@ class JsonMapImporter implements ImporterInterface
         }
         
         return $suggestions;
-    }
-
-    /**
-     * Format tileset name for consistency.
-     */
-    private function formatTilesetName(string $tilesetName): string
-    {
-        return ucwords(str_replace(['_', '-'], ' ', $tilesetName));
     }
 } 

@@ -11,13 +11,8 @@ use Illuminate\Support\Str;
 
 class TileSetService
 {
-    private TileSetRepository $tilesetRepository;
-    private string $tilesetDirectory;
-
-    public function __construct(TileSetRepository $tilesetRepository, string $tilesetDirectory = 'tilesets')
+    public function __construct(private TileSetRepository $tilesetRepository, private string $tilesetDirectory = 'tilesets')
     {
-        $this->tilesetRepository = $tilesetRepository;
-        $this->tilesetDirectory = $tilesetDirectory;
     }
 
     /**
