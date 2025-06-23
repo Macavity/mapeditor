@@ -306,6 +306,7 @@ class MapImportController extends Controller
         }
 
         $filePath = $request->input('file_path');
+        Log::info('File path: ' . $filePath);
         $format = $request->input('format');
         $tilesetMappingsJson = $request->input('tileset_mappings');
         $fieldTypeFilePath = $request->input('field_type_file_path');
@@ -336,6 +337,7 @@ class MapImportController extends Controller
         try {
             // If this is a JS file and we have a field type file, copy it to the expected location
             if ($format === 'js' && $fieldTypeFilePath) {
+                Log::info('Copying field type file: ' . $fieldTypeFilePath);
                 $this->copyFieldTypeFile($filePath, $fieldTypeFilePath);
             }
 
@@ -387,12 +389,11 @@ class MapImportController extends Controller
                 }
             }
 
-            // 3. Read the file content
-            $fileContent = Storage::disk('local')->get($filePath);
-
-            // 4. Use the standard MapImportService to handle the complete import
-            $importResult = $this->importService->importFromString(
-                $fileContent,
+            // 3. Use the standard MapImportService to handle the complete import
+            // Use importFromFile instead of importFromString so field type files are properly handled
+            Log::info('Importing file: ' . $filePath);
+            $importResult = $this->importService->importFromFile(
+                $filePath,
                 $format,
                 Auth::user(),
                 ['auto_create_tilesets' => true]
@@ -401,7 +402,7 @@ class MapImportController extends Controller
             $map = $importResult['map'];
             $tilesetResults = $importResult['tilesets'];
 
-            // 5. Clean up the uploaded files
+            // 4. Clean up the uploaded files
             Storage::disk('local')->delete($filePath);
             if ($fieldTypeFilePath) {
                 Storage::disk('local')->delete($fieldTypeFilePath);
@@ -432,8 +433,10 @@ class MapImportController extends Controller
     private function copyFieldTypeFile(string $mainFilePath, string $fieldTypeFilePath): void
     {
         $mainFileDir = dirname($mainFilePath);
-        $fieldTypeFileName = basename($fieldTypeFilePath);
-        $targetPath = $mainFileDir . '/' . $fieldTypeFileName;
+        $mainFileName = pathinfo($mainFilePath, PATHINFO_FILENAME);
+        $targetPath = $mainFileDir . '/' . $mainFileName . '_ft.js';
+        
+        Log::info('Copying field type file to: ' . $targetPath);
         
         if (!Storage::disk('local')->exists($targetPath)) {
             $fieldTypeContent = Storage::disk('local')->get($fieldTypeFilePath);
