@@ -6,10 +6,18 @@ namespace App\Services\Importers;
 
 use App\DataTransferObjects\Export\ExportMapFormatV1;
 use App\Constants\ExportVersions;
+use App\Services\TileSetService;
 use Illuminate\Support\Facades\Storage;
 
 class JsonMapImporter implements ImporterInterface
 {
+    private TileSetService $tilesetService;
+
+    public function __construct(TileSetService $tilesetService)
+    {
+        $this->tilesetService = $tilesetService;
+    }
+
     /**
      * Parse a JSON map file and return structured data.
      */
@@ -226,10 +234,10 @@ class JsonMapImporter implements ImporterInterface
             $formattedName = $this->formatTilesetName($originalName);
             
             // Check if tileset image exists
-            $imageExists = $this->checkTilesetImageExists($originalName);
+            $imageExists = $this->tilesetService->checkTilesetImageExists($originalName);
             
             // Try to find existing tileset by name
-            $existingTileset = $this->findExistingTileset($originalName, $formattedName);
+            $existingTileset = $this->tilesetService->findExistingTileset($originalName, $formattedName);
             
             $suggestions[] = [
                 'original_name' => $originalName,
@@ -248,36 +256,6 @@ class JsonMapImporter implements ImporterInterface
         }
         
         return $suggestions;
-    }
-
-    /**
-     * Check if a tileset image file exists.
-     */
-    private function checkTilesetImageExists(string $tilesetName): bool
-    {
-        $basename = $tilesetName . '.png';
-        $searchDirs = [
-            base_path('tilesets/' . $basename),
-            base_path('tests/static/tilesets/' . $basename),
-        ];
-        
-        foreach ($searchDirs as $src) {
-            if (file_exists($src)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /**
-     * Find existing tileset by name.
-     */
-    private function findExistingTileset(string $originalName, string $formattedName): ?\App\Models\TileSet
-    {
-        return \App\Models\TileSet::where('name', $originalName)
-            ->orWhere('name', $formattedName)
-            ->first();
     }
 
     /**

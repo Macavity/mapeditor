@@ -4,10 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services\Importers;
 
+use App\Services\TileSetService;
 use Illuminate\Support\Facades\Storage;
 
 class TmxMapImporter implements ImporterInterface
 {
+    private TileSetService $tilesetService;
+
+    public function __construct(TileSetService $tilesetService)
+    {
+        $this->tilesetService = $tilesetService;
+    }
+
     /**
      * Parse a TMX map file and return structured data.
      */
@@ -283,77 +291,6 @@ class TmxMapImporter implements ImporterInterface
     }
 
     /**
-     * Parse a TMX layer element.
-     */
-    private function parseLayer(\SimpleXMLElement $layerXml, array $mapData, int $zIndex): array
-    {
-        $attributes = $layerXml->attributes();
-        
-        $layer = [
-            'uuid' => null, // TMX doesn't have UUIDs, will be generated
-            'name' => (string) ($attributes['name'] ?? 'Unnamed Layer'),
-            'type' => 'floor', // Default type, could be enhanced with TMX properties
-            'x' => (int) ($attributes['offsetx'] ?? 0),
-            'y' => (int) ($attributes['offsety'] ?? 0),
-            'z' => $zIndex,
-            'width' => (int) ($attributes['width'] ?? $mapData['width']),
-            'height' => (int) ($attributes['height'] ?? $mapData['height']),
-            'visible' => !isset($attributes['visible']) || (string) $attributes['visible'] !== '0',
-            'opacity' => (float) ($attributes['opacity'] ?? 1.0),
-            'data' => [],
-        ];
-
-        // Parse layer data
-        $dataElement = $layerXml->data;
-        if ($dataElement) {
-            $layer['data'] = $this->parseLayerData($dataElement, $layer['width'], $layer['height']);
-        }
-
-        return $layer;
-    }
-
-    /**
-     * Parse TMX layer data (supports CSV format for simplicity).
-     */
-    private function parseLayerData(\SimpleXMLElement $dataElement, int $width, int $height): array
-    {
-        $attributes = $dataElement->attributes();
-        $encoding = (string) ($attributes['encoding'] ?? '');
-        
-        $data = [];
-        
-        if ($encoding === 'csv') {
-            // Parse CSV data
-            $csvData = trim((string) $dataElement);
-            $values = array_map('intval', explode(',', $csvData));
-            
-            // Convert flat array to tile positions with basic structure
-            for ($y = 0; $y < $height; $y++) {
-                for ($x = 0; $x < $width; $x++) {
-                    $index = $y * $width + $x;
-                    $gid = $values[$index] ?? 0;
-                    
-                    if ($gid > 0) {
-                        $data[] = [
-                            'x' => $x,
-                            'y' => $y,
-                            'brush' => [
-                                'tileset' => null, // Would need tileset mapping logic
-                                'tile_id' => $gid,
-                            ]
-                        ];
-                    }
-                }
-            }
-        } else {
-            // For other encodings (base64, etc.), you'd implement additional parsing
-            throw new \InvalidArgumentException("TMX encoding '{$encoding}' is not yet supported. Please use CSV encoding.");
-        }
-
-        return $data;
-    }
-
-    /**
      * Parse a TMX map file for the import wizard, returning basic information and tileset usage.
      * This method is optimized for the wizard and doesn't build complete tileset models.
      */
@@ -450,10 +387,10 @@ class TmxMapImporter implements ImporterInterface
         }
         
         // Check if tileset image exists
-        $imageExists = $this->checkTilesetImageExists($name, $imageSource);
+        $imageExists = $this->tilesetService->checkTilesetImageExists($name, $imageSource);
         
         // Try to find existing tileset by name
-        $existingTileset = $this->findExistingTileset($name, $formattedName);
+        $existingTileset = $this->tilesetService->findExistingTileset($name, $formattedName);
         
         return [
             'original_name' => $name,
@@ -469,51 +406,6 @@ class TmxMapImporter implements ImporterInterface
             ] : null,
             'requires_upload' => !$imageExists && !$existingTileset,
         ];
-    }
-
-    /**
-     * Check if a tileset image file exists.
-     */
-    private function checkTilesetImageExists(string $tilesetName, ?string $imageSource): bool
-    {
-        // Try the image source first if available
-        if ($imageSource) {
-            $searchDirs = [
-                base_path('tilesets/' . basename($imageSource)),
-                base_path('tests/static/tilesets/' . basename($imageSource)),
-            ];
-            
-            foreach ($searchDirs as $src) {
-                if (file_exists($src)) {
-                    return true;
-                }
-            }
-        }
-        
-        // Fallback to tileset name
-        $basename = $tilesetName . '.png';
-        $searchDirs = [
-            base_path('tilesets/' . $basename),
-            base_path('tests/static/tilesets/' . $basename),
-        ];
-        
-        foreach ($searchDirs as $src) {
-            if (file_exists($src)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /**
-     * Find existing tileset by name.
-     */
-    private function findExistingTileset(string $originalName, string $formattedName): ?\App\Models\TileSet
-    {
-        return \App\Models\TileSet::where('name', $originalName)
-            ->orWhere('name', $formattedName)
-            ->first();
     }
 
     /**
