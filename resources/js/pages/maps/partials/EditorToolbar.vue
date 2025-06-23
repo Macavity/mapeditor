@@ -2,7 +2,7 @@
 import { ToggleButton } from '@/components/ui/button';
 import { useEditorStore } from '@/stores/editorStore';
 import { EditorTool } from '@/types/EditorTool';
-import { Eraser, Grid, Layers, Paintbrush, PaintBucket } from 'lucide-vue-next';
+import { Eraser, Grid, Paintbrush, PaintBucket } from 'lucide-vue-next';
 
 const store = useEditorStore();
 </script>
@@ -12,8 +12,6 @@ const store = useEditorStore();
         <!-- Toggle Buttons -->
         <div class="flex gap-2" role="group">
             <ToggleButton :icon="Grid" text="Show Grid" :active="store.showGrid" @click="store.toggleGrid()" />
-
-            <ToggleButton :icon="Layers" text="Show Properties" :active="store.showProperties" @click="store.toggleProperties()" />
         </div>
 
         <!-- Tools -->

@@ -25,6 +25,7 @@ class TileMapResource extends JsonResource
             'height' => $this->height,
             'tile_width' => $this->tile_width,
             'tile_height' => $this->tile_height,
+            'external_creator' => $this->external_creator,
             'creator' => $this->whenLoaded('creator', function () {
                 return [
                     'id' => $this->creator->id,
