@@ -4,10 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services\Importers;
 
+use App\Services\TileSetService;
 use Illuminate\Support\Facades\Storage;
 
 class TmxMapImporter implements ImporterInterface
 {
+    private TileSetService $tilesetService;
+
+    public function __construct(TileSetService $tilesetService)
+    {
+        $this->tilesetService = $tilesetService;
+    }
+
     /**
      * Parse a TMX map file and return structured data.
      */
@@ -283,73 +291,120 @@ class TmxMapImporter implements ImporterInterface
     }
 
     /**
-     * Parse a TMX layer element.
+     * Parse a TMX map file for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
      */
-    private function parseLayer(\SimpleXMLElement $layerXml, array $mapData, int $zIndex): array
+    public function parseForWizard(string $filePath): array
     {
-        $attributes = $layerXml->attributes();
-        
-        $layer = [
-            'uuid' => null, // TMX doesn't have UUIDs, will be generated
-            'name' => (string) ($attributes['name'] ?? 'Unnamed Layer'),
-            'type' => 'floor', // Default type, could be enhanced with TMX properties
-            'x' => (int) ($attributes['offsetx'] ?? 0),
-            'y' => (int) ($attributes['offsety'] ?? 0),
-            'z' => $zIndex,
-            'width' => (int) ($attributes['width'] ?? $mapData['width']),
-            'height' => (int) ($attributes['height'] ?? $mapData['height']),
-            'visible' => !isset($attributes['visible']) || (string) $attributes['visible'] !== '0',
-            'opacity' => (float) ($attributes['opacity'] ?? 1.0),
-            'data' => [],
-        ];
-
-        // Parse layer data
-        $dataElement = $layerXml->data;
-        if ($dataElement) {
-            $layer['data'] = $this->parseLayerData($dataElement, $layer['width'], $layer['height']);
+        // Try to read from Laravel storage first, then fallback to filesystem
+        if (Storage::exists($filePath)) {
+            $content = Storage::get($filePath);
+        } elseif (file_exists($filePath)) {
+            $content = file_get_contents($filePath);
+        } else {
+            throw new \InvalidArgumentException("File not found: {$filePath}");
         }
 
-        return $layer;
+        if ($content === false) {
+            throw new \InvalidArgumentException("Failed to read file: {$filePath}");
+        }
+
+        return $this->parseStringForWizard($content);
     }
 
     /**
-     * Parse TMX layer data (supports CSV format for simplicity).
+     * Parse raw TMX data string for the wizard, returning basic information and tileset usage.
      */
-    private function parseLayerData(\SimpleXMLElement $dataElement, int $width, int $height): array
+    public function parseStringForWizard(string $data): array
     {
-        $attributes = $dataElement->attributes();
-        $encoding = (string) ($attributes['encoding'] ?? '');
-        
-        $data = [];
-        
-        if ($encoding === 'csv') {
-            // Parse CSV data
-            $csvData = trim((string) $dataElement);
-            $values = array_map('intval', explode(',', $csvData));
+        // Disable libxml errors and use internal error handling
+        $prevUseErrors = libxml_use_internal_errors(true);
+        $prevDisableEntities = libxml_disable_entity_loader(true);
+
+        try {
+            $xml = simplexml_load_string($data);
             
-            // Convert flat array to tile positions with basic structure
-            for ($y = 0; $y < $height; $y++) {
-                for ($x = 0; $x < $width; $x++) {
-                    $index = $y * $width + $x;
-                    $gid = $values[$index] ?? 0;
-                    
-                    if ($gid > 0) {
-                        $data[] = [
-                            'x' => $x,
-                            'y' => $y,
-                            'brush' => [
-                                'tileset' => null, // Would need tileset mapping logic
-                                'tile_id' => $gid,
-                            ]
-                        ];
-                    }
+            if ($xml === false) {
+                $errors = libxml_get_errors();
+                $errorMessage = "Invalid XML data";
+                if (!empty($errors)) {
+                    $errorMessage .= ": " . $errors[0]->message;
                 }
+                throw new \InvalidArgumentException($errorMessage);
             }
-        } else {
-            // For other encodings (base64, etc.), you'd implement additional parsing
-            throw new \InvalidArgumentException("TMX encoding '{$encoding}' is not yet supported. Please use CSV encoding.");
+
+            return $this->convertXmlToWizardData($xml);
+
+        } finally {
+            // Restore previous libxml settings
+            libxml_use_internal_errors($prevUseErrors);
+            libxml_disable_entity_loader($prevDisableEntities);
+        }
+    }
+
+    /**
+     * Convert TMX XML structure to wizard data format.
+     */
+    private function convertXmlToWizardData(\SimpleXMLElement $xml): array
+    {
+        $attributes = $xml->attributes();
+        
+        $mapInfo = [
+            'name' => (string) ($attributes['name'] ?? 'Imported TMX Map'),
+            'width' => (int) $attributes['width'],
+            'height' => (int) $attributes['height'],
+            'external_creator' => null, // TMX doesn't have creator info
+            'has_field_types' => false, // TMX doesn't have field types
+        ];
+
+        // Parse tilesets for wizard
+        $tilesets = [];
+        foreach ($xml->tileset as $tilesetXml) {
+            $tilesets[] = $this->parseTilesetForWizard($tilesetXml);
         }
 
-        return $data;
+        return [
+            'map_info' => $mapInfo,
+            'tilesets' => $tilesets,
+            'field_type_file' => null,
+        ];
+    }
+
+    /**
+     * Parse tileset for wizard data.
+     */
+    private function parseTilesetForWizard(\SimpleXMLElement $tilesetXml): array
+    {
+        $attributes = $tilesetXml->attributes();
+        $name = (string) ($attributes['name'] ?? 'Unnamed Tileset');
+        $formattedName = $this->tilesetService->formatTilesetName($name);
+        
+        // Get image source if available
+        $imageSource = null;
+        $imageElement = $tilesetXml->image;
+        if ($imageElement) {
+            $imageSource = (string) $imageElement->attributes()['source'];
+        }
+        
+        // Check if tileset image exists
+        $imageExists = $this->tilesetService->checkTilesetImageExists($name, $imageSource);
+        
+        // Try to find existing tileset by name
+        $existingTileset = $this->tilesetService->findExistingTileset($name, $formattedName);
+        
+        return [
+            'original_name' => $name,
+            'formatted_name' => $formattedName,
+            'tile_count' => (int) ($attributes['tilecount'] ?? 0),
+            'tile_ids' => [], // Would need to scan layers to get actual tile IDs
+            'max_tile_id' => (int) ($attributes['tilecount'] ?? 0),
+            'image_exists' => $imageExists,
+            'existing_tileset' => $existingTileset ? [
+                'uuid' => $existingTileset->uuid,
+                'name' => $existingTileset->name,
+                'image_path' => $existingTileset->image_path,
+            ] : null,
+            'requires_upload' => !$imageExists && !$existingTileset,
+        ];
     }
 } 

@@ -25,6 +25,7 @@ class TileMapResource extends JsonResource
             'height' => $this->height,
             'tile_width' => $this->tile_width,
             'tile_height' => $this->tile_height,
+            'external_creator' => $this->external_creator,
             'creator' => $this->whenLoaded('creator', function () {
                 return [
                     'id' => $this->creator->id,
@@ -42,7 +43,7 @@ class TileMapResource extends JsonResource
     /**
      * Aggregate used tiles per tileset across all layers.
      *
-     * @return array<string, array<int, array<string, int>>>
+     * @return array<string, int<1, max>>
      */
     protected function getTilesetUsage(): array
     {

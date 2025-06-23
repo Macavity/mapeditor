@@ -123,7 +123,7 @@ class TileMapGenerator
     private function createMapDirectory(TileMap $tileMap): string
     {
         $baseDirectory = self::MAPS_BASE_DIRECTORY . "/{$tileMap->id}";
-        Storage::makeDirectory($baseDirectory, self::DIRECTORY_PERMISSIONS, true, true);
+        Storage::makeDirectory($baseDirectory);
         
         return $baseDirectory;
     }
@@ -268,8 +268,6 @@ class TileMapGenerator
             
             $this->placeTileOnImage($image, $tileImage, $tile, $tileWidth, $tileHeight);
             
-            // $this->logTileRendering($tile);
-            
         } catch (RuntimeException $e) {
             Log::error("Error rendering tile: " . $e->getMessage(), [
                 'exception' => $e,
@@ -321,23 +319,18 @@ class TileMapGenerator
 
     private function tilesetImageExists(string $tilesetImagePath): bool
     {
-        if (!file_exists($tilesetImagePath)) {
-            Log::warning(sprintf("Tileset image not found: %s", $tilesetImagePath));
-            return false;
+        if (file_exists($tilesetImagePath)) {
+            return true;
         }
         
-        return true;
+        Log::warning(sprintf("Tileset image not found: %s", $tilesetImagePath));
+        return false;
     }
 
-    private function loadTilesetImage(string $tilesetImagePath): ?ImageInterface
+    private function loadTilesetImage(string $tilesetImagePath): ImageInterface
     {
         // Load the tileset image with error suppression for GD warnings
         $tilesetImage = @$this->imageManager->read($tilesetImagePath);
-        
-        if (!$tilesetImage) {
-            Log::warning(sprintf("Failed to load tileset image: %s", $tilesetImagePath));
-            return null;
-        }
         
         return $tilesetImage;
     }
@@ -379,17 +372,5 @@ class TileMapGenerator
             $destX,
             $destY
         );
-    }
-
-    private function logTileRendering(Tile $tile): void
-    {
-        Log::debug(sprintf(
-            'Rendered tile at [%d, %d] from tileset %s at [%d, %d]',
-            $tile->x,
-            $tile->y,
-            $tile->brush->tileset,
-            $tile->brush->tileX,
-            $tile->brush->tileY
-        ));
     }
 }

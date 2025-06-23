@@ -20,6 +20,11 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
+        // Check if registration is allowed
+        if (!config('app.allow_registration', true)) {
+            abort(403, 'Registration is currently disabled.');
+        }
+
         return Inertia::render('auth/Register');
     }
 
@@ -30,6 +35,11 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Check if registration is allowed
+        if (!config('app.allow_registration', true)) {
+            abort(403, 'Registration is currently disabled.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,

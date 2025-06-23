@@ -10,6 +10,7 @@ export interface PageProps {
     flash?: {
         success?: string;
         error?: string;
+        status?: string;
     };
     ziggy: {
         location: string;

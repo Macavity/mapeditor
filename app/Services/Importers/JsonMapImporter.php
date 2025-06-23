@@ -6,10 +6,18 @@ namespace App\Services\Importers;
 
 use App\DataTransferObjects\Export\ExportMapFormatV1;
 use App\Constants\ExportVersions;
+use App\Services\TileSetService;
 use Illuminate\Support\Facades\Storage;
 
 class JsonMapImporter implements ImporterInterface
 {
+    private TileSetService $tilesetService;
+
+    public function __construct(TileSetService $tilesetService)
+    {
+        $this->tilesetService = $tilesetService;
+    }
+
     /**
      * Parse a JSON map file and return structured data.
      */
@@ -156,5 +164,97 @@ class JsonMapImporter implements ImporterInterface
         }
     }
 
+    /**
+     * Parse a JSON map file for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
+     */
+    public function parseForWizard(string $filePath): array
+    {
+        // Try to read from Laravel storage first, then fallback to filesystem
+        if (Storage::exists($filePath)) {
+            $content = Storage::get($filePath);
+        } elseif (file_exists($filePath)) {
+            $content = file_get_contents($filePath);
+        } else {
+            throw new \InvalidArgumentException("File not found: {$filePath}");
+        }
 
+        if ($content === false) {
+            throw new \InvalidArgumentException("Failed to read file: {$filePath}");
+        }
+
+        return $this->parseStringForWizard($content);
+    }
+
+    /**
+     * Parse raw JSON data string for the wizard, returning basic information and tileset usage.
+     */
+    public function parseStringForWizard(string $data): array
+    {
+        $decodedData = json_decode($data, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \InvalidArgumentException("Invalid JSON data: " . json_last_error_msg());
+        }
+
+        if (!is_array($decodedData)) {
+            throw new \InvalidArgumentException("JSON data must be an object/array");
+        }
+
+        // Extract basic map information
+        $mapInfo = $decodedData['map'] ?? [];
+        $layers = $decodedData['layers'] ?? [];
+        $tilesets = $decodedData['tilesets'] ?? [];
+
+        // Build tileset suggestions
+        $tilesetSuggestions = $this->buildTilesetSuggestions($tilesets);
+
+        return [
+            'map_info' => [
+                'name' => $mapInfo['name'] ?? 'Unknown Map',
+                'width' => $mapInfo['width'] ?? 0,
+                'height' => $mapInfo['height'] ?? 0,
+                'external_creator' => $mapInfo['external_creator'] ?? null,
+                'has_field_types' => false, // JSON format doesn't have field types
+            ],
+            'tilesets' => $tilesetSuggestions,
+            'field_type_file' => null,
+        ];
+    }
+
+    /**
+     * Build tileset suggestions based on tileset data.
+     */
+    private function buildTilesetSuggestions(array $tilesets): array
+    {
+        $suggestions = [];
+        
+        foreach ($tilesets as $tileset) {
+            $originalName = $tileset['name'] ?? 'Unknown';
+            $formattedName = $this->tilesetService->formatTilesetName($originalName);
+            
+            // Check if tileset image exists
+            $imageExists = $this->tilesetService->checkTilesetImageExists($originalName);
+            
+            // Try to find existing tileset by name
+            $existingTileset = $this->tilesetService->findExistingTileset($originalName, $formattedName);
+            
+            $suggestions[] = [
+                'original_name' => $originalName,
+                'formatted_name' => $formattedName,
+                'tile_count' => 0, // Would need to scan layers to count tiles
+                'tile_ids' => [],
+                'max_tile_id' => 0,
+                'image_exists' => $imageExists,
+                'existing_tileset' => $existingTileset ? [
+                    'uuid' => $existingTileset->uuid,
+                    'name' => $existingTileset->name,
+                    'image_path' => $existingTileset->image_path,
+                ] : null,
+                'requires_upload' => !$imageExists && !$existingTileset,
+            ];
+        }
+        
+        return $suggestions;
+    }
 } 

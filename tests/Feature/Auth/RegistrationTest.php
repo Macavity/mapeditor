@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 test('registration screen can be rendered', function () {
     $response = $this->get('/register');
 
@@ -16,4 +18,8 @@ test('new users can register', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+    
+    // Verify the user was created with admin set to false
+    $user = User::where('email', 'test@example.com')->first();
+    expect($user->is_admin)->toBeFalse();
 });

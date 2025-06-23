@@ -19,7 +19,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: maptest
+          MYSQL_DATABASE: mapeditor_test
         ports:
           - 3306:3306
         options: >-
@@ -68,7 +68,7 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -P 3306 -u root -proot -e "
             CREATE USER IF NOT EXISTS 'maptest'@'%' IDENTIFIED BY 'maptest';
-            GRANT ALL PRIVILEGES ON maptest.* TO 'maptest'@'%';
+            GRANT ALL PRIVILEGES ON mapeditor_test.* TO 'maptest'@'%';
             FLUSH PRIVILEGES;
           "
 

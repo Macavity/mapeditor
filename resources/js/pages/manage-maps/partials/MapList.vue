@@ -18,6 +18,7 @@
                     <tr>
                         <th scope="col" class="px-6 py-3">Name</th>
                         <th scope="col" class="px-6 py-3">Dimensions</th>
+                        <th v-if="isAdmin" scope="col" class="px-6 py-3">Creator</th>
                         <th scope="col" class="px-6 py-3">Created</th>
                         <th scope="col" class="px-6 py-3 text-right">Actions</th>
                     </tr>
@@ -33,6 +34,9 @@
                             {{ map.name }}
                         </td>
                         <td class="px-6 py-4 text-gray-500">{{ map.width }}x{{ map.height }}</td>
+                        <td v-if="isAdmin" class="px-6 py-4 text-gray-500">
+                            {{ map.external_creator ?? map.creator?.name ?? 'Unknown' }}
+                        </td>
                         <td class="px-6 py-4 text-gray-500">{{ new Date(map.created_at).toLocaleDateString() }}</td>
                         <td class="px-6 py-4">
                             <div class="flex justify-end gap-2">
@@ -45,6 +49,7 @@
                                     Test
                                 </button>
                                 <button
+                                    v-if="canEditMap(map)"
                                     type="button"
                                     :data-testid="`${TestId.MAP_ROW_EDIT_BUTTON}-${map.uuid}`"
                                     @click="goToMapEdit(map.uuid)"
@@ -53,6 +58,7 @@
                                     Edit
                                 </button>
                                 <button
+                                    v-if="canDeleteMap(map)"
                                     type="button"
                                     :data-testid="`${TestId.MAP_ROW_DELETE_BUTTON}-${map.uuid}`"
                                     @click="deleteMap(map.uuid)"
@@ -73,13 +79,27 @@
 
 <script setup lang="ts">
 import { useMapStore } from '@/stores/mapStore';
+import { type SharedData } from '@/types';
 import { TestId } from '@/types/TestId';
+import { type TileMap } from '@/types/TileMap';
 
-import { router } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, ref } from 'vue';
 
+const page = usePage<SharedData>();
 const store = useMapStore();
 const deletingMap = ref<string | null>(null);
+
+const isAdmin = computed(() => page.props.auth.user?.is_admin);
+const currentUserId = computed(() => page.props.auth.user?.id);
+
+const canEditMap = (map: TileMap): boolean => {
+    return isAdmin.value || map.creator?.id === currentUserId.value;
+};
+
+const canDeleteMap = (map: TileMap): boolean => {
+    return isAdmin.value || map.creator?.id === currentUserId.value;
+};
 
 const goToMapEdit = (uuid: string) => {
     router.visit(`/maps/${uuid}/edit`);

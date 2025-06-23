@@ -21,7 +21,6 @@ export const useEditorStore = defineStore('editorStore', {
     state: () => ({
         loaded: false,
         showGrid: false,
-        showProperties: false,
         showLeftSideBar: false,
         activeLayer: null as string | null,
         activeTool: EditorTool.DRAW,
@@ -29,6 +28,7 @@ export const useEditorStore = defineStore('editorStore', {
             uuid: null as string | null,
             name: null as string | null,
             creatorName: null as string | null,
+            externalCreator: null as string | null,
             width: 0,
             height: 0,
             tileWidth: 32,
@@ -103,10 +103,6 @@ export const useEditorStore = defineStore('editorStore', {
             this.showGrid = !this.showGrid;
         },
 
-        toggleProperties() {
-            this.showProperties = !this.showProperties;
-        },
-
         selectTool(tool: EditorTool) {
             this.activeTool = tool;
         },
@@ -133,6 +129,7 @@ export const useEditorStore = defineStore('editorStore', {
                     uuid: mapData.uuid,
                     name: mapData.name,
                     creatorName: mapData.creator?.name ?? 'Unknown',
+                    externalCreator: mapData.external_creator ?? null,
                     width: mapData.width,
                     height: mapData.height,
                     tileWidth: mapData.tile_width,

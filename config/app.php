@@ -86,6 +86,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Registration Settings
+    |--------------------------------------------------------------------------
+    |
+    | This option determines whether new users can register for accounts.
+    | Set this to false to disable public registration.
+    |
+    */
+
+    'allow_registration' => env('ALLOW_REGISTRATION', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

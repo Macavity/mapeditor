@@ -34,7 +34,7 @@ class MapExportService
     private function extractTilesetUuids(array $layers): array
     {
         $tilesetUuids = collect();
-        $this->output->info('Starting tileset extraction from ' . count($layers) . ' layers');
+        $this->output->writeln('<info>Starting tileset extraction from ' . count($layers) . ' layers</info>');
 
         foreach ($layers as $layer) {
             
@@ -48,12 +48,12 @@ class MapExportService
                     }
                 }
             } else {
-                $this->output->error('Layer data is not an array: ' . gettype($layer->data));
+                $this->output->writeln('<error>Layer data is not an array: ' . gettype($layer->data) . '</error>');
             }
         }
 
         $uniqueTilesetUuids = $tilesetUuids->unique()->values()->toArray();
-        $this->output->writeln('Found ' . count($uniqueTilesetUuids) . ' unique tileset UUIDs');
+        $this->output->writeln('<info>Found ' . count($uniqueTilesetUuids) . ' unique tileset UUIDs</info>');
         return $uniqueTilesetUuids;
     }
 
@@ -119,7 +119,7 @@ class MapExportService
         $this->ensureExportDirectories();
         $json = $exportData->toJson();
         Storage::put($path, $json);
-        $this->output->info('Stored JSON file at: ' . Storage::path($path));
+        $this->output->writeln('<info>Stored JSON file at: ' . Storage::path($path) . '</info>');
     }
 
     /**
@@ -156,15 +156,15 @@ class MapExportService
         $storagePath = "{$this->basePath}/tilesets/{$filename}";
         $relativePath = "tilesets/{$filename}";
 
-        $this->output->writeln("Processing tileset image: {$imagePath}");
+        $this->output->writeln('Processing tileset image: ' . $imagePath);
 
         if (!$publicDisk->exists($imagePath)) {
-            $this->output->error("Source tileset file not found: {$imagePath}");
+            $this->output->writeln('<error>Source tileset file not found: ' . $imagePath . '</error>');
             throw new \RuntimeException("Tileset file not found: {$imagePath}");
         }
 
         if (!Storage::exists($storagePath)) {
-            $this->output->info("Copying tileset image: {$filename}");
+            $this->output->writeln('<info>Copying tileset image: ' . $filename . '</info>');
             Storage::put(
                 $storagePath, 
                 $publicDisk->get($imagePath)
@@ -213,7 +213,7 @@ class MapExportService
         // Add tileset elements
         foreach ($exportData->tilesets as $tileset) {
             $columns = (int)($tileset->image_width / $tileset->tile_width);
-            $this->output->info("Tileset {$tileset->name}: calculated columns = {$columns} (image_width: {$tileset->image_width}, tile_width: {$tileset->tile_width})");
+            $this->output->writeln('<info>Tileset ' . $tileset->name . ': calculated columns = ' . $columns . ' (image_width: ' . $tileset->image_width . ', tile_width: ' . $tileset->tile_width . ')</info>');
 
             $tilesetElement = $dom->createElement('tileset');
             $tilesetElement->setAttribute('firstgid', (string)$tilesetGids[$tileset->uuid]);
@@ -275,6 +275,6 @@ class MapExportService
         }
         
         Storage::put($exportPath, $xml);
-        $this->output->info('Stored TMX file at: ' . Storage::path($exportPath));
+        $this->output->writeln('<info>Stored TMX file at: ' . Storage::path($exportPath) . '</info>');
     }
 } 

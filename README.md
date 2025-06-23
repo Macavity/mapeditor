@@ -1,10 +1,36 @@
-# TileMap Editor
+# TileStove Map Editor
 
-The editor gives you the ability to have your very own tile map editor which can be easily hosted locally or on any basic web server.
+A web-based tile map editor, with the goal of being easy to use and self-hostable.
 
 Keep in mind that this editor is still a work in progress.
 
-![Screenshot](./docs/screenshot.png)
+## Features
+
+- **Web-based and Self-hostable**: Host it on your own server or locally using Docker.
+- **Layered Editing**: Use multiple layers to build complex maps, including layers for background, objects, floors, and sky.
+- **TileSet Management**: Import and manage your tilesets.
+- **Map Import/Export**: Import maps from `JSON`, `TMX` and legacy `JS` formats via an import wizard.
+- **Field Types**: Define special tile behaviors, like collision, custom interactions, etc.
+- **Object Layers**: Add objects to your map for things like player start positions, NPCs, or events.
+- **Map Testing**: Test your maps directly in the editor, including collision detection.
+- **User Management**: Manage users who can access the editor.
+
+## Screenshots
+
+**Import Wizard: Easily import your maps**
+![showing the wizard to import maps](./docs/import-wizard.png)
+
+**Map List: Manage all your maps**
+![manage maps](./docs/map-list.png)
+
+**Map Editor: General map editor**
+![general map editor](./docs/map-edit.png)
+
+**Field Types: Use field types to easily control movement and interactions**
+![Map Editor featuring Field types to control movement easily](./docs/map-edit-field-types.png)
+
+**Map Test: Test your maps with collision detection**
+![test walk over maps including collision detection](./docs/map-test.png)
 
 ## Installation
 
@@ -35,7 +61,6 @@ Import and Export for TMX files is currently limited to the CSV format.
 Open to suggestions :)
 
 - Keyboard shortcuts for the tools
-- Testdrive a map - walk around with a character, test collisions
 
 # Credits
 

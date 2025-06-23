@@ -12,12 +12,10 @@ use Inertia\Response;
 
 class MapTestController extends Controller
 {
-    public function __construct(
-        private readonly MapDisplayService $mapDisplayService
-    ) {}
-
     public function show(string $uuid): Response
     {
+        $user = auth()->user();
+        
         $tileMap = TileMap::where('uuid', $uuid)
             ->with(['layers' => function ($query) {
                 $query->where(function ($q) {
@@ -90,7 +88,7 @@ class MapTestController extends Controller
                     $playerLayerInserted = true;
                     continue;
                 }
-            } elseif ($hasFloorLayers && !$hasSkyLayers) {
+            } elseif ($hasFloorLayers) {
                 // Only floor layers exist, insert player layer after the highest floor
                 if (!$playerLayerInserted && $layer['type'] === 'floor' && $layer['z'] === $highestFloorZ) {
                     $adjustedLayers[] = $adjustedLayer;
@@ -117,7 +115,7 @@ class MapTestController extends Controller
                     $playerLayerInserted = true;
                     continue;
                 }
-            } elseif (!$hasFloorLayers && $hasSkyLayers) {
+            } elseif ($hasSkyLayers) {
                 // Only sky layers exist, insert player layer before the lowest sky layer
                 if (!$playerLayerInserted && $layer['type'] === 'sky' && $layer['z'] === $lowestSkyZ) {
                     // Insert player layer first

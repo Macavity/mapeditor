@@ -123,8 +123,6 @@ class Layer extends Model
 
     /**
      * The attributes that should be visible in arrays.
-     *
-     * @var array<int, string>
      */
     protected $visible = [
         'uuid',

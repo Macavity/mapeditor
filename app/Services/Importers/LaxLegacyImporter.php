@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace App\Services\Importers;
 
 use App\Models\TileSet;
+use App\Services\TileSetService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class LaxLegacyImporter implements ImporterInterface
 {
-    private array $tilesetMapping = [];
-    private string $tilesetDirectory;
-
-    public function __construct(string $tilesetDirectory = 'tilesets')
+    public function __construct(private TileSetService $tilesetService)
     {
-        $this->tilesetDirectory = $tilesetDirectory;
     }
 
     /**
@@ -22,16 +20,8 @@ class LaxLegacyImporter implements ImporterInterface
      */
     public function setTilesetDirectory(string $directory): self
     {
-        $this->tilesetDirectory = $directory;
+        $this->tilesetService->setTilesetDirectory($directory);
         return $this;
-    }
-
-    /**
-     * Get the current tileset directory.
-     */
-    public function getTilesetDirectory(): string
-    {
-        return $this->tilesetDirectory;
     }
 
     /**
@@ -52,6 +42,9 @@ class LaxLegacyImporter implements ImporterInterface
             throw new \InvalidArgumentException("Failed to read file: {$filePath}");
         }
 
+        // Handle encoding issues gracefully
+        $content = $this->fixEncoding($content);
+
         return $this->parseString($content, $filePath);
     }
 
@@ -60,6 +53,9 @@ class LaxLegacyImporter implements ImporterInterface
      */
     public function parseString(string $data, string $originalFilePath = ''): array
     {
+        // Handle encoding issues gracefully
+        $data = $this->fixEncoding($data);
+
         // Parse the JavaScript variables
         $mapData = $this->parseJavaScriptVariables($data);
         
@@ -101,6 +97,10 @@ class LaxLegacyImporter implements ImporterInterface
                    strpos($sample, 'var width =') !== false &&
                    strpos($sample, 'field_bg') !== false;
         } catch (\Exception $e) {
+            Log::error("LaxLegacyImporter::canHandle - Exception", [
+                'filePath' => $filePath,
+                'exception' => $e->getMessage()
+            ]);
             return false;
         }
     }
@@ -268,8 +268,6 @@ class LaxLegacyImporter implements ImporterInterface
      */
     private function convertToStandardFormat(array $mapData, ?array $fieldTypeData = null): array
     {
-        $this->tilesetMapping = [];
-
         $result = [
             'map' => [
                 'name' => $mapData['name'] ?: 'Legacy Map',
@@ -291,7 +289,7 @@ class LaxLegacyImporter implements ImporterInterface
             'field_layer5' => ['type' => 'sky', 'z' => 4],
         ];
 
-        $tilesetUsage = $this->scanTilesetUsage($mapData, $layerMappings);
+        $tilesetUsage = $this->tilesetService->scanTilesetUsage($mapData, $layerMappings);
         $tilesetModels = $this->buildTilesetModels($tilesetUsage);
         $result['layers'] = $this->buildLayerData($mapData, $layerMappings, $tilesetModels);
         
@@ -355,87 +353,11 @@ class LaxLegacyImporter implements ImporterInterface
         return $layer;
     }
 
-    private function scanTilesetUsage(array $mapData, array $layerMappings): array
-    {
-        $tilesetUsage = [];
-        foreach ($layerMappings as $jsLayerName => $config) {
-            if (!isset($mapData['layers'][$jsLayerName])) {
-                continue;
-            }
-            $jsLayer = $mapData['layers'][$jsLayerName];
-            $width = $mapData['width'];
-            $height = $mapData['height'];
-            for ($row = 0; $row < $height; $row++) {
-                for ($col = 0; $col < $width; $col++) {
-                    if (isset($jsLayer[$row][$col])) {
-                        $tileValue = $jsLayer[$row][$col];
-                        if (preg_match('/^([^\/]+)\/(\d+)\.png$/', $tileValue, $matches)) {
-                            $tilesetName = $matches[1];
-                            $tileId = (int) $matches[2];
-                            $tilesetUsage[$tilesetName][] = $tileId;
-                        }
-                    }
-                }
-            }
-        }
-        return $tilesetUsage;
-    }
-
     private function buildTilesetModels(array $tilesetUsage): array
     {
         $tilesetModels = [];
         foreach ($tilesetUsage as $tilesetName => $tileIds) {
-            $existingTileset = TileSet::where('name', $tilesetName)->first();
-            if ($existingTileset) {
-                $tilesetModels[$tilesetName] = $existingTileset;
-            } else {
-                $basename = $tilesetName . '.png';
-                $imageFile = null;
-                $searchDirs = [
-                    isset($this->tilesetDirectory)
-                        ? (str_starts_with($this->tilesetDirectory, '/')
-                            ? rtrim($this->tilesetDirectory, '/') . '/' . $basename
-                            : base_path(trim($this->tilesetDirectory, '/') . '/' . $basename))
-                        : null,
-                    base_path('tests/static/tilesets/' . $basename),
-                ];
-                foreach (array_filter($searchDirs) as $src) {
-                    if (file_exists($src)) {
-                        $imageFile = $src;
-                        break;
-                    }
-                }
-                if (!$imageFile) {
-                    throw new \Exception("Tileset image file not found: {$tilesetName}");
-                }
-                $imgInfo = @getimagesize($imageFile);
-                if (!$imgInfo) {
-                    throw new \Exception("Could not read image size for tileset: {$tilesetName}");
-                }
-                $imageWidth = $imgInfo[0];
-                $imageHeight = $imgInfo[1];
-                if ($imageWidth <= 0 || $imageHeight <= 0) {
-                    throw new \Exception("Invalid image dimensions for tileset: {$tilesetName}");
-                }
-                $tileWidth = 32;
-                $tileHeight = 32;
-                $tilesPerRow = (int) ($imageWidth / $tileWidth);
-                if ($tilesPerRow <= 0) {
-                    throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
-                }
-                $maxTileId = max($tileIds);
-                $tilesPerCol = (int) ceil($maxTileId / $tilesPerRow);
-                $tilesetModels[$tilesetName] = [
-                    'uuid' => (string) \Illuminate\Support\Str::uuid(),
-                    'name' => $tilesetName,
-                    'image_width' => $imageWidth,
-                    'image_height' => $imageHeight,
-                    'tile_width' => $tileWidth,
-                    'tile_height' => $tileHeight,
-                    'tiles_per_row' => $tilesPerRow,
-                    'image_path' => "tilesets/{$tilesetName}.png",
-                ];
-            }
+            $tilesetModels[$tilesetName] = $this->tilesetService->buildTilesetModelData($tilesetName, $tileIds, false);
         }
         return $tilesetModels;
     }
@@ -477,17 +399,16 @@ class LaxLegacyImporter implements ImporterInterface
                             if ($tilesPerRow <= 0) {
                                 throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
                             }
-                            $adjustedTileId = $tileId - 1;
-                            $tileX = $adjustedTileId % $tilesPerRow;
-                            $tileY = (int) ($adjustedTileId / $tilesPerRow);
+                            
+                            $coordinates = $this->tilesetService->convertTileIdToCoordinates($tileId, $tilesPerRow);
 
                             $layer['data'][] = [
                                 'x' => $col,
                                 'y' => $row,
                                 'brush' => [
                                     'tileset' => $tileset['uuid'],
-                                    'tileX' => $tileX,
-                                    'tileY' => $tileY,
+                                    'tileX' => $coordinates['tileX'],
+                                    'tileY' => $coordinates['tileY'],
                                 ]
                             ];
                         }
@@ -523,140 +444,117 @@ class LaxLegacyImporter implements ImporterInterface
     }
 
     /**
-     * Parse a tile value like 'castle_exterior_mc/761.png' into tileset and tile ID.
+     * Parse a map file for the import wizard, returning basic information and tileset usage.
+     * This method is optimized for the wizard and doesn't build complete tileset models.
      */
-    private function parseTileValue(string $tileValue): ?array
+    public function parseForWizard(string $filePath): array
     {
-        // Extract tileset name and tile ID from path like 'castle_exterior_mc/761.png'
-        if (!preg_match('/^([^\/]+)\/(\d+)\.png$/', $tileValue, $matches)) {
+        // Try to read from Laravel storage first, then fallback to filesystem
+        if (Storage::exists($filePath)) {
+            $content = Storage::get($filePath);
+        } elseif (file_exists($filePath)) {
+            $content = file_get_contents($filePath);
+        } else {
+            throw new \InvalidArgumentException("File not found: {$filePath}");
+        }
+
+        if ($content === false) {
+            throw new \InvalidArgumentException("Failed to read file: {$filePath}");
+        }
+
+        // Handle encoding issues gracefully
+        $content = $this->fixEncoding($content);
+
+        return $this->parseStringForWizard($content, $filePath);
+    }
+
+    /**
+     * Fix encoding issues in the content.
+     */
+    private function fixEncoding(string $content): string
+    {
+        // Check if content is valid UTF-8
+        if (mb_check_encoding($content, 'UTF-8')) {
+            return $content;
+        }
+
+        // Try to detect the encoding
+        $detectedEncoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'ISO-8859-15', 'Windows-1252'], true);
+        
+        if ($detectedEncoding && $detectedEncoding !== 'UTF-8') {
+            // Convert to UTF-8
+            $converted = mb_convert_encoding($content, 'UTF-8', $detectedEncoding);
+            
+            // Verify the conversion worked
+            if (mb_check_encoding($converted, 'UTF-8')) {
+                return $converted;
+            }
+        }
+
+        // If all else fails, try to fix common encoding issues
+        $fixed = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+        if ($fixed !== false) {
+            return $fixed;
+        }
+
+        // Last resort: remove invalid characters
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $content);
+    }
+
+    /**
+     * Parse raw JavaScript data string for the wizard, returning basic information and tileset usage.
+     */
+    public function parseStringForWizard(string $data, string $originalFilePath = ''): array
+    {
+        // Handle encoding issues gracefully
+        $data = $this->fixEncoding($data);
+
+        // Parse the JavaScript variables
+        $mapData = $this->parseJavaScriptVariables($data);
+        
+        // Try to parse field type data if available
+        $fieldTypeData = $this->parseFieldTypeFile($originalFilePath);
+        
+        // Scan for tileset usage without building models
+        $tilesetUsage = $this->tilesetService->scanTilesetUsage($mapData, [
+            'field_bg' => ['type' => 'background', 'z' => 0],
+            'field_layer1' => ['type' => 'tile', 'z' => 1],
+            'field_layer2' => ['type' => 'tile', 'z' => 2],
+            'field_layer4' => ['type' => 'tile', 'z' => 4],
+            'field_layer5' => ['type' => 'tile', 'z' => 5],
+        ]);
+
+        // Build basic tileset information with suggestions
+        $tilesets = $this->tilesetService->buildTilesetSuggestions($tilesetUsage);
+
+        return [
+            'map_info' => [
+                'name' => $mapData['name'],
+                'width' => $mapData['width'],
+                'height' => $mapData['height'],
+                'external_creator' => $mapData['external_creator'],
+                'has_field_types' => !empty($fieldTypeData),
+            ],
+            'tilesets' => $tilesets,
+            'field_type_file' => $this->getFieldTypeFilePath($originalFilePath),
+        ];
+    }
+
+    /**
+     * Get the field type file path if it exists.
+     */
+    private function getFieldTypeFilePath(string $originalFilePath): ?string
+    {
+        if (empty($originalFilePath)) {
             return null;
         }
 
-        $tilesetName = $matches[1];
-        $tileId = (int) $matches[2];
-
-        // Generate or get UUID for this tileset
-        if (!isset($this->tilesetMapping[$tilesetName])) {
-            $formattedName = $this->formatTilesetName($tilesetName);
-            
-            // First, try to find existing tileset by name
-            $existingTileset = $this->findExistingTileset($tilesetName, $formattedName);
-            
-            if ($existingTileset) {
-                // Use existing tileset
-                $this->tilesetMapping[$tilesetName] = [
-                    'uuid' => $existingTileset->uuid,
-                    'name' => $existingTileset->name,
-                    'tiles' => [],
-                    'existing' => true
-                ];
-            } else {
-                // Create new tileset mapping
-                $this->tilesetMapping[$tilesetName] = [
-                    'uuid' => $this->generateTilesetUuid($tilesetName),
-                    'name' => $formattedName,
-                    'tiles' => [],
-                    'existing' => false
-                ];
-            }
-        }
-
-        // Track this tile ID
-        $this->tilesetMapping[$tilesetName]['tiles'][] = $tileId;
-
-        // Convert tile_id to tileX/tileY coordinates
-        $tileCoords = $this->convertTileIdToCoordinates($tileId, $tilesetName);
-
-        return [
-            'tileset_uuid' => $this->tilesetMapping[$tilesetName]['uuid'],
-            'tileX' => $tileCoords['tileX'],
-            'tileY' => $tileCoords['tileY'],
-        ];
-    }
-
-    /**
-     * Convert linear tile_id to 2D tileX/tileY coordinates.
-     */
-    private function convertTileIdToCoordinates(int $tileId, string $tilesetName): array
-    {
-        $tilesPerRow = null;
-        // If tileset exists in mapping and was found in database, use the model accessor
-        if (isset($this->tilesetMapping[$tilesetName]['existing']) && $this->tilesetMapping[$tilesetName]['existing']) {
-            $existingTileset = TileSet::where('uuid', $this->tilesetMapping[$tilesetName]['uuid'])->first();
-            if ($existingTileset && $existingTileset->tiles_per_row > 0) {
-                $tilesPerRow = $existingTileset->tiles_per_row;
-            } else {
-                throw new \Exception("Cannot determine tilesPerRow for existing tileset: {$tilesetName}");
-            }
-        } else if (
-            isset($this->tilesetMapping[$tilesetName]['image_width']) &&
-            isset($this->tilesetMapping[$tilesetName]['tile_width']) &&
-            $this->tilesetMapping[$tilesetName]['tile_width'] > 0
-        ) {
-            $tilesPerRow = (int) ($this->tilesetMapping[$tilesetName]['image_width'] / $this->tilesetMapping[$tilesetName]['tile_width']);
-            if ($tilesPerRow <= 0) {
-                throw new \Exception("Invalid tilesPerRow for tileset: {$tilesetName}");
-            }
-        } else {
-            dd($this->tilesetMapping[$tilesetName]);
-            throw new \Exception("Cannot determine tilesPerRow for tileset: {$tilesetName}");
-        }
-        $adjustedTileId = $tileId - 1;
-        return [
-            'tileX' => $tilesPerRow > 0 ? $adjustedTileId % $tilesPerRow : 0,
-            'tileY' => $tilesPerRow > 0 ? intval($adjustedTileId / $tilesPerRow) : 0,
-        ];
-    }
-
-    /**
-     * Find an existing tileset by name variations.
-     */
-    private function findExistingTileset(string $originalName, string $formattedName): ?TileSet
-    {
-        // Try multiple name variations to find existing tileset
-        $searchNames = [
-            $formattedName,        // "Castle Exterior Mc"
-            $originalName,         // "castle_exterior_mc"
-            ucwords($originalName, '_'), // "Castle_Exterior_Mc"
-            str_replace('_', ' ', $originalName), // "castle exterior mc"
-            ucfirst(str_replace('_', ' ', $originalName)), // "Castle exterior mc"
-        ];
-
-        foreach ($searchNames as $searchName) {
-            $tileset = TileSet::where('name', 'LIKE', $searchName)->first();
-            if ($tileset) {
-                return $tileset;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Generate a deterministic UUID for a tileset name.
-     */
-    private function generateTilesetUuid(string $tilesetName): string
-    {
-        // Create a deterministic UUID based on the tileset name
-        // This ensures consistent UUIDs across imports of the same legacy map
-        $hash = md5('legacy_tileset_' . $tilesetName);
+        $fieldTypePath = preg_replace('/\.js$/', '_ft.js', $originalFilePath);
         
-        return sprintf(
-            '%s-%s-%s-%s-%s',
-            substr($hash, 0, 8),
-            substr($hash, 8, 4),
-            substr($hash, 12, 4),
-            substr($hash, 16, 4),
-            substr($hash, 20, 12)
-        );
-    }
-
-    /**
-     * Format tileset name for display.
-     */
-    private function formatTilesetName(string $tilesetName): string
-    {
-        // Keep the original name format for legacy tilesets
-        return $tilesetName;
+        if (Storage::exists($fieldTypePath)) {
+            return $fieldTypePath;
+        }
+        
+        return null;
     }
 } 

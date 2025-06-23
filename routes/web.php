@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LayerImageController;
 use App\Http\Controllers\MapTestController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -18,6 +19,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('manage-maps', function () {
         return Inertia::render('manage-maps');
     })->name('manage-maps');
+
+    Route::get('import', function () {
+        return Inertia::render('import.ImportWizard');
+    })->name('manage-maps.import');
 
     Route::get('manage-tilesets', function () {
         return Inertia::render('manage-tilesets');
@@ -42,6 +47,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('maps.edit');
 
     Route::get('maps/{uuid}/test', [MapTestController::class, 'show'])->name('maps.test');
+
+    // User management routes (admin only)
+    Route::resource('manage-users', UserController::class)->names([
+        'index' => 'manage-users.index',
+        'create' => 'manage-users.create',
+        'store' => 'manage-users.store',
+        'edit' => 'manage-users.edit',
+        'update' => 'manage-users.update',
+        'destroy' => 'manage-users.destroy',
+    ]);
+    Route::patch('manage-users/{user}/toggle-admin', [UserController::class, 'toggleAdmin'])->name('manage-users.toggle-admin');
 });
 
 // Public route for serving layer images (no auth required)

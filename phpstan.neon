@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 4
+    paths:
+        - app
+        - config
+        - database
+        - routes
+    excludePaths:
+        - bootstrap/cache/*
+        - storage/*
+        - vendor/*
+    ignoreErrors:
+        - '#Access to an undefined property [a-zA-Z0-9\\_]+::\$[a-zA-Z0-9\\_]+#'
+    scanFiles:
+        - vendor/autoload.php
+    bootstrapFiles:
+        - vendor/autoload.php
+        - bootstrap/app.php

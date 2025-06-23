@@ -14,7 +14,7 @@ export default defineConfigWithVueTs(
             'bootstrap/ssr',
             'tailwind.config.js',
             'resources/js/components/ui/*',
-            'storage/app/*',
+            'storage/**/*',
             'tests/static/*',
             'playwright-report/*',
             '**/*.spec.ts',

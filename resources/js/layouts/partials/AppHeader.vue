@@ -19,7 +19,7 @@ import AppLogoIcon from '@/layouts/partials/AppLogoIcon.vue';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import type { PageProps } from '@/types/globals';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Box, Folder, LayoutGrid, Menu, Palette, Search } from 'lucide-vue-next';
+import { BookOpen, Box, Folder, LayoutGrid, Menu, Palette, Search, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Props {
@@ -32,6 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage<PageProps>();
 const auth = computed(() => page.props.auth);
+const isAdmin = computed(() => auth.value.user?.is_admin);
 
 const isCurrentRoute = computed(() => (url: string) => page.url === url);
 
@@ -39,33 +40,46 @@ const activeItemStyles = computed(
     () => (url: string) => (isCurrentRoute.value(url) ? 'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100' : ''),
 );
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Maps',
-        href: '/manage-maps',
-        icon: Folder,
-    },
-    {
-        title: 'Tilesets',
-        href: '/manage-tilesets',
-        icon: Folder,
-    },
-    {
-        title: 'Field Types',
-        href: '/manage-field-types',
-        icon: Palette,
-    },
-    {
-        title: 'Object Types',
-        href: '/manage-object-types',
-        icon: Box,
-    },
-];
+const mainNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: '/dashboard',
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Maps',
+            href: '/manage-maps',
+            icon: Folder,
+        },
+        {
+            title: 'Tilesets',
+            href: '/manage-tilesets',
+            icon: Folder,
+        },
+        {
+            title: 'Field Types',
+            href: '/manage-field-types',
+            icon: Palette,
+        },
+        {
+            title: 'Object Types',
+            href: '/manage-object-types',
+            icon: Box,
+        },
+    ];
+
+    // Add Users management for admins
+    if (isAdmin.value) {
+        items.push({
+            title: 'Users',
+            href: '/manage-users',
+            icon: Users,
+        });
+    }
+
+    return items;
+});
 
 const rightNavItems: NavItem[] = [
     {

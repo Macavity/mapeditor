@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\TileSetController;
 use App\Http\Controllers\Api\FieldTypeController;
 use App\Http\Controllers\Api\ObjectTypeController;
 use App\Http\Controllers\Api\ApiTokenController;
+use App\Http\Controllers\Api\MapImportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,11 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::put('tile-maps/{tile_map}/layers/{layer}/data', [TileMapController::class, 'updateLayerData']);
     Route::delete('tile-maps/{tile_map}/layers/{layer}', [TileMapController::class, 'deleteLayer']);
+    
+    // Map Import Wizard routes
+    Route::post('map-import/upload', [MapImportController::class, 'upload']);
+    Route::post('map-import/parse', [MapImportController::class, 'parse']);
+    Route::post('map-import/complete', [MapImportController::class, 'complete']);
     
     Route::apiResource('tile-sets', TileSetController::class);
     Route::post('tile-sets/import', [TileSetController::class, 'import']);

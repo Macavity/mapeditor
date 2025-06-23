@@ -29,7 +29,7 @@ class MapGenerate extends Command
     /**
      * Execute the console command.
      */
-    public function handle(MapGenerator $mapGenerator, TileMapRepository $mapRepository)
+    public function handle(TileMapGenerator $mapGenerator, TileMapRepository $mapRepository)
     {
         if ($this->option('all')) {
             $this->generateAllMaps($mapGenerator);
@@ -38,7 +38,7 @@ class MapGenerate extends Command
 
         $mapId = $this->argument('id');
 
-        if(!is_int($mapId)) {
+        if(!is_numeric($mapId)) {
             $map = $mapRepository->findByUuid($mapId);
             $mapId = $map->id;
         }
@@ -51,7 +51,7 @@ class MapGenerate extends Command
         $this->generateMap($mapGenerator, $mapId);
     }
 
-    protected function generateAllMaps(MapGenerator $mapGenerator): void
+    protected function generateAllMaps(TileMapGenerator $mapGenerator): void
     {
         $maps = TileMap::all();
         $bar = $this->output->createProgressBar($maps->count());
@@ -75,7 +75,7 @@ class MapGenerate extends Command
         $this->info('All maps have been processed!');
     }
     
-    protected function generateMap(MapGenerator $mapGenerator, int $mapId): void
+    protected function generateMap(TileMapGenerator $mapGenerator, int $mapId): void
     {
         $map = TileMap::find($mapId);
         
