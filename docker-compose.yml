@@ -49,23 +49,25 @@ services:
       - DB_DATABASE=${DB_DATABASE}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      - COMPOSER_HOME=/var/www/.composer
+      - COMPOSER_CACHE_DIR=/var/www/.cache/composer
     networks:
       - mapeditor
     depends_on:
       - db_mysql
     volumes:
       - .:/var/www/html
-      - /var/www/html/vendor
-      - /var/www/html/node_modules
     ports:
-      - '8000:8000'
+      - '8010:8000'
     expose:
-      - '8000'
+      - '8010'
     command: >
-      sh -c "composer install &&
-             npm install &&
-             npm run build &&
-             php artisan key:generate --force &&
+      sh -c "chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true &&
+             su www-data -s /bin/sh -c 'composer install' &&
+             su www-data -s /bin/sh -c 'npm install' &&
+             su www-data -s /bin/sh -c 'npm run build' &&
+             if ! grep -q 'APP_KEY=base64:' /var/www/html/.env; then php artisan key:generate --force; fi &&
+             php artisan config:clear &&
              php artisan migrate --force &&
              php artisan storage:link &&
              php artisan serve --host=0.0.0.0 --port=8000"

@@ -1,6 +1,5 @@
 ---
-trigger: model_decision
-globs: *.php
+applyTo: "**/*.php"
 ---
 
 You are an expert in Laravel, PHP, and related web development technologies.

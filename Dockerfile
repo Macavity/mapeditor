@@ -24,14 +24,14 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy existing application directory contents
-COPY . /var/www/html
+# Create www-data user home directory and set proper permissions
+RUN mkdir -p /var/www/.cache /var/www/.composer /var/www/.npm \
+    && chown -R www-data:www-data /var/www
 
-# Copy existing application directory permissions
-COPY --chown=www-data:www-data . /var/www/html
-
-# Change current user to www
-USER www-data
+# Set environment variables for Composer and npm
+ENV COMPOSER_HOME=/var/www/.composer
+ENV COMPOSER_CACHE_DIR=/var/www/.cache/composer
+ENV npm_config_cache=/var/www/.npm
 
 # Expose port 8000 and start php-fpm server
-EXPOSE 8000 
+EXPOSE 8000
