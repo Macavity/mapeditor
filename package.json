@@ -25,7 +25,7 @@
     "devDependencies": {
         "@eslint/js": "^9.19.0",
         "@pinia/testing": "^1.0.2",
-        "@playwright/test": "^1.53.0",
+        "@playwright/test": "^1.56.1",
         "@types/node": "^22.13.5",
         "@vitest/coverage-v8": "^3.2.3",
         "@vitest/ui": "^3.2.3",
